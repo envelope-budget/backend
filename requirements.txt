@@ -1,0 +1,4 @@
+Django==4.2.7
+django-allauth==0.58.2
+django-ninja==0.22.2
+python-dotenv==1.0.0

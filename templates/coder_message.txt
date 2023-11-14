@@ -1,0 +1,21 @@
+  Hey there, curious coder! 👋
+
+  You're peeking into the heart of EnvelopeBudget, where we blend budgeting with tech magic!
+  Our stack?
+    - Python 3 & Django 4
+    - DB: Postgresql or SQLite
+    - CSS: Bootstrap 5 & AdminLTE
+    - JS: Alpine.js
+
+  I deliberately decided to go old school and keep it simple to allow for more people to collaborate, so I have avoided large SPA frameworks.
+  Thinking of contributing? Fantastic! We love collaboration.
+  Whether you're a veteran developer or just starting out, your ideas and code are welcome here.
+  If you're keen on improving EnvelopeBudget or have a cool feature in mind, let's make it happen together.
+
+  Reach out to me, Dustin, at [your contact email] or through our GitHub repo.
+  Whether it's a bug, a feature request, or just saying hi, I'm all ears. Let's push the boundaries of budgeting software, one line of code at a time!
+
+  P.S. If you're into automation and deployment, I'm always game to discuss new, cutting-edge methods. Let's innovate!
+
+  Happy coding!
+  Dustin Davis

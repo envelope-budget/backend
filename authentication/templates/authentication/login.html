@@ -1,0 +1,33 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Budgeting App</title>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="{% static 'authentication/style.css' %}"
+    />
+  </head>
+  <body>
+    <div class="auth-container">
+      <!-- Update the form to use Django form -->
+      <form class="login-form" method="post">
+        {% csrf_token %}
+        <!-- CSRF token for security -->
+        {{ form.as_p }}
+        <!-- Render the form fields -->
+        <button type="submit">Login</button>
+        <a href="/register">Register</a>
+        <a href="/forgot-password">Forgot Password?</a>
+        <div class="social-login">
+          <a href="/auth/twitter">Log in with Twitter</a>
+          <a href="/auth/google">Log in with Google</a>
+          <a href="/auth/facebook">Log in with Facebook</a>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>

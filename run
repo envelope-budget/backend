@@ -1,0 +1,4 @@
+#!/bin/zsh
+
+open http://localhost:8007
+python manage.py runserver 8007

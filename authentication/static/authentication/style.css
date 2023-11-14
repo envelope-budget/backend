@@ -1,0 +1,124 @@
+/* Main styles */
+body {
+  font-family: Arial, sans-serif;
+  background-image: url("auth-background.webp");
+  background-size: cover;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+/* Form Container */
+div#allauth-container {
+  background-color: rgba(255, 255, 255, 0.8); /* White with transparency */
+  padding: 20px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px; /* Maximum width */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Shadow for depth */
+  margin: 20px;
+}
+
+div.allauth-menu {
+  display: none;
+}
+
+h1 {
+  text-align: center;
+}
+h2 {
+  text-align: center;
+}
+
+/* Logo */
+h1:before {
+  content: "";
+  display: block;
+  background-image: url("logo.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center; /* Center the background image */
+  height: 100px; /* Adjust as needed */
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+/* Responsive Text Inputs */
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* Button Styles */
+button {
+  width: 100%;
+  padding: 10px;
+  background-color: #0071bc; /* Bootstrap primary color */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #005994; /* Darker on hover */
+}
+
+/* Additional Styles for Links and Texts */
+a {
+  color: #0071bc;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+ul.errorlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+ul.errorlist li {
+  background-color: rgb(207, 0, 0);
+  color: white;
+  padding: 5px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+div.allauth-messages {
+  margin-bottom: 20px;
+}
+div.allauth-messages ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+div.allauth-messages ul li {
+  background-color: #0071bc7e;
+  color: white;
+  padding: 5px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+div.allauth-messages ul li::before {
+  content: "🤑";
+  margin-right: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  form {
+    margin: 10px; /* Smaller margin on smaller screens */
+  }
+}

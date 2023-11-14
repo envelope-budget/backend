@@ -1,0 +1,59 @@
+{% load i18n %}
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block head_title %}
+
+      {% endblock %}
+    </title>
+    <link rel="stylesheet" type="text/css" href="{% static 'authentication/style.css' %}" />
+    {% block extra_head %}
+
+    {% endblock %}
+  </head>
+  <body>
+    <div id="allauth-container">
+      {% block body %}
+        {% if messages %}
+          <div class="allauth-messages">
+            <ul>
+              {% for message in messages %}
+                <li>{{ message }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+        <div class="allauth-menu">
+          <strong>{% trans 'Menu:' %}</strong>
+          <ul>
+            {% if user.is_authenticated %}
+              <li>
+                <a href="{% url 'account_email' %}">{% trans 'Change Email' %}</a>
+              </li>
+              <li>
+                <a href="{% url 'account_logout' %}">{% trans 'Sign Out' %}</a>
+              </li>
+            {% else %}
+              <li>
+                <a href="{% url 'account_login' %}">{% trans 'Sign In' %}</a>
+              </li>
+              <li>
+                <a href="{% url 'account_signup' %}">{% trans 'Sign Up' %}</a>
+              </li>
+            {% endif %}
+          </ul>
+        </div>
+        {% block content %}
+
+        {% endblock %}
+      {% endblock %}
+      {% block extra_body %}
+
+      {% endblock %}
+    </div>
+  </body>
+</html>
