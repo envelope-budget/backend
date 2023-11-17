@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 from ninja import Router, Schema
 from ninja.security import django_auth
@@ -7,6 +7,18 @@ from django.shortcuts import get_object_or_404
 from .models import Budget
 
 router = Router()
+
+
+class createBudgetSchema(Schema):
+    name: str
+    date_format: Optional[str] = "MM/DD/YYYY"
+    currency_iso_code: Optional[str] = "USD"
+    currency_decimal_digits: Optional[int] = 2
+    currency_decimal_separator: Optional[str] = "."
+    currency_symbol_first: Optional[bool] = True
+    currency_group_separator: Optional[str] = ","
+    currency_symbol: Optional[str] = "$"
+    currency_display_symbol: Optional[bool] = True
 
 
 class BudgetSchema(Schema):
@@ -37,6 +49,23 @@ class BudgetSchema(Schema):
             currency_symbol=obj.currency_symbol,
             currency_display_symbol=obj.currency_display_symbol,
         )
+
+
+@router.post("", response=BudgetSchema, auth=django_auth, tags=["Budgets"])
+def create_budget(request, payload: createBudgetSchema):
+    budget = Budget.objects.create(
+        user=request.auth,
+        name=payload.name,
+        date_format=payload.date_format,
+        currency_iso_code=payload.currency_iso_code,
+        currency_decimal_digits=payload.currency_decimal_digits,
+        currency_decimal_separator=payload.currency_decimal_separator,
+        currency_symbol_first=payload.currency_symbol_first,
+        currency_group_separator=payload.currency_group_separator,
+        currency_symbol=payload.currency_symbol,
+        currency_display_symbol=payload.currency_display_symbol,
+    )
+    return BudgetSchema.from_django(budget)
 
 
 @router.get("", response=List[BudgetSchema], auth=django_auth, tags=["Budgets"])

@@ -2,6 +2,9 @@ import uuid
 import os
 
 from django.db import models
+from envelopes.apis import CategorySchema
+
+from envelopes.models import Category, Envelope
 
 
 class Budget(models.Model):
@@ -21,3 +24,10 @@ class Budget(models.Model):
 
     def __str__(self):
         return str(self.name)
+
+    def categorized_envelopes(self):
+        categories = Category.objects.filter(budget=self)
+        for category in categories:
+            # Assuming envelopes is a method or a property
+            category.envelopes = category.envelopes()
+        return [CategorySchema.from_orm(category) for category in categories]

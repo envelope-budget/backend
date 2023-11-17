@@ -27,7 +27,6 @@ class AccountSchema(Schema):
 
 
 class AccountCreateSchema(Schema):
-    budget_id: UUID
     name: str
     type: str
     on_budget: bool = True

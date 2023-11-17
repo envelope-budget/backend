@@ -1,1 +1,4 @@
-edit base.html
+{% for message in messages %}
+  <p>{{ message }}</p>
+{% endfor %}Welcome {{ request.user }}<br />
+<a href="/logout">Log out</a>

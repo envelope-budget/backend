@@ -176,16 +176,14 @@ ACCOUNT_SIGNUP_REDIRECT_URL = "/"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_LOGOUT_REDIRECT_URL = "/login/"
+LOGIN_URL = "/login/"
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "UTC")
-
 USE_I18N = True
-
 USE_TZ = True
 
 
