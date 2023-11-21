@@ -1,4 +1,4 @@
 {% for message in messages %}
   <p>{{ message }}</p>
-{% endfor %}Welcome {{ request.user }}<br />
+{% endfor %}Welcome {{ request.user.email }}<br />
 <a href="/logout">Log out</a>
