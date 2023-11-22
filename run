@@ -1,4 +1,23 @@
-#!/bin/zsh
+#!/bin/bash
 
-open http://localhost:8007
-python manage.py runserver 8007
+# Start the Tailwind CSS process in the background
+npx tailwindcss -i ./static/src/input.css -o ./static/src/output.css --watch=always &
+TAILWIND_PID=$!
+
+# Start the Django server in the background
+python manage.py runserver 8007 &
+DJANGO_PID=$!
+
+# Function to handle SIGINT (ctrl+c)
+cleanup() {
+  echo "Terminating Tailwind CSS and Django Server..."
+  kill $TAILWIND_PID
+  kill $DJANGO_PID
+}
+
+# Trap SIGINT and call the cleanup function
+trap cleanup SIGINT
+
+# Wait for both processes to exit
+wait $TAILWIND_PID
+wait $DJANGO_PID
