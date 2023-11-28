@@ -27,6 +27,9 @@ urlpatterns = [
     path("api/", api.urls),
     path("", include("allauth.urls")),
     path("", include("budgets.urls")),
+    path("envelopes/", include("envelopes.urls")),
+    path("accounts/", include("accounts.urls")),
+    path("transactions/", include("transactions.urls")),
 ]
 
 if settings.DEBUG:
