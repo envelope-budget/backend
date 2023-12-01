@@ -1,21 +1,22 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./**/templates/**/*.html", "./node_modules/flowbite/**/*.js"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         primary: {
-          50: "#f7fee7",
-          100: "#ecfccb",
-          200: "#d9f99d",
-          300: "#bef264",
-          400: "#a3e635",
-          500: "#84cc16",
-          600: "#65a30d",
-          700: "#4d7c0f",
-          800: "#3f6212",
-          900: "#365314",
-          950: "#1a2e05",
+          50: "#f0f8ff",
+          100: "#e0f0fe",
+          200: "#b9e2fe",
+          300: "#7ccbfd",
+          400: "#36b2fa",
+          500: "#0c99eb",
+          600: "#0071bc",
+          700: "#015fa3",
+          800: "#065186",
+          900: "#0b446f",
+          950: "#072b4a",
         },
       },
     },

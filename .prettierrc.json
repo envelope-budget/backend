@@ -1,0 +1,17 @@
+{
+  "tabWidth": 2,
+  "printWidth": 120,
+  "twigPrintWidth": 5000,
+  "twigMultiTags": ["with,endwith"],
+  "twigAlwaysBreakObjects": false,
+  "twigSingleQuote": false,
+  "overrides": [
+    {
+      "files": ["*.jinja", "*.django", "**/views/**/*.html"],
+      "options": {
+        "parser": "melody"
+      }
+    }
+  ],
+  "plugins": ["/Users/dustin/sd/src/eb/node_modules/prettier-plugin-django"]
+}

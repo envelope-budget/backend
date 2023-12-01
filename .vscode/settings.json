@@ -19,5 +19,15 @@
     "activityBarBadge.foreground": "#15202b"
   },
   "peacock.color": "#00860b",
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "[django-html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": true,
+      "strings": true
+    }
+  },
+  "tailwindCSS.emmetCompletions": true,
+  "emmet.triggerExpansionOnTab": true
 }

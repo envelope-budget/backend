@@ -219,3 +219,11 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     "compressor.finders.CompressorFinder",
 ]
+
+
+# Plaid
+PLAID_ENABLED = os.environ.get("PLAID_ENABLED", False)
+PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID")
+PLAID_SECRET = os.environ.get("PLAID_SECRET")
+PLAID_ENVIRONMENT = os.environ.get("PLAID_ENVIRONMENT", "sandbox")
+PLAID_CLIENT_NAME = os.environ.get("PLAID_CLIENT_NAME", "EnvelopeBudget.com")
