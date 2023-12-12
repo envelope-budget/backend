@@ -1,0 +1,17 @@
+#!/bin/zsh
+
+# Delete sqlite database
+rm -f db.sqlite3
+
+# Find and delete all folders named 'migrations'
+find . -type d -name 'migrations' -exec rm -rf {} +
+
+# Run Django management commands
+python manage.py makemigrations accounts authentication budgetapp budgets envelopes transactions
+python manage.py migrate
+
+# Create superuser
+echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('dustin', 'dustin@davis.im', 'test')" | python manage.py shell
+
+echo "Script completed."
+

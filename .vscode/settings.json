@@ -29,5 +29,9 @@
     }
   },
   "tailwindCSS.emmetCompletions": true,
-  "emmet.triggerExpansionOnTab": true
+  "emmet.triggerExpansionOnTab": true,
+  "pylint.args": [
+    "--load-plugins=pylint_django",
+    "--django-settings-module=budgetapp.settings",
+  ]
 }

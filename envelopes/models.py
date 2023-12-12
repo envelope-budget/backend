@@ -1,6 +1,6 @@
-import uuid
-
 from django.db import models
+
+from budgetapp.utils import generate_uuid_hex
 
 
 class CategoryManager(models.Manager):
@@ -9,7 +9,12 @@ class CategoryManager(models.Manager):
 
 
 class Category(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     budget = models.ForeignKey("budgets.Budget", on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     sort_order = models.IntegerField(default=99)
@@ -34,7 +39,12 @@ class EnvelopeManager(models.Manager):
 
 
 class Envelope(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     budget = models.ForeignKey("budgets.Budget", on_delete=models.CASCADE)
     category = models.ForeignKey(
         "envelopes.Category", blank=True, null=True, on_delete=models.CASCADE
@@ -52,7 +62,12 @@ class Envelope(models.Model):
 
 
 class EnvelopeGoal(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     envelope = models.ForeignKey("envelopes.Envelope", on_delete=models.CASCADE)
     type = models.CharField(max_length=255)
     day = models.PositiveIntegerField(blank=True, null=True)

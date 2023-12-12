@@ -1,14 +1,19 @@
-import uuid
 import os
 
 from django.db import models
-from envelopes.apis import CategorySchema
 
-from envelopes.models import Category, Envelope
+from budgetapp.utils import generate_uuid_hex
+from envelopes.apis import CategorySchema
+from envelopes.models import Category
 
 
 class Budget(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     user = models.ForeignKey("auth.User", on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     date_format = models.CharField(
@@ -21,6 +26,8 @@ class Budget(models.Model):
     currency_group_separator = models.CharField(max_length=1, default=",")
     currency_symbol = models.CharField(max_length=48, default="$")
     currency_display_symbol = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return str(self.name)

@@ -1,4 +1,4 @@
-{% load compress %} {% load static %}
+{% load compress %} {% load static %}{% load global %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -71,8 +71,8 @@
             </a>
 
             <button
-              id="dropdownDividerButton"
-              data-dropdown-toggle="dropdownDivider"
+              id="budget-dropdown-button"
+              data-dropdown-toggle="budget-dropdown"
               class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-base px-5 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
               type="button"
             >
@@ -87,7 +87,7 @@
                   d="M18.972.863a.913.913 0 0 0-.041-.207.956.956 0 0 0-.107-.19 1.01 1.01 0 0 0-.065-.116c-.008-.01-.02-.013-.028-.022a1.008 1.008 0 0 0-.174-.137 1.085 1.085 0 0 0-.141-.095 1.051 1.051 0 0 0-.171-.047.985.985 0 0 0-.207-.041C18.025.007 18.014 0 18 0h-3.207a1 1 0 1 0 0 2h.5l-4.552 3.9-3.5-.874a1 1 0 0 0-.867.189l-5 4a1 1 0 0 0 1.25 1.562L7.238 7.09l3.52.88a1 1 0 0 0 .892-.211L17 3.173v1.034a1 1 0 0 0 2 0V1a.9.9 0 0 0-.028-.137ZM13.5 9a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Zm.24 4.591a3.112 3.112 0 0 1 1.935 1.374 2.036 2.036 0 0 1 .234 1.584 2.255 2.255 0 0 1-1.374 1.469.982.982 0 0 1-1.953.09 2.943 2.943 0 0 1-1.475-.92 1 1 0 0 1 1.536-1.283.953.953 0 0 0 .507.29.778.778 0 0 0 .831-.18 1.108 1.108 0 0 0-.714-.481 3.105 3.105 0 0 1-1.934-1.374 2.042 2.042 0 0 1-.233-1.584 2.264 2.264 0 0 1 1.45-1.493v-.03a1 1 0 0 1 2 0c.517.159.98.457 1.337.862a1.002 1.002 0 1 1-1.524 1.3.962.962 0 0 0-.507-.286.775.775 0 0 0-.829.18 1.113 1.113 0 0 0 .713.482ZM6 20a1 1 0 0 1-1-1v-6a1 1 0 1 1 2 0v6a1 1 0 0 1-1 1Zm-4 0a1 1 0 0 1-1-1v-4a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1Z"
                 />
               </svg>
-              Family Budget
+              {{ budget.name }}
               <svg
                 class="w-2.5 h-2.5 ms-3"
                 aria-hidden="true"
@@ -107,13 +107,14 @@
 
             <!-- Budget menu -->
             <div
-              id="dropdownDivider"
+              id="budget-dropdown"
               class="z-10 hidden bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600"
             >
-              <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownDividerButton">
+              <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="budget-dropdown-button">
+                {% for b in budgets %} {% if b != budget %}
                 <li>
                   <a
-                    href="#"
+                    href="{% url 'set_active_budget' b.id %}"
                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white flex"
                   >
                     <svg
@@ -127,51 +128,17 @@
                         d="M18.972.863a.913.913 0 0 0-.041-.207.956.956 0 0 0-.107-.19 1.01 1.01 0 0 0-.065-.116c-.008-.01-.02-.013-.028-.022a1.008 1.008 0 0 0-.174-.137 1.085 1.085 0 0 0-.141-.095 1.051 1.051 0 0 0-.171-.047.985.985 0 0 0-.207-.041C18.025.007 18.014 0 18 0h-3.207a1 1 0 1 0 0 2h.5l-4.552 3.9-3.5-.874a1 1 0 0 0-.867.189l-5 4a1 1 0 0 0 1.25 1.562L7.238 7.09l3.52.88a1 1 0 0 0 .892-.211L17 3.173v1.034a1 1 0 0 0 2 0V1a.9.9 0 0 0-.028-.137ZM13.5 9a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Zm.24 4.591a3.112 3.112 0 0 1 1.935 1.374 2.036 2.036 0 0 1 .234 1.584 2.255 2.255 0 0 1-1.374 1.469.982.982 0 0 1-1.953.09 2.943 2.943 0 0 1-1.475-.92 1 1 0 0 1 1.536-1.283.953.953 0 0 0 .507.29.778.778 0 0 0 .831-.18 1.108 1.108 0 0 0-.714-.481 3.105 3.105 0 0 1-1.934-1.374 2.042 2.042 0 0 1-.233-1.584 2.264 2.264 0 0 1 1.45-1.493v-.03a1 1 0 0 1 2 0c.517.159.98.457 1.337.862a1.002 1.002 0 1 1-1.524 1.3.962.962 0 0 0-.507-.286.775.775 0 0 0-.829.18 1.113 1.113 0 0 0 .713.482ZM6 20a1 1 0 0 1-1-1v-6a1 1 0 1 1 2 0v6a1 1 0 0 1-1 1Zm-4 0a1 1 0 0 1-1-1v-4a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1Z"
                       />
                     </svg>
-                    Inzolo</a
+                    {{ b.name }}</a
                   >
                 </li>
-                <li>
-                  <a
-                    href="#"
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white flex"
-                  >
-                    <svg
-                      class="w-[14px] h-[14px] text-gray-800 dark:text-white mr-2"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      viewBox="0 0 19 20"
-                    >
-                      <path
-                        d="M18.972.863a.913.913 0 0 0-.041-.207.956.956 0 0 0-.107-.19 1.01 1.01 0 0 0-.065-.116c-.008-.01-.02-.013-.028-.022a1.008 1.008 0 0 0-.174-.137 1.085 1.085 0 0 0-.141-.095 1.051 1.051 0 0 0-.171-.047.985.985 0 0 0-.207-.041C18.025.007 18.014 0 18 0h-3.207a1 1 0 1 0 0 2h.5l-4.552 3.9-3.5-.874a1 1 0 0 0-.867.189l-5 4a1 1 0 0 0 1.25 1.562L7.238 7.09l3.52.88a1 1 0 0 0 .892-.211L17 3.173v1.034a1 1 0 0 0 2 0V1a.9.9 0 0 0-.028-.137ZM13.5 9a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Zm.24 4.591a3.112 3.112 0 0 1 1.935 1.374 2.036 2.036 0 0 1 .234 1.584 2.255 2.255 0 0 1-1.374 1.469.982.982 0 0 1-1.953.09 2.943 2.943 0 0 1-1.475-.92 1 1 0 0 1 1.536-1.283.953.953 0 0 0 .507.29.778.778 0 0 0 .831-.18 1.108 1.108 0 0 0-.714-.481 3.105 3.105 0 0 1-1.934-1.374 2.042 2.042 0 0 1-.233-1.584 2.264 2.264 0 0 1 1.45-1.493v-.03a1 1 0 0 1 2 0c.517.159.98.457 1.337.862a1.002 1.002 0 1 1-1.524 1.3.962.962 0 0 0-.507-.286.775.775 0 0 0-.829.18 1.113 1.113 0 0 0 .713.482ZM6 20a1 1 0 0 1-1-1v-6a1 1 0 1 1 2 0v6a1 1 0 0 1-1 1Zm-4 0a1 1 0 0 1-1-1v-4a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1Z"
-                      />
-                    </svg>
-                    Red Seam</a
-                  >
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white flex"
-                  >
-                    <svg
-                      class="w-[14px] h-[14px] text-gray-800 dark:text-white mr-2"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      viewBox="0 0 19 20"
-                    >
-                      <path
-                        d="M18.972.863a.913.913 0 0 0-.041-.207.956.956 0 0 0-.107-.19 1.01 1.01 0 0 0-.065-.116c-.008-.01-.02-.013-.028-.022a1.008 1.008 0 0 0-.174-.137 1.085 1.085 0 0 0-.141-.095 1.051 1.051 0 0 0-.171-.047.985.985 0 0 0-.207-.041C18.025.007 18.014 0 18 0h-3.207a1 1 0 1 0 0 2h.5l-4.552 3.9-3.5-.874a1 1 0 0 0-.867.189l-5 4a1 1 0 0 0 1.25 1.562L7.238 7.09l3.52.88a1 1 0 0 0 .892-.211L17 3.173v1.034a1 1 0 0 0 2 0V1a.9.9 0 0 0-.028-.137ZM13.5 9a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Zm.24 4.591a3.112 3.112 0 0 1 1.935 1.374 2.036 2.036 0 0 1 .234 1.584 2.255 2.255 0 0 1-1.374 1.469.982.982 0 0 1-1.953.09 2.943 2.943 0 0 1-1.475-.92 1 1 0 0 1 1.536-1.283.953.953 0 0 0 .507.29.778.778 0 0 0 .831-.18 1.108 1.108 0 0 0-.714-.481 3.105 3.105 0 0 1-1.934-1.374 2.042 2.042 0 0 1-.233-1.584 2.264 2.264 0 0 1 1.45-1.493v-.03a1 1 0 0 1 2 0c.517.159.98.457 1.337.862a1.002 1.002 0 1 1-1.524 1.3.962.962 0 0 0-.507-.286.775.775 0 0 0-.829.18 1.113 1.113 0 0 0 .713.482ZM6 20a1 1 0 0 1-1-1v-6a1 1 0 1 1 2 0v6a1 1 0 0 1-1 1Zm-4 0a1 1 0 0 1-1-1v-4a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1Z"
-                      />
-                    </svg>
-                    Murphy</a
-                  >
-                </li>
+                {% endif %} {% endfor %}
               </ul>
               <div class="py-2">
                 <a
                   href="#"
+                  data-modal-target="add-budget-modal"
+                  data-modal-toggle="add-budget-modal"
+                  data-dropdown-hide="budget-dropdown"
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white flex"
                 >
                   <svg
@@ -858,32 +825,21 @@
                 </svg>
               </button>
               <ul id="dropdown-pages" class="py-2 space-y-2">
+                {% for account in accounts %}
                 <li>
                   <a
                     href="{% url 'account' %}"
                     class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
-                    <span class="flex-1 whitespace-nowrap">🔵 AFCU Checking</span>
+                    <span class="flex-1 whitespace-nowrap truncate mr-1">{{ account.name }}</span>
                     <span
-                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800"
+                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full {% if account.balance < 0 %}text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800{% else %}text-green-800 bg-green-100 dark:bg-green-200 dark:text-green-800{% endif %}"
                     >
-                      $7,234.67
+                      {{ account.balance | money }}
                     </span>
                   </a>
                 </li>
-                <li>
-                  <a
-                    href="#"
-                    class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >
-                    <span class="flex-1 whitespace-nowrap truncate mr-1">💰 AFCU Money Market Savings</span>
-                    <span
-                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800"
-                    >
-                      $15,047.35
-                    </span>
-                  </a>
-                </li>
+                {% endfor %}
               </ul>
             </li>
             <li>
@@ -919,45 +875,21 @@
                 </svg>
               </button>
               <ul id="dropdown-sales" class="py-2 space-y-2">
+                {% for cc in credit_cards %}
                 <li>
                   <a
                     href="#"
                     class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
-                    <span class="flex-1 whitespace-nowrap">🟦 Amex Blue</span>
+                    <span class="flex-1 whitespace-nowrap truncate mr-1">{{ cc.name }}</span>
                     <span
-                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800"
+                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full {% if cc.balance < 0 %}text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800{% else %}text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800{% endif %}"
                     >
-                      $-17,234.67
+                      {{ cc.balance|money }}
                     </span>
                   </a>
                 </li>
-                <li>
-                  <a
-                    href="#"
-                    class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >
-                    <span class="flex-1 whitespace-nowrap">🟥 Citi Visa</span>
-                    <span
-                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800"
-                    >
-                      $-634.67
-                    </span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >
-                    <span class="flex-1 whitespace-nowrap truncate">🔷 AFCU Visa Platinum</span>
-                    <span
-                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800"
-                    >
-                      $0.00
-                    </span>
-                  </a>
-                </li>
+                {% endfor %}
               </ul>
             </li>
             <li>
@@ -994,20 +926,21 @@
                 </svg>
               </button>
               <ul id="dropdown-loans" class="hidden py-2 space-y-2">
+                {% for l in loans %}
                 <li>
                   <a
                     href="#"
-                    class="flex items-center p-2 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                    >🚙 Max</a
+                    class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    class="flex items-center p-2 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                    >🏔️ Trailer
+                    <span class="flex-1 whitespace-nowrap truncate mr-1">{{ l.name }}</span>
+                    <span
+                      class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800"
+                    >
+                      {{ l.balance|money }}
+                    </span>
                   </a>
                 </li>
+                {% endfor %}
               </ul>
             </li>
           </ul>
@@ -1311,6 +1244,73 @@
       {% endfor %}
     </div>
     <!-- End Toasts-->
+
+    <!-- Add Budget Modal -->
+    <div
+      id="add-budget-modal"
+      tabindex="-1"
+      aria-hidden="true"
+      class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+    >
+      <div class="relative p-4 w-full max-w-md max-h-full">
+        <!-- Modal content -->
+        <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+          <!-- Modal header -->
+          <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Create New Budget</h3>
+            <button
+              type="button"
+              class="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+              data-modal-hide="add-budget-modal"
+            >
+              <svg
+                class="w-3 h-3"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 14 14"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                />
+              </svg>
+              <span class="sr-only">Close modal</span>
+            </button>
+          </div>
+          <!-- Modal body -->
+          <div class="p-4 md:p-5">
+            <form class="space-y-4" action="{% url 'create_budget' %}" method="post">
+              {% csrf_token %}
+              <div>
+                <label for="name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >Budget Name</label
+                >
+                <input
+                  type="text"
+                  name="name"
+                  id="name"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  placeholder="New Budget Name"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+              >
+                Create Budget
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Add Budget Modal-->
 
     <!-- Add Account modal -->
     <div

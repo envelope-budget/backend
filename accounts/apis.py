@@ -4,12 +4,28 @@ from datetime import datetime
 
 from ninja import Router, Schema
 from ninja.security import django_auth
+from django.conf import settings
 from django.shortcuts import get_object_or_404
+import plaid
+from plaid.api import plaid_api
 
 from .models import Account
 from budgets.models import Budget
 
 router = Router()
+
+# Plaid configuration
+configuration = plaid.Configuration(
+    host=plaid.Environment.Sandbox,
+    api_key={
+        "clientId": settings.PLAID_CLIENT_ID,
+        "secret": settings.PLAID_SECRET,
+    },
+)
+
+# Create an instance of the API client
+api_client = plaid.ApiClient(configuration)
+client = plaid_api.PlaidApi(api_client)
 
 
 class AccountSchema(Schema):

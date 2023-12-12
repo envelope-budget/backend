@@ -111,6 +111,8 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 # `allauth` needs this from django
                 "django.template.context_processors.request",
+                # My context processors
+                "budgetapp.context_processors.global_context",
             ],
         },
     },

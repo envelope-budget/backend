@@ -1,10 +1,15 @@
-import uuid
-
 from django.db import models
+
+from budgetapp.utils import generate_uuid_hex
 
 
 class Payee(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     budget = models.ForeignKey("budgets.Budget", on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     deleted = models.BooleanField(default=False)
@@ -14,7 +19,12 @@ class Payee(models.Model):
 
 
 class Transaction(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     budget = models.ForeignKey("budgets.Budget", on_delete=models.CASCADE)
     account = models.ForeignKey("accounts.Account", on_delete=models.CASCADE)
     payee = models.ForeignKey(
@@ -39,7 +49,12 @@ class Transaction(models.Model):
 
 
 class SubTransaction(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     transaction = models.ForeignKey(
         "transactions.Transaction", on_delete=models.CASCADE
     )

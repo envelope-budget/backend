@@ -1,10 +1,15 @@
-import uuid
-
 from django.db import models
+
+from budgetapp.utils import generate_uuid_hex
 
 
 class Account(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     budget = models.ForeignKey("budgets.Budget", on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
