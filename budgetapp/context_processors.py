@@ -3,6 +3,10 @@ from budgets.models import Budget
 
 
 def global_context(request):
+    if not request.user.is_authenticated:
+        return {}
+
+    budget = None
     user_budgets = Budget.objects.filter(user=request.user)
     active_budget_id = request.session.get("budget")
 
