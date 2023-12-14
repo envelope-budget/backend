@@ -1,6 +1,12 @@
-from django.db import models
+import io
 
+from django.core.exceptions import ValidationError
+from django.db import models
+from ofxparse import OfxParser
+
+from accounts.models import Account
 from budgetapp.utils import generate_uuid_hex
+from budgets.models import Budget
 
 
 class Payee(models.Model):
@@ -39,13 +45,98 @@ class Transaction(models.Model):
     cleared = models.BooleanField(default=False)
     reconciled = models.BooleanField(default=False)
     approved = models.BooleanField(default=False)
-    deleted = models.BooleanField(default=False)
     import_id = models.CharField(max_length=255, blank=True, null=True)
     import_payee_name = models.CharField(max_length=255, blank=True, null=True)
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.date} | {self.payee} | {self.amount}"
+
+    # Override the save method
+    def save(self, *args, **kwargs):
+        if self.import_id:
+            # Check if a transaction with the same budget, account, and import_id already exists
+            if (
+                Transaction.objects.filter(
+                    budget=self.budget, account=self.account, import_id=self.import_id
+                )
+                .exclude(id=self.id)
+                .exists()
+            ):
+                raise ValidationError(
+                    f"A transaction with import_id '{self.import_id}' already exists for this budget and account."
+                )
+        super(Transaction, self).save(*args, **kwargs)
+
+    class Meta:
+        # Define unique_together constraint
+        unique_together = ("budget", "account", "import_id")
+
+    @classmethod
+    def import_ofx(cls, budget_id: str, account_id: str, ofx_data: str):
+        """
+        Imports OFX data into the budget and account specified and returns the IDs of the created transactions and duplicate transactions.
+
+        :param budget_id: The ID of the budget.
+        :type budget_id: str
+        :param account_id: The ID of the account.
+        :type account_id: str
+        :param ofx_data: The OFX data to be imported.
+        :type ofx_data: str
+        :return: Dictionary with lists of created and duplicate transaction IDs
+        """
+        budget = Budget.objects.get(id=budget_id)
+        account = Account.objects.get(id=account_id, budget_id=budget_id)
+        # Convert string data to a file-like object
+        ofx_file = io.StringIO(ofx_data)
+
+        # Parse the OFX data
+        ofx = OfxParser.parse(ofx_file)
+
+        created_transaction_ids = []  # Store the IDs of created transactions
+        duplicate_transaction_ids = []  # Store the IDs of duplicate transactions
+
+        # Iterate over account transactions
+        for transaction in ofx.account.statement.transactions:
+            # Check for existing transaction with the same import_id
+            existing_transaction = Transaction.objects.filter(
+                budget_id=budget_id, account_id=account_id, import_id=transaction.id
+            ).first()
+
+            if existing_transaction:
+                # If transaction exists, add its ID to duplicate_transaction_ids
+                duplicate_transaction_ids.append(existing_transaction.id)
+            else:
+                # Create a new Transaction for each unique OFX transaction
+                payee = None
+                if transaction.payee:
+                    payee = Payee.objects.get_or_create(
+                        name=transaction.payee.title(), budget=budget
+                    )[0]
+                try:
+                    new_transaction = Transaction.objects.create(
+                        budget=budget,
+                        account=account,
+                        date=transaction.date,
+                        amount=int(transaction.amount * 1000),
+                        memo=transaction.memo,
+                        payee=payee,
+                        import_id=transaction.id,
+                        import_payee_name=transaction.payee,
+                        cleared=True,
+                    )
+                    created_transaction_ids.append(new_transaction.id)
+                except ValidationError:
+                    # Handle any validation error (e.g., from unique constraints)
+                    continue
+
+        # Close the file-like object
+        ofx_file.close()
+
+        return {
+            "created_ids": created_transaction_ids,
+            "duplicate_ids": duplicate_transaction_ids,
+        }
 
 
 class SubTransaction(models.Model):

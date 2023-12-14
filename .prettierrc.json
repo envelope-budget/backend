@@ -13,5 +13,5 @@
       }
     }
   ],
-  "plugins": ["/Users/dustin/sd/src/eb/node_modules/prettier-plugin-django"]
+  "plugins": ["/Users/dustin/sd/src/eb/backend/node_modules/prettier-plugin-django"]
 }
