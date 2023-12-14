@@ -4,4 +4,6 @@ from django.shortcuts import render
 
 @login_required
 def transactions(request):
-    return render(request, "transactions/transactions.html")
+    response = render(request, "transactions/transactions.html")
+    response.set_cookie("budget_id", request.session.get("budget"))
+    return response

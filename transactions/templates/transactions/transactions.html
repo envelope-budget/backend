@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% load static %} {% load compress %} {% block content %}
-<section class="bg-gray-50 dark:bg-gray-900">
+<section class="bg-gray-50 dark:bg-gray-900" x-data="transactionData()">
   <div class="mx-auto max-w-screen-xl">
     <!-- Start coding here -->
     <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
@@ -214,7 +214,9 @@
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+          <thead
+            class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b dark:border-gray-700 border-l-4 border-l-gray-50 dark:border-l-gray-700"
+          >
             <tr>
               <th scope="col" class="px-2 py-3">
                 <input type="checkbox" />
@@ -230,18 +232,27 @@
             </tr>
           </thead>
           <tbody>
-            <tr class="transaction-row transaction-active">
-              <td class="px-2 py-3">
-                <input type="checkbox" />
-              </td>
-              <td class="px-2 py-3">🔵 AFCU Checking</td>
-              <td class="px-2 py-3">2023-11-27</td>
-              <td class="px-2 py-3">Kent's Market Place</td>
-              <td class="px-2 py-3">🛒 Groceries</td>
-              <td class="px-2 py-3">Weekly meal planned groceries</td>
-              <td class="px-2 py-3 text-right">259.24</td>
-              <td class="px-2 py-3 text-right"></td>
-            </tr>
+            <template x-for="(transaction, index) in transactions" :key="index">
+              <tr class="transaction-row" :class="{'transaction-active': index === 0}">
+                <td class="px-2 py-3">
+                  <input type="checkbox" />
+                </td>
+                <td class="px-2 py-3 whitespace-nowrap truncate" x-text="transaction.account.name"></td>
+                <td class="px-2 py-3 whitespace-nowrap truncate" x-text="transaction.date"></td>
+                <td
+                  class="px-2 py-3 whitespace-nowrap truncate max-w-xs"
+                  x-text="transaction.payee ? transaction.payee.name : ''"
+                ></td>
+                <td
+                  class="px-2 py-3 whitespace-nowrap truncate"
+                  x-text="transaction.envelope ? transaction.envelope.name : 'Assign...'"
+                ></td>
+                <td class="px-2 py-3 whitespace-nowrap truncate max-w-xs" x-text="transaction.memo"></td>
+                <td class="px-2 py-3 text-right" x-text="formatAmount(transaction.amount, 'outflow')"></td>
+                <td class="px-2 py-3 text-right" x-text="formatAmount(transaction.amount, 'inflow')"></td>
+              </tr>
+            </template>
+            {% comment %}
             <tr class="transaction-edit">
               <td class="px-2 py-3 align-text-top">
                 <input type="checkbox" />
@@ -294,61 +305,33 @@
               </td>
               <td class="px-1 py-3 align-text-top"></td>
             </tr>
-            <tr class="transaction-row">
-              <td class="px-2 py-3">
-                <input type="checkbox" />
-              </td>
-              <td class="px-2 py-3">🔵 AFCU Checking</td>
-              <td class="px-2 py-3">2023-11-27</td>
-              <td class="px-2 py-3">Kent's Market Place</td>
-              <td class="px-2 py-3">🛒 Groceries</td>
-              <td class="px-2 py-3">Weekly meal planned groceries</td>
-              <td class="px-2 py-3 text-right">259.24</td>
-              <td class="px-2 py-3 text-right"></td>
-            </tr>
-            <tr class="transaction-row">
-              <td class="px-2 py-3">
-                <input type="checkbox" />
-              </td>
-              <td class="px-2 py-3">🔵 AFCU Checking</td>
-              <td class="px-2 py-3">2023-11-27</td>
-              <td class="px-2 py-3">Kent's Market Place</td>
-              <td class="px-2 py-3">🛒 Groceries</td>
-              <td class="px-2 py-3">Weekly meal planned groceries</td>
-              <td class="px-2 py-3 text-right">259.24</td>
-              <td class="px-2 py-3 text-right"></td>
-            </tr>
-            <tr class="transaction-row">
-              <td class="px-2 py-3">
-                <input type="checkbox" />
-              </td>
-              <td class="px-2 py-3">🔵 AFCU Checking</td>
-              <td class="px-2 py-3">2023-11-27</td>
-              <td class="px-2 py-3">Kent's Market Place</td>
-              <td class="px-2 py-3">🛒 Groceries</td>
-              <td class="px-2 py-3">Weekly meal planned groceries</td>
-              <td class="px-2 py-3 text-right">259.24</td>
-              <td class="px-2 py-3 text-right"></td>
-            </tr>
+            {% endcomment %}
           </tbody>
         </table>
       </div>
 
+      <!-- Pagination nav -->
       <nav
         class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
         aria-label="Table navigation"
       >
         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
           Showing
-          <span class="font-semibold text-gray-900 dark:text-white">1-10</span>
+          <span
+            class="font-semibold text-gray-900 dark:text-white"
+            x-text="((currentPage - 1) * transactionsPerPage) + 1"
+          ></span>
+          -
+          <span class="font-semibold text-gray-900 dark:text-white" x-text="currentPage * transactionsPerPage"></span>
           of
-          <span class="font-semibold text-gray-900 dark:text-white">1000</span>
+          <span class="font-semibold text-gray-900 dark:text-white" x-text="totalTransactions"></span>
         </span>
         <ul class="inline-flex items-stretch -space-x-px">
           <li>
             <a
               href="#"
               class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              x-on:click.prevent="currentPage > 1 && changePage(currentPage - 1)"
             >
               <span class="sr-only">Previous</span>
               <svg
@@ -366,46 +349,22 @@
               </svg>
             </a>
           </li>
-          <li>
-            <a
-              href="#"
-              class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              >1</a
-            >
-          </li>
-          <li>
-            <a
-              href="#"
-              class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              >2</a
-            >
-          </li>
-          <li>
-            <a
-              href="#"
-              aria-current="page"
-              class="flex items-center justify-center text-sm z-10 py-2 px-3 leading-tight text-primary-600 bg-primary-50 border border-primary-300 hover:bg-primary-100 hover:text-primary-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
-              >3</a
-            >
-          </li>
-          <li>
-            <a
-              href="#"
-              class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              >...</a
-            >
-          </li>
-          <li>
-            <a
-              href="#"
-              class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              >100</a
-            >
-          </li>
+          <template x-for="page in totalPages" :key="page">
+            <li>
+              <a
+                href="#"
+                class="pagination-page"
+                x-text="page"
+                :class="{'pagination-page-active': currentPage === page}"
+                x-on:click.prevent="changePage(page)"
+              ></a>
+            </li>
+          </template>
           <li>
             <a
               href="#"
               class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              x-on:click.prevent="currentPage < totalPages && changePage(currentPage + 1)"
             >
               <span class="sr-only">Next</span>
               <svg
@@ -425,6 +384,7 @@
           </li>
         </ul>
       </nav>
+      <!-- End Pagination nav -->
     </div>
   </div>
 </section>

@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
 from ninja import File, Router, Schema, UploadedFile
+from ninja.pagination import paginate
 from ninja.security import django_auth
 
 from .models import Payee, Transaction, SubTransaction
@@ -19,13 +20,23 @@ class PayeeSchema(Schema):
     name: str
 
 
+class EnvelopeSchema(Schema):
+    id: str
+    name: str
+
+
+class AccountSchema(Schema):
+    id: str
+    name: str
+
+
 class TransactionSchema(Schema):
     id: str
     budget_id: str
-    account_id: str
+    account: AccountSchema
     payee: Optional[PayeeSchema]
     import_payee_name: Optional[str]
-    envelope_id: Optional[str]
+    envelope: Optional[EnvelopeSchema]
     date: date
     amount: int
     memo: Optional[str]
@@ -52,10 +63,11 @@ class OFXDataSchema(Schema):
     auth=django_auth,
     tags=["Transactions"],
 )
+@paginate
 def list_transactions(request, budget_id: str):
-    """List all transactions"""
-    transactions = Transaction.objects.filter(budget_id=budget_id)
-    return [TransactionSchema.from_orm(transaction) for transaction in transactions]
+    """List all transactions with pagination"""
+    transactions_query = Transaction.objects.filter(budget_id=budget_id)
+    return transactions_query
 
 
 @router.get(
