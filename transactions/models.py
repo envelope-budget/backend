@@ -24,6 +24,12 @@ class Payee(models.Model):
         return str(self.name)
 
 
+class TransactionManager(models.Manager):
+    def get_queryset(self):
+        # Default queryset will exclude deleted transactions and order by date descending
+        return super().get_queryset().filter(deleted=False).order_by("-date")
+
+
 class Transaction(models.Model):
     id = models.CharField(
         primary_key=True,
@@ -48,6 +54,8 @@ class Transaction(models.Model):
     import_id = models.CharField(max_length=255, blank=True, null=True)
     import_payee_name = models.CharField(max_length=255, blank=True, null=True)
     deleted = models.BooleanField(default=False)
+
+    objects = TransactionManager()
 
     def __str__(self):
         return f"{self.date} | {self.payee} | {self.amount}"

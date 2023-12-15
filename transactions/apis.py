@@ -83,8 +83,13 @@ class BulkDeleteSchema(Schema):
 @paginate
 def list_transactions(request, budget_id: str):
     """List all transactions with pagination"""
-    # TODO: ensure the budget belongs to the user
-    transactions_query = Transaction.objects.filter(budget_id=budget_id)
+    # Ensure the budget belongs to the authenticated user
+    if not Budget.objects.filter(id=budget_id, user=request.user).exists():
+        return (
+            []
+        )  # Return an empty list or raise an error if the budget does not belong to the user
+
+    transactions_query = Transaction.objects.filter(budget_id=budget_id, deleted=False)
     return transactions_query
 
 
@@ -171,34 +176,15 @@ def delete_transaction(request, budget_id: str, transaction_id: str):
     """
     Delete a transaction.
     """
-    # TODO: ensure the transaction belongs to the user
-    transaction = get_object_or_404(Transaction, id=transaction_id, budget_id=budget_id)
-    transaction.delete()
-    return {"detail": "Transaction deleted successfully"}
-
-
-@router.delete("/bulk-delete/{budget_id}", auth=django_auth, tags=["Transactions"])
-def delete_transactions_bulk(request, budget_id: str, data: BulkDeleteSchema):
-    """
-    Delete multiple transactions in bulk. Ensures that both the budget and the transactions belong to the authenticated user.
-    """
-    # Verify that the budget belongs to the authenticated user
-    if not Budget.objects.filter(id=budget_id, user=request.user).exists():
-        return {"detail": "Budget not found or access denied"}, 404
-
-    # Filter transactions by the provided IDs, the budget_id, and ensure they belong to the user
-    transactions = Transaction.objects.filter(
-        id__in=data.transaction_ids, budget_id=budget_id, budget__user=request.user
+    # Ensure the transaction belongs to the authenticated user
+    transaction = get_object_or_404(
+        Transaction, id=transaction_id, budget_id=budget_id, budget__user=request.user
     )
 
-    # Check if all transactions exist and belong to the user
-    if transactions.count() != len(data.transaction_ids):
-        return {"detail": "One or more transactions not found or access denied"}, 404
-
-    # Delete the transactions
-    transactions.delete()
-
-    return {"detail": f"{transactions.count()} transactions deleted successfully"}
+    # Mark the transaction as deleted
+    transaction.deleted = True
+    transaction.save()
+    return {"detail": "Transaction deleted successfully"}
 
 
 @router.post(

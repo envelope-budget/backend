@@ -367,17 +367,24 @@
         class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
         aria-label="Table navigation"
       >
-        <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
+        <span class="text-sm font-normal text-gray-500 dark:text-gray-400" x-show="totalTransactions > 0">
           Showing
           <span
             class="font-semibold text-gray-900 dark:text-white"
             x-text="((currentPage - 1) * transactionsPerPage) + 1"
           ></span>
           -
-          <span class="font-semibold text-gray-900 dark:text-white" x-text="currentPage * transactionsPerPage"></span>
+          <span
+            class="font-semibold text-gray-900 dark:text-white"
+            x-text="Math.min(currentPage * transactionsPerPage, totalTransactions)"
+          ></span>
           of
           <span class="font-semibold text-gray-900 dark:text-white" x-text="totalTransactions"></span>
         </span>
+        <span class="text-sm font-normal text-gray-500 dark:text-gray-400" x-show="totalTransactions === 0">
+          No transaction data to show.
+        </span>
+
         <ul class="inline-flex items-stretch -space-x-px">
           <li>
             <a
@@ -442,5 +449,4 @@
 </section>
 {% endblock %} {% block js %} {% compress js %}
 <script src="{% static 'transactions/js/transactions.js' %}"></script>
-<script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
 {% endcompress %} {% endblock js%}

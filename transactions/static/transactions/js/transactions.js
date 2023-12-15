@@ -66,6 +66,30 @@ async function patchTransaction(id, data) {
   }
 }
 
+async function deleteTransaction(transaction_id) {
+  const budgetId = getCookie("budget_id");
+  const url = `http://localhost:8007/api/transactions/${budgetId}/${transaction_id}`;
+  const csrfToken = getCookie("csrftoken");
+
+  try {
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "X-CSRFToken": csrfToken,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json(); // or handle the response as needed
+  } catch (error) {
+    console.error("Error deleting transaction:", error);
+    // Handle the error appropriately in your application
+  }
+}
+
 function transactionData() {
   return {
     activeIndex: 0,
@@ -123,9 +147,21 @@ function transactionData() {
       });
     },
 
-    deleteCheckedRows() {
+    async deleteCheckedRows() {
+      // Gather IDs of checked transactions
+      const idsToDelete = this.transactions
+        .filter((transaction) => transaction.checked)
+        .map((transaction) => transaction.id);
+
       this.transactions = this.transactions.filter((transaction) => !transaction.checked);
-      this.fetchTransactions();
+
+      // Call the bulkDeleteTransactions function if there are IDs to delete
+      if (idsToDelete.length > 0) {
+        for (const id of idsToDelete) {
+          await deleteTransaction(id);
+        }
+        this.fetchTransactions(); // Refresh the transaction list
+      }
     },
 
     setupKeyboardShortcuts() {
