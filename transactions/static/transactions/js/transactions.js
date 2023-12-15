@@ -38,19 +38,51 @@ async function get_transactions(budgetId, page = 1, pageSize = 20) {
   }
 }
 
+async function patchTransaction(id, data) {
+  const budgetId = getCookie("budget_id");
+  const url = `http://localhost:8007/api/transactions/${budgetId}/${id}`;
+  const csrfToken = getCookie("csrftoken");
+
+  try {
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    return responseData; // Return the parsed JSON data.
+  } catch (error) {
+    console.error("Error updating transaction:", error);
+    throw error; // Rethrow the error to be handled by the caller.
+  }
+}
+
 function transactionData() {
   return {
+    activeIndex: 0,
     transactions: [],
     totalTransactions: 0,
     currentPage: 1,
-    transactionsPerPage: 25,
+    transactionsPerPage: 20,
 
     async fetchTransactions() {
       const budgetId = getCookie("budget_id");
       try {
         const data = await get_transactions(budgetId, this.currentPage, this.transactionsPerPage);
         if (data && data.items) {
-          this.transactions = data.items;
+          this.transactions = data.items.map((transaction) => ({
+            ...transaction,
+            checked: false,
+          }));
           this.totalTransactions = data.count;
         }
       } catch (error) {
@@ -74,8 +106,50 @@ function transactionData() {
       return "";
     },
 
+    setActiveTransaction(index) {
+      this.activeIndex = index;
+    },
+
+    toggleCheckboxInActiveRow() {
+      if (this.activeIndex > -1 && this.activeIndex < this.transactions.length) {
+        this.transactions[this.activeIndex].checked = !this.transactions[this.activeIndex].checked;
+      }
+    },
+
+    toggleCleared(transaction) {
+      transaction.cleared = !transaction.cleared;
+      patchTransaction(transaction.id, {
+        cleared: transaction.cleared,
+      });
+    },
+
+    deleteCheckedRows() {
+      this.transactions = this.transactions.filter((transaction) => !transaction.checked);
+      this.fetchTransactions();
+    },
+
+    setupKeyboardShortcuts() {
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "j" || event.key === "k") {
+          let newIndex = this.activeIndex + (event.key === "j" ? 1 : -1);
+          if (newIndex >= 0 && newIndex < this.transactions.length) {
+            this.setActiveTransaction(newIndex);
+          }
+        } else if (event.key === "c") {
+          if (this.activeIndex > -1 && this.activeIndex < this.transactions.length) {
+            this.toggleCleared(this.transactions[this.activeIndex]);
+          }
+        } else if (event.key === "x") {
+          this.toggleCheckboxInActiveRow();
+        } else if (event.key === "#") {
+          this.deleteCheckedRows();
+        }
+      });
+    },
+
     init() {
       this.fetchTransactions();
+      this.setupKeyboardShortcuts();
     },
   };
 }

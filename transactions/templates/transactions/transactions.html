@@ -233,9 +233,12 @@
           </thead>
           <tbody>
             <template x-for="(transaction, index) in transactions" :key="index">
-              <tr class="transaction-row" :class="{'transaction-active': index === 0}">
+              <tr
+                class="transaction-row"
+                :class="{'transaction-active': index === activeIndex, 'transaction-checked': transaction.checked}"
+              >
                 <td class="px-2 py-3">
-                  <input type="checkbox" />
+                  <input type="checkbox" x-model="transaction.checked" />
                 </td>
                 <td class="px-2 py-3 whitespace-nowrap truncate" x-text="transaction.account.name"></td>
                 <td class="px-2 py-3 whitespace-nowrap truncate" x-text="transaction.date"></td>
@@ -243,16 +246,66 @@
                   class="px-2 py-3 whitespace-nowrap truncate max-w-xs"
                   x-text="transaction.payee ? transaction.payee.name : ''"
                 ></td>
-                <td
-                  class="px-2 py-3 whitespace-nowrap truncate"
-                  x-text="transaction.envelope ? transaction.envelope.name : 'Assign...'"
-                ></td>
+                <td class="px-2 py-3 whitespace-nowrap truncate">
+                  <button
+                    type="button"
+                    class="px-4 py-1 text-xs font-medium text-center inline-flex items-center text-white bg-yellow-700 rounded-full hover:bg-yellow-800 focus:ring-1 focus:outline-none focus:ring-yellow-300"
+                  >
+                    <svg
+                      class="w-3 h-3 text-white me-2"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      viewBox="0 0 20 16"
+                    >
+                      <path
+                        d="m10.036 8.278 9.258-7.79A1.979 1.979 0 0 0 18 0H2A1.987 1.987 0 0 0 .641.541l9.395 7.737Z"
+                      />
+                      <path
+                        d="M11.241 9.817c-.36.275-.801.425-1.255.427-.428 0-.845-.138-1.187-.395L0 2.6V14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V2.5l-8.759 7.317Z"
+                      />
+                    </svg>
+                    Select...
+                  </button>
+                </td>
                 <td class="px-2 py-3 whitespace-nowrap truncate max-w-xs" x-text="transaction.memo"></td>
                 <td class="px-2 py-3 text-right" x-text="formatAmount(transaction.amount, 'outflow')"></td>
                 <td class="px-2 py-3 text-right" x-text="formatAmount(transaction.amount, 'inflow')"></td>
+                <td>
+                  <a x-show="!transaction.cleared" x-on:click="toggleCleared(transaction)">
+                    <svg
+                      class="w-3.5 h-3.5"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="m7 10 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                      />
+                    </svg>
+                  </a>
+                  <a x-show="transaction.cleared" x-on:click="toggleCleared(transaction)">
+                    <svg
+                      class="w-3.5 h-3.5 text-green-600 dark:text-green-500"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"
+                      />
+                    </svg>
+                  </a>
+                </td>
               </tr>
             </template>
-            {% comment %}
+
             <tr class="transaction-edit">
               <td class="px-2 py-3 align-text-top">
                 <input type="checkbox" />
@@ -305,7 +358,6 @@
               </td>
               <td class="px-1 py-3 align-text-top"></td>
             </tr>
-            {% endcomment %}
           </tbody>
         </table>
       </div>

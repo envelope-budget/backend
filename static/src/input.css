@@ -12,6 +12,9 @@
   .transaction-active {
     @apply border-b border-gray-400 dark:border-gray-600 border-l-4 border-l-primary-500 dark:border-l-primary-600;
   }
+  .transaction-checked {
+    @apply bg-gray-200 text-black dark:bg-gray-600 dark:text-white;
+  }
   .transaction-edit {
     @apply border-b bg-gray-200 dark:border-gray-700 dark:bg-gray-600 border-l-4 border-l-primary-600 dark:border-l-primary-500;
   }
