@@ -29,6 +29,10 @@ class TransactionManager(models.Manager):
         # Default queryset will exclude deleted transactions and order by date descending
         return super().get_queryset().filter(deleted=False).order_by("-date")
 
+    def include_deleted(self):
+        # Include deleted transactions in the queryset
+        return super().get_queryset().order_by("-date")
+
 
 class Transaction(models.Model):
     id = models.CharField(
@@ -107,13 +111,19 @@ class Transaction(models.Model):
         # Iterate over account transactions
         for transaction in ofx.account.statement.transactions:
             # Check for existing transaction with the same import_id
-            existing_transaction = Transaction.objects.filter(
-                budget_id=budget_id, account_id=account_id, import_id=transaction.id
-            ).first()
+            transaction_exists = (
+                Transaction.objects.include_deleted()
+                .filter(
+                    budget=budget,
+                    account=account,
+                    import_id=transaction.id,
+                )
+                .first()
+            )
 
-            if existing_transaction:
+            if transaction_exists:
                 # If transaction exists, add its ID to duplicate_transaction_ids
-                duplicate_transaction_ids.append(existing_transaction.id)
+                duplicate_transaction_ids.append(transaction_exists.id)
             else:
                 # Create a new Transaction for each unique OFX transaction
                 payee = None

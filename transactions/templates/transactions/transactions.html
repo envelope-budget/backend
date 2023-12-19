@@ -1,8 +1,7 @@
 {% extends "base.html" %} {% load static %} {% load compress %} {% block content %}
 <section class="bg-gray-50 dark:bg-gray-900" x-data="transactionData()">
-  <div class="mx-auto max-w-screen-xl">
-    <!-- Start coding here -->
-    <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
+  <div class="mx-auto">
+    <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden min-h-screen">
       <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
         <div class="w-full md:w-1/2">
           <form class="flex items-center">
@@ -39,6 +38,7 @@
           <button
             type="button"
             class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
+            @click="startNewTransaction()"
           >
             <svg
               class="h-3.5 w-3.5 mr-2"
@@ -55,7 +55,10 @@
             </svg>
             Add transaction
           </button>
+
           <button
+            id="importDropdownButton"
+            data-dropdown-toggle="importDropdown"
             type="button"
             class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
           >
@@ -76,6 +79,59 @@
             </svg>
             Import
           </button>
+          <div
+            id="importDropdown"
+            class="hidden z-10 w-144 bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 border-primary-500 border-solid border-2 p-3"
+          >
+            <form class="max-w-lg mx-auto" @submit.prevent="importTransactions">
+              <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white" for="user_avatar"
+                >Upload OFX file</label
+              >
+
+              <label for="countries" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >Select account</label
+              >
+              <select
+                id="import_account_id"
+                class="mb-4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              >
+                {% if accounts %}
+                <optgroup label="Accounts">
+                  {% for account in accounts %}
+                  <option value="{{ account.id }}">{{ account }}</option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %} {% if credit_cards %}
+                <optgroup label="Credit Cards">
+                  {% for credit_card in credit_cards %}
+                  <option value="{{ credit_card.id }}">{{ credit_card }}</option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+              </select>
+
+              <input
+                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                aria-describedby="ofx_file_help"
+                id="ofx_file"
+                type="file"
+                accept=".ofx"
+              />
+              <div class="mt-1 text-sm text-gray-500 dark:text-gray-300" id="ofx_file_help">
+                Download OFX transaction file from your bank
+              </div>
+              <button
+                id="import-transactions-button"
+                type="submit"
+                class="float-right mt-4 text-white bg-primary-700 hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+              >
+                Upload &amp; Import
+              </button>
+            </form>
+          </div>
+
+          <!-- Actions Button & Dropdown -->
+
           <div class="flex items-center space-x-3 w-full md:w-auto">
             <button
               id="actionsDropdownButton"
@@ -117,6 +173,9 @@
                 >
               </div>
             </div>
+
+            <!-- Filter Button & Dropdown -->
+            <!--
             <button
               id="filterDropdownButton"
               data-dropdown-toggle="filterDropdown"
@@ -209,6 +268,7 @@
                 </li>
               </ul>
             </div>
+            -->
           </div>
         </div>
       </div>
@@ -232,6 +292,113 @@
             </tr>
           </thead>
           <tbody>
+            <tr class="transaction-edit" x-show="showNewTransactionForm">
+              <td class="px-2 py-3 align-text-top">
+                <input type="checkbox" />
+              </td>
+              <td class="px-1 py-3 align-text-top">
+                <input
+                  type="text"
+                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  x-value="editableTransaction.account"
+                />
+              </td>
+              <td class="px-1 py-3 align-text-top">
+                <div class="relative max-w-sm">
+                  <input
+                    datepicker
+                    type="text"
+                    class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="Select date"
+                    x-value="editableTransaction.date"
+                  />
+                </div>
+              </td>
+              <td class="px-1 py-3 align-text-top">
+                <input
+                  type="text"
+                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  x-value="editableTransaction.payee"
+                />
+              </td>
+              <td class="px-1 py-3 align-text-top" x-value="editableTransaction.envelope"></td>
+              <td class="px-1 py-3 align-text-top">
+                <textarea
+                  id="message"
+                  rows="1"
+                  class="block p-1 w-full text-sm text-gray-900 bg-gray-50 rounded border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  placeholder="Memo..."
+                  x-value="editableTransaction.memo"
+                ></textarea>
+              </td>
+              <td class="px-1 py-3 align-text-top w-5">
+                <input
+                  type="text"
+                  class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  x-value="editableTransaction.outflow"
+                  placeholder="0.00"
+                />
+              </td>
+              <td class="px-1 py-3 align-text-top w-5">
+                <input
+                  type="text"
+                  class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  x-value="editableTransaction.inflow"
+                  placeholder="0.00"
+                />
+              </td>
+              <td>
+                <a x-show="!editableTransaction.cleared" x-on:click="toggleCleared(editableTransaction)">
+                  <svg
+                    class="w-3.5 h-3.5"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="m7 10 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                    />
+                  </svg>
+                </a>
+                <a x-show="editableTransaction.cleared" x-on:click="toggleCleared(editableTransaction)">
+                  <svg
+                    class="w-3.5 h-3.5 text-green-600 dark:text-green-500"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"
+                    />
+                  </svg>
+                </a>
+              </td>
+            </tr>
+            <tr class="transaction-edit" x-show="showNewTransactionForm">
+              <td colspan="9" class="text-right">
+                <!-- Adjust the colspan to match the number of columns in your table -->
+                <button
+                  type="button"
+                  class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mr-2 mb-2"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-white mr-2 mb-2"
+                  @click="cancelNewTransaction()"
+                >
+                  Cancel
+                </button>
+              </td>
+            </tr>
+
             <template x-for="(transaction, index) in transactions" :key="index">
               <tr
                 class="transaction-row"
@@ -305,59 +472,6 @@
                 </td>
               </tr>
             </template>
-
-            <tr class="transaction-edit">
-              <td class="px-2 py-3 align-text-top">
-                <input type="checkbox" />
-              </td>
-              <td class="px-1 py-3 align-text-top">
-                <input
-                  type="text"
-                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  value="🔵 AFCU Checking"
-                />
-              </td>
-              <td class="px-1 py-3 align-text-top">
-                <input
-                  type="text"
-                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  value="2023-11-27"
-                />
-              </td>
-              <td class="px-1 py-3 align-text-top">
-                <input
-                  type="text"
-                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  value="Kent's Market Place"
-                />
-              </td>
-              <td class="px-1 py-3 align-text-top">🛒 Groceries</td>
-              <td class="px-1 py-3 align-text-top">
-                <textarea
-                  id="message"
-                  rows="1"
-                  class="block p-1 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="Memo..."
-                ></textarea>
-              </td>
-              <td class="px-1 py-3 align-text-top w-5">
-                <input
-                  type="text"
-                  class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  value="259.24"
-                  placeholder="0.00"
-                />
-              </td>
-              <td class="px-1 py-3 align-text-top w-5">
-                <input
-                  type="text"
-                  class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  value=""
-                  placeholder="0.00"
-                />
-              </td>
-              <td class="px-1 py-3 align-text-top"></td>
-            </tr>
           </tbody>
         </table>
       </div>

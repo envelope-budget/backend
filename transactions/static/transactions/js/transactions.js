@@ -15,7 +15,7 @@ function getCookie(name) {
 
 async function get_transactions(budgetId, page = 1, pageSize = 20) {
   const offset = (page - 1) * pageSize;
-  const url = `http://localhost:8007/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}`;
+  const url = `/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}`;
   const csrfToken = getCookie("csrftoken");
 
   try {
@@ -40,7 +40,7 @@ async function get_transactions(budgetId, page = 1, pageSize = 20) {
 
 async function patchTransaction(id, data) {
   const budgetId = getCookie("budget_id");
-  const url = `http://localhost:8007/api/transactions/${budgetId}/${id}`;
+  const url = `/api/transactions/${budgetId}/${id}`;
   const csrfToken = getCookie("csrftoken");
 
   try {
@@ -68,7 +68,7 @@ async function patchTransaction(id, data) {
 
 async function deleteTransaction(transaction_id) {
   const budgetId = getCookie("budget_id");
-  const url = `http://localhost:8007/api/transactions/${budgetId}/${transaction_id}`;
+  const url = `/api/transactions/${budgetId}/${transaction_id}`;
   const csrfToken = getCookie("csrftoken");
 
   try {
@@ -97,6 +97,8 @@ function transactionData() {
     totalTransactions: 0,
     currentPage: 1,
     transactionsPerPage: 20,
+    showNewTransactionForm: false,
+    editableTransaction: { cleared: false },
 
     async fetchTransactions() {
       const budgetId = getCookie("budget_id");
@@ -114,8 +116,67 @@ function transactionData() {
       }
     },
 
+    async importTransactions() {
+      const budgetId = getCookie("budget_id");
+      const accountId = document.getElementById("import_account_id").value;
+      if (!accountId) {
+        return;
+      }
+      const url = `/api/transactions/${budgetId}/${accountId}/import/ofx/file`;
+      const csrfToken = getCookie("csrftoken");
+
+      const formData = new FormData();
+      const fileInput = document.getElementById("ofx_file");
+      if (fileInput.files.length > 0) {
+        formData.append("ofx_file", fileInput.files[0]);
+      } else {
+        return;
+      }
+      // turn button into spinner
+      const importButton = document.getElementById("import-transactions-button");
+      importButton.disabled = true;
+      importButton.innerHTML = "Importing...";
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        resp = await response.json();
+        const message = `Import complete. ${resp.created_ids.length} transactions imported. ${resp.duplicate_ids.length} transactions skipped.`;
+        console.log(message);
+        this.fetchTransactions(); // Reload transactions
+      } catch (error) {
+        console.error("Error posting file:", error);
+      } finally {
+        // turn button back into text
+        importButton.disabled = false;
+        importButton.innerHTML = "Upload & Import";
+        // Close dropdown
+        const importDropdownButton = document.getElementById("importDropdownButton");
+        importDropdownButton.click();
+        // Reset file input
+        document.getElementById("ofx_file").value = "";
+      }
+    },
+
     get totalPages() {
       return Math.ceil(this.totalTransactions / this.transactionsPerPage);
+    },
+
+    getActiveTransaction() {
+      if (this.activeIndex > -1 && this.activeIndex < this.transactions.length) {
+        return this.transactions[this.activeIndex];
+      }
+      return null;
     },
 
     changePage(page) {
@@ -141,10 +202,14 @@ function transactionData() {
     },
 
     toggleCleared(transaction) {
-      transaction.cleared = !transaction.cleared;
-      patchTransaction(transaction.id, {
-        cleared: transaction.cleared,
-      });
+      if (transaction) {
+        transaction.cleared = !transaction.cleared;
+        if (transaction.id) {
+          patchTransaction(transaction.id, {
+            cleared: transaction.cleared,
+          });
+        }
+      }
     },
 
     async deleteCheckedRows() {
@@ -164,21 +229,57 @@ function transactionData() {
       }
     },
 
+    editTransaction(transaction) {
+      console.log("Editing transaction:", transaction);
+      this.editableTransaction = transaction;
+    },
+
+    startNewTransaction() {
+      if (!this.showNewTransactionForm) {
+        this.editableTransaction = {
+          account: null,
+          amount: 0,
+          approved: false,
+          budget_id: getCookie("budget_id"),
+          date: null,
+          envelope: null,
+          payee: null,
+          memo: "",
+          inflow: null,
+          outflow: null,
+          cleared: false,
+        };
+        this.showNewTransactionForm = true;
+        this.activeIndex = -1;
+      }
+    },
+
+    cancelNewTransaction() {
+      if (this.showNewTransactionForm) {
+        this.showNewTransactionForm = false;
+        this.activeIndex = 0;
+      }
+    },
+
     setupKeyboardShortcuts() {
       document.addEventListener("keydown", (event) => {
-        if (event.key === "j" || event.key === "k") {
+        if ((event.key === "j" || event.key === "k") && !this.showNewTransactionForm) {
           let newIndex = this.activeIndex + (event.key === "j" ? 1 : -1);
           if (newIndex >= 0 && newIndex < this.transactions.length) {
             this.setActiveTransaction(newIndex);
           }
+        } else if (event.key === "a") {
+          this.startNewTransaction();
         } else if (event.key === "c") {
-          if (this.activeIndex > -1 && this.activeIndex < this.transactions.length) {
-            this.toggleCleared(this.transactions[this.activeIndex]);
-          }
+          this.toggleCleared(this.getActiveTransaction());
+        } else if (event.key === "e") {
+          this.editTransaction(this.getActiveTransaction());
         } else if (event.key === "x") {
           this.toggleCheckboxInActiveRow();
         } else if (event.key === "#") {
           this.deleteCheckedRows();
+        } else if (event.key === "Escape") {
+          this.cancelNewTransaction();
         }
       });
     },
