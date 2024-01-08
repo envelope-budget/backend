@@ -45,17 +45,16 @@ class TransactionSchema(Schema):
     approved: bool
 
 
-class TransactionPatchSchema(Schema):
-    budget_id: Optional[str] = None
+class TransactionPostPatchSchema(Schema):
     account_id: Optional[str] = None
-    payee_id: Optional[str] = None
+    payee: Optional[str] = None
     envelope_id: Optional[str] = None
-    date: Optional[date] = None
+    date: Optional[str] = None
     amount: Optional[int] = None
     memo: Optional[str] = None
-    cleared: Optional[bool] = None
-    reconciled: Optional[bool] = None
-    approved: Optional[bool] = None
+    cleared: Optional[bool] = False
+    reconciled: Optional[bool] = False
+    approved: Optional[bool] = True
 
 
 class SubTransactionSchema(Schema):
@@ -111,11 +110,27 @@ def get_transaction(request, budget_id: str, transaction_id: str):
 @router.post(
     "/{budget_id}", response=TransactionSchema, auth=django_auth, tags=["Transactions"]
 )
-def create_transaction(request, budget_id: str, transaction: TransactionSchema):
+def create_transaction(
+    request, budget_id: str, transaction: TransactionPostPatchSchema
+):
     """Create a new transaction"""
-    # TODO: ensure the budget belongs to the user
+    # Ensure the budget belongs to the user
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    account = get_object_or_404(Account, id=transaction.account_id)
+    payee = Payee.objects.get_or_create(name=transaction.payee, budget=budget)[0]
+    envelope = get_object_or_404(Envelope, id=transaction.envelope_id)
     new_transaction = Transaction.objects.create(
-        **transaction.dict(), budget_id=budget_id
+        budget=budget,
+        account=account,
+        envelope=envelope,
+        payee=payee,
+        date=transaction.date,
+        amount=transaction.amount,
+        memo=transaction.memo,
+        cleared=transaction.cleared,
+        reconciled=transaction.reconciled,
+        approved=transaction.approved,
     )
     return TransactionSchema.from_orm(new_transaction)
 
@@ -154,7 +169,7 @@ def patch_transaction(
     request,
     budget_id: str,
     transaction_id: str,
-    transaction_data: TransactionPatchSchema,
+    transaction_data: TransactionPostPatchSchema,
 ):
     """
     Partially update a transaction with the given `transaction_id` and `budget_id`.

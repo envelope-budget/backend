@@ -237,20 +237,85 @@ function transactionData() {
     startNewTransaction() {
       if (!this.showNewTransactionForm) {
         this.editableTransaction = {
-          account: null,
+          account: "",
           amount: 0,
           approved: false,
           budget_id: getCookie("budget_id"),
-          date: null,
-          envelope: null,
-          payee: null,
+          date: "",
+          envelope: "",
+          payee: "",
           memo: "",
-          inflow: null,
-          outflow: null,
+          inflow: "",
+          outflow: "",
           cleared: false,
         };
         this.showNewTransactionForm = true;
         this.activeIndex = -1;
+        Alpine.nextTick(() => {
+          document.getElementById("account_id").focus();
+        });
+      }
+    },
+
+    calculateAmount(type) {
+      console.log(type, this.editableTransaction.outflow, this.editableTransaction.inflow);
+      let input = this.editableTransaction[type];
+      if (/[\+\-\*\/]/.test(input)) {
+        // calculate the math
+        input = eval(input);
+      } else {
+        // convert to number
+        input = Number(input);
+      }
+      if (isNaN(input) || input === 0) {
+        this.editableTransaction[type] = null;
+        return;
+      }
+      if (type === "outflow") {
+        this.editableTransaction.inflow = null;
+      } else {
+        this.editableTransaction.outflow = null;
+      }
+
+      this.editableTransaction[type] = Math.abs(input).toFixed(2);
+      this.editableTransaction.amount = this.editableTransaction[type] * 1000 * (type === "outflow" ? -1 : 1);
+    },
+
+    async saveNewTransaction() {
+      console.log("Saving new transaction:", this.editableTransaction);
+      const url = `/api/transactions/${this.editableTransaction.budget_id}`;
+      const csrfToken = getCookie("csrftoken");
+      const date = new Date(document.querySelector(".editable-transaction-date").value);
+      const formattedDate = date.toISOString().slice(0, 10);
+      console.log("date", formattedDate);
+      const postData = {
+        account_id: this.editableTransaction.account,
+        amount: this.editableTransaction.amount,
+        approved: this.editableTransaction.approved,
+        cleared: this.editableTransaction.cleared,
+        date: formattedDate,
+        envelope_id: this.editableTransaction.envelope,
+        memo: this.editableTransaction.memo,
+        payee: this.editableTransaction.payee,
+      };
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+          body: JSON.stringify(postData),
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const newTransaction = await response.json();
+        this.transactions.unshift(newTransaction);
+        this.showNewTransactionForm = false;
+        this.activeIndex = 0;
+      } catch (error) {
+        console.error("Error posting file:", error);
       }
     },
 
@@ -268,11 +333,11 @@ function transactionData() {
           if (newIndex >= 0 && newIndex < this.transactions.length) {
             this.setActiveTransaction(newIndex);
           }
-        } else if (event.key === "a") {
+        } else if (event.key === "a" && !this.showNewTransactionForm) {
           this.startNewTransaction();
         } else if (event.key === "c") {
           this.toggleCleared(this.getActiveTransaction());
-        } else if (event.key === "e") {
+        } else if (event.key === "e" && !this.showNewTransactionForm) {
           this.editTransaction(this.getActiveTransaction());
         } else if (event.key === "x") {
           this.toggleCheckboxInActiveRow();

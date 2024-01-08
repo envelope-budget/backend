@@ -292,59 +292,80 @@
             </tr>
           </thead>
           <tbody>
+            <!-- New Transaction Form -->
             <tr class="transaction-edit" x-show="showNewTransactionForm">
-              <td class="px-2 py-3 align-text-top">
-                <input type="checkbox" />
-              </td>
+              <td class="px-2 py-3 align-text-top"></td>
               <td class="px-1 py-3 align-text-top">
-                <input
-                  type="text"
+                <select
                   class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-value="editableTransaction.account"
-                />
+                  id="account_id"
+                  x-model="editableTransaction.account"
+                >
+                  <option value="">Select account</option>
+                  {% for account in accounts %}
+                  <option value="{{ account.id }}">{{ account.name }}</option>
+                  {% endfor %} {% for credit_card in credit_cards %}
+                  <option value="{{ credit_card.id }}">{{ credit_card.name }}</option>
+                  {% endfor %}
+                </select>
               </td>
               <td class="px-1 py-3 align-text-top">
                 <div class="relative max-w-sm">
                   <input
                     datepicker
                     type="text"
-                    class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    class="editable-transaction-date block w-24 p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                     placeholder="Select date"
-                    x-value="editableTransaction.date"
+                    x-model="editableTransaction.date"
                   />
                 </div>
               </td>
               <td class="px-1 py-3 align-text-top">
                 <input
                   type="text"
-                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-value="editableTransaction.payee"
+                  class="payee-input block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  x-model="editableTransaction.payee"
                 />
               </td>
-              <td class="px-1 py-3 align-text-top" x-value="editableTransaction.envelope"></td>
+              <td class="px-1 py-3 align-text-top">
+                <select
+                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  x-model="editableTransaction.envelope"
+                >
+                  <option value="">Unassigned</option>
+                  {% for ce in categorized_envelopes %}
+                  <optgroup label="{{ ce.category }}">
+                    {% for envelope in ce.envelopes %}
+                    <option value="{{ envelope.id }}">{{ envelope.name }}</option>
+                    {% endfor %} {% endfor %}
+                  </optgroup>
+                </select>
+              </td>
               <td class="px-1 py-3 align-text-top">
                 <textarea
                   id="message"
                   rows="1"
                   class="block p-1 w-full text-sm text-gray-900 bg-gray-50 rounded border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   placeholder="Memo..."
-                  x-value="editableTransaction.memo"
+                  x-model="editableTransaction.memo"
                 ></textarea>
               </td>
               <td class="px-1 py-3 align-text-top w-5">
                 <input
                   type="text"
                   class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-value="editableTransaction.outflow"
+                  x-model="editableTransaction.outflow"
                   placeholder="0.00"
+                  @blur="calculateAmount('outflow')"
                 />
               </td>
               <td class="px-1 py-3 align-text-top w-5">
                 <input
                   type="text"
                   class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-value="editableTransaction.inflow"
+                  x-model="editableTransaction.inflow"
                   placeholder="0.00"
+                  @blur="calculateAmount('inflow')"
                 />
               </td>
               <td>
@@ -386,6 +407,7 @@
                 <button
                   type="button"
                   class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mr-2 mb-2"
+                  @click="saveNewTransaction()"
                 >
                   Save
                 </button>
@@ -398,6 +420,7 @@
                 </button>
               </td>
             </tr>
+            <!-- End New Transaction Form -->
 
             <template x-for="(transaction, index) in transactions" :key="index">
               <tr
@@ -437,7 +460,10 @@
                 </td>
                 <td class="px-2 py-3 whitespace-nowrap truncate max-w-xs" x-text="transaction.memo"></td>
                 <td class="px-2 py-3 text-right" x-text="formatAmount(transaction.amount, 'outflow')"></td>
-                <td class="px-2 py-3 text-right" x-text="formatAmount(transaction.amount, 'inflow')"></td>
+                <td
+                  class="px-2 py-3 text-right text-green-700 dark:text-green-400"
+                  x-text="formatAmount(transaction.amount, 'inflow')"
+                ></td>
                 <td>
                   <a x-show="!transaction.cleared" x-on:click="toggleCleared(transaction)">
                     <svg
@@ -561,6 +587,8 @@
     </div>
   </div>
 </section>
-{% endblock %} {% block js %} {% compress js %}
+{% endblock %} {% block js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/datepicker.min.js"></script>
+{% compress js %}
 <script src="{% static 'transactions/js/transactions.js' %}"></script>
 {% endcompress %} {% endblock js%}
