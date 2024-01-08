@@ -97,7 +97,7 @@ function transactionData() {
     totalTransactions: 0,
     currentPage: 1,
     transactionsPerPage: 20,
-    showNewTransactionForm: false,
+    showEditForm: false,
     editableTransaction: { cleared: false },
 
     async fetchTransactions() {
@@ -229,13 +229,38 @@ function transactionData() {
       }
     },
 
-    editTransaction(transaction) {
-      console.log("Editing transaction:", transaction);
-      this.editableTransaction = transaction;
+    editTransactionAtIndex(transaction, index) {
+      this.editableTransaction = { ...transaction };
+      if (this.editableTransaction.amount > 0) {
+        this.editableTransaction.inflow = this.editableTransaction.amount / 1000;
+      } else {
+        this.editableTransaction.outflow = Math.abs(this.editableTransaction.amount / 1000);
+      }
+      this.editableTransaction.payee = this.editableTransaction.payee.name;
+
+      this.activeIndex = index;
+      this.showEditForm = true;
+
+      Alpine.nextTick(() => {
+        const formFieldsRow = this.$refs.editForm;
+        const formButtonsRow = this.$refs.editFormButtons;
+        const allRows = document.querySelectorAll(".transaction-row");
+
+        // remove hidden class from each row
+        for (const row of allRows) {
+          row.classList.remove("hidden");
+        }
+
+        if (formFieldsRow && formButtonsRow && allRows.length > index) {
+          allRows[index].after(formFieldsRow);
+          formFieldsRow.after(formButtonsRow);
+          allRows[index].classList.add("hidden");
+        }
+      });
     },
 
     startNewTransaction() {
-      if (!this.showNewTransactionForm) {
+      if (!this.showEditForm) {
         this.editableTransaction = {
           account: "",
           amount: 0,
@@ -249,16 +274,22 @@ function transactionData() {
           outflow: "",
           cleared: false,
         };
-        this.showNewTransactionForm = true;
+        this.showEditForm = true;
         this.activeIndex = -1;
         Alpine.nextTick(() => {
           document.getElementById("account_id").focus();
+
+          // Move the form to the top of the table
+          const formFieldsRow = this.$refs.editForm;
+          const formButtonsRow = this.$refs.editFormButtons;
+          const allRows = document.querySelectorAll(".transaction-row");
+          allRows[0].before(formFieldsRow);
+          formFieldsRow.after(formButtonsRow);
         });
       }
     },
 
     calculateAmount(type) {
-      console.log(type, this.editableTransaction.outflow, this.editableTransaction.inflow);
       let input = this.editableTransaction[type];
       if (/[\+\-\*\/]/.test(input)) {
         // calculate the math
@@ -282,12 +313,10 @@ function transactionData() {
     },
 
     async saveNewTransaction() {
-      console.log("Saving new transaction:", this.editableTransaction);
       const url = `/api/transactions/${this.editableTransaction.budget_id}`;
       const csrfToken = getCookie("csrftoken");
       const date = new Date(document.querySelector(".editable-transaction-date").value);
       const formattedDate = date.toISOString().slice(0, 10);
-      console.log("date", formattedDate);
       const postData = {
         account_id: this.editableTransaction.account,
         amount: this.editableTransaction.amount,
@@ -312,7 +341,7 @@ function transactionData() {
         }
         const newTransaction = await response.json();
         this.transactions.unshift(newTransaction);
-        this.showNewTransactionForm = false;
+        this.showEditForm = false;
         this.activeIndex = 0;
       } catch (error) {
         console.error("Error posting file:", error);
@@ -320,25 +349,30 @@ function transactionData() {
     },
 
     cancelNewTransaction() {
-      if (this.showNewTransactionForm) {
-        this.showNewTransactionForm = false;
+      if (this.showEditForm) {
+        this.showEditForm = false;
         this.activeIndex = 0;
+        // remove hidden class from each row
+        const allRows = document.querySelectorAll(".transaction-row");
+        for (const row of allRows) {
+          row.classList.remove("hidden");
+        }
       }
     },
 
     setupKeyboardShortcuts() {
       document.addEventListener("keydown", (event) => {
-        if ((event.key === "j" || event.key === "k") && !this.showNewTransactionForm) {
+        if ((event.key === "j" || event.key === "k") && !this.showEditForm) {
           let newIndex = this.activeIndex + (event.key === "j" ? 1 : -1);
           if (newIndex >= 0 && newIndex < this.transactions.length) {
             this.setActiveTransaction(newIndex);
           }
-        } else if (event.key === "a" && !this.showNewTransactionForm) {
+        } else if (event.key === "a" && !this.showEditForm) {
           this.startNewTransaction();
         } else if (event.key === "c") {
           this.toggleCleared(this.getActiveTransaction());
-        } else if (event.key === "e" && !this.showNewTransactionForm) {
-          this.editTransaction(this.getActiveTransaction());
+        } else if (event.key === "e" && !this.showNewTransactioshowEditFormnForm) {
+          this.editTransactionAtIndex(this.getActiveTransaction(), this.activeIndex);
         } else if (event.key === "x") {
           this.toggleCheckboxInActiveRow();
         } else if (event.key === "#") {

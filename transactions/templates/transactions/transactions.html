@@ -293,7 +293,7 @@
           </thead>
           <tbody>
             <!-- New Transaction Form -->
-            <tr class="transaction-edit" x-show="showNewTransactionForm">
+            <tr class="transaction-edit" x-show="showEditForm" x-ref="editForm">
               <td class="px-2 py-3 align-text-top"></td>
               <td class="px-1 py-3 align-text-top">
                 <select
@@ -401,7 +401,7 @@
                 </a>
               </td>
             </tr>
-            <tr class="transaction-edit" x-show="showNewTransactionForm">
+            <tr class="transaction-edit" x-show="showEditForm" x-ref="editFormButtons">
               <td colspan="9" class="text-right">
                 <!-- Adjust the colspan to match the number of columns in your table -->
                 <button
@@ -424,8 +424,10 @@
 
             <template x-for="(transaction, index) in transactions" :key="index">
               <tr
+                :id="'transaction-' + transaction.id"
                 class="transaction-row"
                 :class="{'transaction-active': index === activeIndex, 'transaction-checked': transaction.checked}"
+                @click="editTransactionAtIndex(transaction, index)"
               >
                 <td class="px-2 py-3">
                   <input type="checkbox" x-model="transaction.checked" />
