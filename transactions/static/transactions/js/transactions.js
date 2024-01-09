@@ -229,14 +229,15 @@ function transactionData() {
       }
     },
 
-    editTransactionAtIndex(transaction, index) {
+    editTransactionAtIndex(transaction, index, highlightField) {
       this.editableTransaction = { ...transaction };
-      if (this.editableTransaction.amount > 0) {
-        this.editableTransaction.inflow = this.editableTransaction.amount / 1000;
-      } else {
-        this.editableTransaction.outflow = Math.abs(this.editableTransaction.amount / 1000);
-      }
+      this.editableTransaction.inflow = this.formatAmount(transaction.amount, "inflow");
+      this.editableTransaction.outflow = this.formatAmount(transaction.amount, "outflow");
       this.editableTransaction.payee = this.editableTransaction.payee.name;
+      this.editableTransaction.account = transaction.account.id;
+      if (transaction.envelope) {
+        this.editableTransaction.envelope = transaction.envelope.id;
+      }
 
       this.activeIndex = index;
       this.showEditForm = true;
@@ -246,16 +247,17 @@ function transactionData() {
         const formButtonsRow = this.$refs.editFormButtons;
         const allRows = document.querySelectorAll(".transaction-row");
 
-        // remove hidden class from each row
-        for (const row of allRows) {
-          row.classList.remove("hidden");
-        }
+        this.showAllTransactions();
 
         if (formFieldsRow && formButtonsRow && allRows.length > index) {
           allRows[index].after(formFieldsRow);
           formFieldsRow.after(formButtonsRow);
           allRows[index].classList.add("hidden");
         }
+
+        // Focus on the first field
+        const firstField = document.getElementById("id_account");
+        firstField.focus();
       });
     },
 
@@ -277,7 +279,7 @@ function transactionData() {
         this.showEditForm = true;
         this.activeIndex = -1;
         Alpine.nextTick(() => {
-          document.getElementById("account_id").focus();
+          document.getElementById("id_account").focus();
 
           // Move the form to the top of the table
           const formFieldsRow = this.$refs.editForm;
@@ -312,11 +314,12 @@ function transactionData() {
       this.editableTransaction.amount = this.editableTransaction[type] * 1000 * (type === "outflow" ? -1 : 1);
     },
 
-    async saveNewTransaction() {
-      const url = `/api/transactions/${this.editableTransaction.budget_id}`;
+    async saveTransaction() {
+      let url = `/api/transactions/${this.editableTransaction.budget_id}`;
       const csrfToken = getCookie("csrftoken");
       const date = new Date(document.querySelector(".editable-transaction-date").value);
       const formattedDate = date.toISOString().slice(0, 10);
+      console.log(this.editableTransaction);
       const postData = {
         account_id: this.editableTransaction.account,
         amount: this.editableTransaction.amount,
@@ -328,35 +331,63 @@ function transactionData() {
         payee: this.editableTransaction.payee,
       };
 
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "X-CSRFToken": csrfToken,
-          },
-          body: JSON.stringify(postData),
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+      if (this.editableTransaction.id) {
+        url += `/${this.editableTransaction.id}`;
+        try {
+          const response = await fetch(url, {
+            method: "PUT",
+            headers: {
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify(postData),
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          const updatedTransaction = await response.json();
+          this.transactions[this.activeIndex] = updatedTransaction;
+          this.showEditForm = false;
+          this.showAllTransactions();
+        } catch (error) {
+          console.error("Error posting file:", error);
         }
-        const newTransaction = await response.json();
-        this.transactions.unshift(newTransaction);
-        this.showEditForm = false;
-        this.activeIndex = 0;
-      } catch (error) {
-        console.error("Error posting file:", error);
+      } else {
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify(postData),
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          const newTransaction = await response.json();
+          this.transactions.unshift(newTransaction);
+          this.showEditForm = false;
+          this.activeIndex = 0;
+        } catch (error) {
+          console.error("Error posting file:", error);
+        }
       }
     },
 
-    cancelNewTransaction() {
+    showAllTransactions() {
+      // remove hidden class from each row
+      const allRows = document.querySelectorAll(".transaction-row");
+      for (const row of allRows) {
+        row.classList.remove("hidden");
+      }
+    },
+
+    cancelTransaction() {
       if (this.showEditForm) {
         this.showEditForm = false;
-        this.activeIndex = 0;
-        // remove hidden class from each row
-        const allRows = document.querySelectorAll(".transaction-row");
-        for (const row of allRows) {
-          row.classList.remove("hidden");
+        if (this.activeIndex < 0) {
+          this.activeIndex = 0;
         }
+        this.showAllTransactions();
       }
     },
 
@@ -371,14 +402,14 @@ function transactionData() {
           this.startNewTransaction();
         } else if (event.key === "c") {
           this.toggleCleared(this.getActiveTransaction());
-        } else if (event.key === "e" && !this.showNewTransactioshowEditFormnForm) {
+        } else if (event.key === "e" && !this.showEditForm) {
           this.editTransactionAtIndex(this.getActiveTransaction(), this.activeIndex);
         } else if (event.key === "x") {
           this.toggleCheckboxInActiveRow();
         } else if (event.key === "#") {
           this.deleteCheckedRows();
         } else if (event.key === "Escape") {
-          this.cancelNewTransaction();
+          this.cancelTransaction();
         }
       });
     },

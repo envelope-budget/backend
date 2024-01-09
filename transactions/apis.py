@@ -142,20 +142,37 @@ def create_transaction(
     tags=["Transactions"],
 )
 def update_transaction(
-    request, budget_id: str, transaction_id: str, transaction_data: TransactionSchema
+    request,
+    budget_id: str,
+    transaction_id: str,
+    transaction_data: TransactionPostPatchSchema,
 ):
     """
     Update a transaction with the given `transaction_id` and `budget_id`, ensuring it belongs to the user.
     """
     # Ensure the transaction belongs to the authenticated user
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
     trans = get_object_or_404(
         Transaction, id=transaction_id, budget_id=budget_id, budget__user=request.user
     )
 
     # Update transaction fields
-    for attr, value in transaction_data.dict().items():
-        setattr(trans, attr, value)
+    trans.account = get_object_or_404(Account, id=transaction_data.account_id)
+    trans.payee = Payee.objects.get_or_create(
+        name=transaction_data.payee, budget=budget
+    )[0]
+    if transaction_data.envelope_id is not None:
+        trans.envelope = get_object_or_404(Envelope, id=transaction_data.envelope_id)
+    else:
+        trans.envelope = None
+    trans.date = transaction_data.date
+    trans.amount = transaction_data.amount
+    trans.memo = transaction_data.memo
+    trans.cleared = transaction_data.cleared
+    trans.reconciled = transaction_data.reconciled
+    trans.approved = transaction_data.approved
     trans.save()
+
     return TransactionSchema.from_orm(trans)
 
 
