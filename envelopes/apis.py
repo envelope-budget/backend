@@ -29,8 +29,9 @@ class EnvelopeSchema(Schema):
 
 
 class CategorySchema(Schema):
-    id: UUID
+    id: str
     name: str
+    balance: int
     sort_order: int
     hidden: bool
     deleted: bool

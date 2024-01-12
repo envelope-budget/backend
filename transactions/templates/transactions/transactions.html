@@ -313,6 +313,7 @@
                 <div class="relative max-w-sm">
                   <input
                     datepicker
+                    datepicker-format="yyyy-mm-dd"
                     type="text"
                     id="id_date"
                     class="editable-transaction-date block w-24 p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
@@ -324,12 +325,14 @@
               <td class="px-1 py-3 align-text-top">
                 <input
                   type="text"
+                  id="id_payee"
                   class="payee-input block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   x-model="editableTransaction.payee"
                 />
               </td>
               <td class="px-1 py-3 align-text-top">
                 <select
+                  id="id_envelope"
                   class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   x-model="editableTransaction.envelope"
                 >
@@ -344,8 +347,8 @@
               </td>
               <td class="px-1 py-3 align-text-top">
                 <textarea
-                  id="message"
                   rows="1"
+                  id="id_memo"
                   class="block p-1 w-full text-sm text-gray-900 bg-gray-50 rounded border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   placeholder="Memo..."
                   x-model="editableTransaction.memo"
@@ -354,6 +357,7 @@
               <td class="px-1 py-3 align-text-top w-5">
                 <input
                   type="text"
+                  id="id_outflow"
                   class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   x-model="editableTransaction.outflow"
                   placeholder="0.00"
@@ -363,6 +367,7 @@
               <td class="px-1 py-3 align-text-top w-5">
                 <input
                   type="text"
+                  id="id_inflow"
                   class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   x-model="editableTransaction.inflow"
                   placeholder="0.00"
@@ -435,19 +440,22 @@
                 <td
                   class="px-2 py-3 whitespace-nowrap truncate cursor-pointer"
                   x-text="transaction.account.name"
-                  @click="editTransactionAtIndex(transaction, index)"
+                  @click="editTransactionAtIndex(transaction, index, 'account')"
                 ></td>
                 <td
                   class="px-2 py-3 whitespace-nowrap truncate cursor-pointer"
                   x-text="transaction.date"
-                  @click="editTransactionAtIndex(transaction, index)"
+                  @click="editTransactionAtIndex(transaction, index, 'date')"
                 ></td>
                 <td
                   class="px-2 py-3 whitespace-nowrap truncate max-w-xs cursor-pointer"
                   x-text="transaction.payee ? transaction.payee.name : ''"
-                  @click="editTransactionAtIndex(transaction, index)"
+                  @click="editTransactionAtIndex(transaction, index, 'payee')"
                 ></td>
-                <td class="px-2 py-3 whitespace-nowrap truncate" @click="editTransactionAtIndex(transaction, index)">
+                <td
+                  class="px-2 py-3 whitespace-nowrap truncate"
+                  @click="editTransactionAtIndex(transaction, index, 'envelope')"
+                >
                   <button
                     type="button"
                     class="px-4 py-1 text-xs font-medium text-center inline-flex items-center text-white bg-yellow-700 rounded-full hover:bg-yellow-800 focus:ring-1 focus:outline-none focus:ring-yellow-300"
@@ -477,17 +485,17 @@
                 <td
                   class="px-2 py-3 whitespace-nowrap truncate max-w-xs cursor-pointer"
                   x-text="transaction.memo"
-                  @click="editTransactionAtIndex(transaction, index)"
+                  @click="editTransactionAtIndex(transaction, index, 'memo')"
                 ></td>
                 <td
                   class="px-2 py-3 text-right cursor-pointer"
                   x-text="formatAmount(transaction.amount, 'outflow')"
-                  @click="editTransactionAtIndex(transaction, index)"
+                  @click="editTransactionAtIndex(transaction, index, 'outflow')"
                 ></td>
                 <td
                   class="px-2 py-3 text-right text-green-700 dark:text-green-400 cursor-pointer"
                   x-text="formatAmount(transaction.amount, 'inflow')"
-                  @click="editTransactionAtIndex(transaction, index)"
+                  @click="editTransactionAtIndex(transaction, index, 'inflow')"
                 ></td>
                 <td>
                   <a x-show="!transaction.cleared" x-on:click="toggleCleared(transaction)">

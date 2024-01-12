@@ -29,13 +29,13 @@ client = plaid_api.PlaidApi(api_client)
 
 
 class AccountSchema(Schema):
-    id: UUID
-    budget_id: UUID
+    id: str
+    budget_id: str
     name: str
     type: str
     on_budget: bool
     closed: bool
-    note: str
+    note: str = None
     balance: int
     cleared_balance: int
     deleted: bool
@@ -60,7 +60,7 @@ class AccountCreateSchema(Schema):
     auth=django_auth,
     tags=["Accounts"],
 )
-def list_accounts(request, budget_id: UUID):
+def list_accounts(request, budget_id: str):
     user = request.auth
     budget = get_object_or_404(
         Budget, id=budget_id, user=user

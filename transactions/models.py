@@ -1,6 +1,7 @@
 import io
 
 from django.core.exceptions import ValidationError
+from django.dispatch import receiver
 from django.db import models
 from ofxparse import OfxParser
 
@@ -78,7 +79,58 @@ class Transaction(models.Model):
                 raise ValidationError(
                     f"A transaction with import_id '{self.import_id}' already exists for this budget and account."
                 )
+
+        soft_delete = kwargs.pop("soft_delete", False)
+        if not soft_delete:
+            is_new = kwargs.get("force_insert", False)
+            if not is_new:
+                # Fetch the old transaction to get the old amount
+                old_transaction = Transaction.objects.get(pk=self.pk)
+
+                if old_transaction.envelope:
+                    if old_transaction.envelope == self.envelope:
+                        self.envelope.balance -= old_transaction.amount
+                    else:
+                        # If the envelope has changed, update the old envelope balance
+                        old_transaction.envelope.balance -= old_transaction.amount
+                        old_transaction.envelope.save()
+
+                if self.account != old_transaction.account:
+                    # If the account has changed, update the old account balance
+                    old_transaction.account.balance -= old_transaction.amount
+                    old_transaction.account.save()
+                else:
+                    self.account.balance -= old_transaction.amount
+
+            # Update the balance for new and updated transactions
+            self.account.balance += self.amount
+            self.account.save()
+
+            if self.envelope:
+                self.envelope.balance += self.amount
+                self.envelope.save()
+                self.envelope.category.update_balance()
+
         super(Transaction, self).save(*args, **kwargs)
+
+    def soft_delete(self):
+        # Update the balance for deleted transactions
+        self.account.balance -= self.amount
+        self.account.save()
+        if self.envelope:
+            self.envelope.balance -= self.amount
+            self.envelope.save()
+        self.deleted = True
+        self.save(soft_delete=True)
+
+    def delete(self, *args, **kwargs):
+        # Update the balance for deleted transactions
+        self.account.balance -= self.amount
+        self.account.save()
+        if self.envelope:
+            self.envelope.balance -= self.amount
+            self.envelope.save()
+        super(Transaction, self).delete(*args, **kwargs)
 
     class Meta:
         # Define unique_together constraint

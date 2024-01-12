@@ -214,8 +214,7 @@ def delete_transaction(request, budget_id: str, transaction_id: str):
     )
 
     # Mark the transaction as deleted
-    transaction.deleted = True
-    transaction.save()
+    transaction.soft_delete()
     return {"detail": "Transaction deleted successfully"}
 
 

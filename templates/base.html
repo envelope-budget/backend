@@ -640,6 +640,7 @@
                   >
                     <span class="flex-1 whitespace-nowrap truncate mr-1">{{ account.name }}</span>
                     <span
+                      id="id_account_balance_{{ account.id }}"
                       class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full {% if account.balance < 0 %}text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800{% else %}text-green-800 bg-green-100 dark:bg-green-200 dark:text-green-800{% endif %}"
                     >
                       {{ account.balance | money }}
@@ -690,6 +691,7 @@
                   >
                     <span class="flex-1 whitespace-nowrap truncate mr-1">{{ cc.name }}</span>
                     <span
+                      id="id_account_balance_{{ cc.id }}"
                       class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full {% if cc.balance < 0 %}text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800{% else %}text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800{% endif %}"
                     >
                       {{ cc.balance|money }}
@@ -741,6 +743,7 @@
                   >
                     <span class="flex-1 whitespace-nowrap truncate mr-1">{{ l.name }}</span>
                     <span
+                      id="id_account_balance_{{ l.id }}"
                       class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800"
                     >
                       {{ l.balance|money }}

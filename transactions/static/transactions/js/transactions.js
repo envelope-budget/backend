@@ -90,6 +90,45 @@ async function deleteTransaction(transaction_id) {
   }
 }
 
+function moneyFormat(value) {
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  });
+  return formatter.format(value / 1000);
+}
+
+async function updateAccountBalances() {
+  const budgetId = getCookie("budget_id");
+  const url = `/api/accounts/${budgetId}`;
+  const csrfToken = getCookie("csrftoken");
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    data.forEach((account) => {
+      const accountBalanceElement = document.getElementById(`id_account_balance_${account.id}`);
+      if (accountBalanceElement) {
+        accountBalanceElement.innerText = moneyFormat(account.balance);
+      }
+    });
+  } catch (error) {
+    console.error("Error updating account balances:", error);
+    throw error; // Rethrow the error to be handled by the caller.
+  }
+}
+
 function transactionData() {
   return {
     activeIndex: 0,
@@ -166,6 +205,7 @@ function transactionData() {
         // Reset file input
         document.getElementById("ofx_file").value = "";
       }
+      updateAccountBalances();
     },
 
     get totalPages() {
@@ -222,14 +262,14 @@ function transactionData() {
 
       // Call the bulkDeleteTransactions function if there are IDs to delete
       if (idsToDelete.length > 0) {
-        for (const id of idsToDelete) {
-          await deleteTransaction(id);
-        }
+        const deletePromises = idsToDelete.map((id) => deleteTransaction(id));
+        await Promise.all(deletePromises);
         this.fetchTransactions(); // Refresh the transaction list
       }
+      updateAccountBalances();
     },
 
-    editTransactionAtIndex(transaction, index, highlightField) {
+    editTransactionAtIndex(transaction, index, highlightField = "account") {
       this.editableTransaction = { ...transaction };
       this.editableTransaction.inflow = this.formatAmount(transaction.amount, "inflow");
       this.editableTransaction.outflow = this.formatAmount(transaction.amount, "outflow");
@@ -255,9 +295,12 @@ function transactionData() {
           allRows[index].classList.add("hidden");
         }
 
-        // Focus on the first field
-        const firstField = document.getElementById("id_account");
-        firstField.focus();
+        const selectFields = ["date", "payee", "memo", "inflow", "outflow"];
+        if (selectFields.includes(highlightField)) {
+          document.getElementById(`id_${highlightField}`).select();
+        } else {
+          document.getElementById(`id_${highlightField}`).focus();
+        }
       });
     },
 
@@ -319,7 +362,6 @@ function transactionData() {
       const csrfToken = getCookie("csrftoken");
       const date = new Date(document.querySelector(".editable-transaction-date").value);
       const formattedDate = date.toISOString().slice(0, 10);
-      console.log(this.editableTransaction);
       const postData = {
         account_id: this.editableTransaction.account,
         amount: this.editableTransaction.amount,
@@ -371,6 +413,7 @@ function transactionData() {
           console.error("Error posting file:", error);
         }
       }
+      updateAccountBalances();
     },
 
     showAllTransactions() {

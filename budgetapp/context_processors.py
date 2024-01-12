@@ -9,7 +9,7 @@ def global_context(request):
     budget = None
     user_budgets = Budget.objects.filter(user=request.user)
     active_budget_id = request.session.get("budget")
-    if not active_budget_id:
+    if not active_budget_id and request.user.profile.active_budget:
         active_budget_id = request.user.profile.active_budget.id
         request.session["budget"] = active_budget_id
 

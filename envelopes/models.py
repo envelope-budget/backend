@@ -17,6 +17,7 @@ class Category(models.Model):
     )
     budget = models.ForeignKey("budgets.Budget", on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
+    balance = models.IntegerField(default=0)
     sort_order = models.IntegerField(default=99)
     hidden = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
@@ -31,6 +32,10 @@ class Category(models.Model):
 
     def envelopes(self):
         return Envelope.objects.filter(category=self)
+
+    def update_balance(self):
+        self.balance = sum([envelope.balance for envelope in self.envelopes()])
+        self.save()
 
 
 class EnvelopeManager(models.Manager):
@@ -51,7 +56,7 @@ class Envelope(models.Model):
     )
     name = models.CharField(max_length=255)
     sort_order = models.IntegerField(default=99)
-    balance = models.PositiveIntegerField(default=0)
+    balance = models.IntegerField(default=0)
     hidden = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
 
@@ -59,6 +64,11 @@ class Envelope(models.Model):
 
     def __str__(self):
         return str(self.name)
+
+    def save(self, *args, **kwargs):
+        if self.category:
+            self.category.update_balance()
+        super().save(*args, **kwargs)
 
 
 class EnvelopeGoal(models.Model):
