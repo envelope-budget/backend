@@ -6,3 +6,4 @@ CACHE
 /static/src/output.css
 *_log.txt
 __pycache__
+/dbreset
