@@ -1,0 +1,26 @@
+<script>
+  const linkHandler = Plaid.create({
+    token: "{{ link_token}}",
+    onSuccess: (public_token, metadata) => {
+      // Send the public_token to your app server.
+      $.post("{% url 'exchange_plaid_token' %}", {
+        public_token: public_token,
+      });
+    },
+    onExit: (err, metadata) => {
+      // Optionally capture when your user exited the Link flow.
+      // Storing this information can be helpful for support.
+      console.log(err);
+      console.log(metadata);
+      console.log("Exited");
+      // todo: close modal
+    },
+    onEvent: (eventName, metadata) => {
+      // Optionally capture Link flow events, streamed through
+      // this callback as your users connect an Item to Plaid.
+      console.log("onEvent", eventName, metadata);
+    },
+  });
+
+  linkHandler.open();
+</script>

@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from envelopes.models import Category, Envelope
+from .models import Payee
 
 
 @login_required
@@ -23,3 +24,9 @@ def transactions(request):
     )
     response.set_cookie("budget_id", request.session.get("budget"))
     return response
+
+
+@login_required
+def payees(request):
+    payees = Payee.objects.filter(budget=request.session.get("budget"))
+    return render(request, "transactions/payees.html", {"payees": payees})

@@ -12,14 +12,15 @@ router = Router()
 
 
 class createEnvelopeSchema(Schema):
-    budget_id: UUID
     name: str
-    category_id: UUID
+    category_id: str
+    balance: int
+    note: str
 
 
 class EnvelopeSchema(Schema):
-    id: UUID
-    budget_id: UUID
+    id: str
+    budget_id: str
     category_id: Optional[UUID]
     name: str
     sort_order: int = 99
@@ -81,8 +82,18 @@ def get_envelope(request, budget_id: UUID, envelope_id: UUID):
 @router.post(
     "/{budget_id}", response=EnvelopeSchema, auth=django_auth, tags=["Envelopes"]
 )
-def create_envelope(request, budget_id: UUID):
-    pass
+def create_envelope(request, budget_id: str, envelope: createEnvelopeSchema):
+    from budgets.models import Budget
+
+    budget = get_object_or_404(Budget, id=budget_id)
+    envelope = Envelope.objects.create(
+        budget=budget,
+        name=envelope.name,
+        category_id=envelope.category_id,
+        balance=envelope.balance,
+        note=envelope.note,
+    )
+    return envelope
 
 
 @router.patch(

@@ -1,5 +1,4 @@
-{% load compress %} {% load static %}{% load global %}
-<!DOCTYPE html>
+{% load compress %}{% load static %}{% load global %}<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -783,7 +782,7 @@
             </li>
             <li>
               <a
-                href="#"
+                href="{% url 'payees' %}"
                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group"
               >
                 <svg
@@ -1201,6 +1200,10 @@
           <div id="add-account-modal-body">
             <button
               class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-lg px-5 py-2.5 text-center inline-flex items-center me-2 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mb-5 flex-col"
+              hx-get="{% url 'x_add_plaid' %}"
+              hx-target="#add-account-modal-body"
+              hx-swap="innerHTML"
+              x-on:click="addAccountStep += 1"
             >
               <div class="flex items-center">
                 <svg

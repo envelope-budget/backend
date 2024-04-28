@@ -57,6 +57,7 @@ class Envelope(models.Model):
     name = models.CharField(max_length=255)
     sort_order = models.IntegerField(default=99)
     balance = models.IntegerField(default=0)
+    note = models.TextField(blank=True, null=True)
     hidden = models.BooleanField(default=False)
     deleted = models.BooleanField(default=False)
 
