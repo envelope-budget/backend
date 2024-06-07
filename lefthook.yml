@@ -3,7 +3,7 @@ pre-commit:
     biome:
       glob: '*'
       run: npx biome check --apply --no-errors-on-unmatched --files-ignore-unknown=true {staged_files} && git update-index --again
-    prettier-yaml:
+    prettier:
       run: |
         npx prettier --write {staged_files}
         git add {staged_files}
