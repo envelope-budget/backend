@@ -15,7 +15,7 @@
   "peacock.color": "#00860b",
   "editor.formatOnSave": true,
   "[django-html]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "monosans.djlint",
     "editor.quickSuggestions": {
       "other": true,
       "comments": true,

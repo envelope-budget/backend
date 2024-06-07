@@ -1,3 +1,4 @@
 black
 django-debug-toolbar
+djlint
 pylint-django

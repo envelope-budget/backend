@@ -1,250 +1,287 @@
-{% extends "base.html" %} {% load global %} {% load static %} {% load compress %} {% block content %}
-<section class="bg-gray-50 dark:bg-gray-900" x-data="envelopeData()">
-  <div class="mx-auto max-w-screen-xl">
-    <!-- Start coding here -->
-    <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
-      <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
-        <div class="w-full md:w-1/2">
-          <form class="flex items-center">
-            <label for="simple-search" class="sr-only">Search</label>
-            <div class="relative w-full">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg
-                  aria-hidden="true"
-                  class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                  fill="currentColor"
-                  viewbox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+{% extends "base.html" %}
+{% load global %}
+{% load static %}
+{% load compress %}
+{% block content %}
+  <section class="bg-gray-50 dark:bg-gray-900" x-data="envelopeData()">
+    <div class="mx-auto max-w-screen-xl">
+      <!-- Start coding here -->
+      <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+          <div class="w-full md:w-1/2">
+            <form class="flex items-center">
+              <label for="simple-search" class="sr-only">Search</label>
+              <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <svg aria-hidden="true"
+                       class="w-5 h-5 text-gray-500 dark:text-gray-400"
+                       fill="currentColor"
+                       viewbox="0 0 20 20"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <input type="text"
+                       id="simple-search"
+                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                       placeholder="Search"
+                       required="" />
               </div>
-              <input
-                type="text"
-                id="simple-search"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                placeholder="Search"
-                required=""
-              />
+            </form>
+          </div>
+          <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
+            <button type="button"
+                    class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800">
+              <svg class="h-3.5 w-3.5 mr-2"
+                   fill="currentColor"
+                   viewbox="0 0 20 20"
+                   xmlns="http://www.w3.org/2000/svg"
+                   aria-hidden="true">
+                <path clip-rule="evenodd" fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+              </svg>
+              Add category
+            </button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+              <tr>
+                <th scope="col" class="px-4 py-3">Category</th>
+                <th scope="col" class="px-4 py-3 text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for category in budget.categorized_envelopes %}
+                <tr class="border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                  <th scope="row"
+                      class="flex px-4 py-3 text-lg font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                    {{ category.name }}
+                    <button class="flex ml-4 px-3 items-center justify-center rounded-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700"
+                            data-modal-target="envelope-modal"
+                            data-modal-toggle="envelope-modal"
+                            @click="startNewEnvelope('{{ category.id }}')">
+                      <svg class="w-[8px] h-[8px] text-white dark:text-white mr-1"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           fill="none"
+                           viewBox="0 0 18 18">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16" />
+                      </svg>
+                      <svg class="w-[15px] h-[15px] text-white dark:text-white"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           fill="none"
+                           viewBox="0 0 20 16">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 2-8.4 7.05a1 1 0 0 1-1.2 0L1 2m18 0a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1m18 0v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2" />
+                      </svg>
+                    </button>
+                  </th>
+                  <td class="px-4 py-3 text-right">{{ category.balance | money }}</td>
+                </tr>
+                {% for envelope in category.envelopes %}
+                  <tr class="border-b dark:border-gray-700">
+                    <th scope="row"
+                        class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                      {{ envelope.name }}
+                    </th>
+                    <td class="px-4 py-3 text-right">{{ envelope.balance | money }}</td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+             aria-label="Table navigation">
+          table footer
+        </nav>
+      </div>
+    </div>
+    <!-- Category modal-->
+    <div id="category-modal"
+         tabindex="-1"
+         aria-hidden="true"
+         class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+      <div class="relative p-4 w-full max-w-md max-h-full">
+        <!-- Modal content -->
+        <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+          <!-- Modal header -->
+          <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create New Envelope</h3>
+            <button type="button"
+                    class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                    data-modal-toggle="envelope-modal">
+              <svg class="w-3 h-3"
+                   aria-hidden="true"
+                   xmlns="http://www.w3.org/2000/svg"
+                   fill="none"
+                   viewBox="0 0 14 14">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+              </svg>
+              <span class="sr-only">Close modal</span>
+            </button>
+          </div>
+          <!-- Modal body -->
+          <form class="p-4 md:p-5">
+            <div class="grid gap-4 mb-4 grid-cols-2">
+              <div class="col-span-2" id="emoji-picker"></div>
+              <div class="col-span-2">
+                <label for="name"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                <input type="text"
+                       name="name"
+                       id="name"
+                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                       placeholder="Type envelope name"
+                       x-model="envelope.name"
+                       required="" />
+              </div>
+              <div class="col-span-2 sm:col-span-1">
+                <label for="balance"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Balance</label>
+                <input type="number"
+                       name="balance"
+                       id="balance"
+                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                       placeholder="0.00"
+                       required=""
+                       x-model="envelope.balance" />
+              </div>
+              <div class="col-span-2 sm:col-span-1">
+                <label for="category"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Category</label>
+                <select id="category"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                        x-model="envelope.category_id">
+                  <option selected="">Select category</option>
+                  {% for category in budget.categorized_envelopes %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-span-2">
+                <label for="notes"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Notes</label>
+                <textarea id="notes"
+                          rows="4"
+                          class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                          placeholder="Write any notes here"
+                          x-model="envelope.notes"></textarea>
+              </div>
             </div>
+            <button type="button"
+                    class="text-white inline-flex items-center bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                    @click="createEnvelope()">
+              <svg class="me-1 -ms-1 w-5 h-5"
+                   fill="currentColor"
+                   viewBox="0 0 20 20"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd">
+                </path>
+              </svg>
+              Add new envelope
+            </button>
           </form>
         </div>
-        <div
-          class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0"
-        >
-          <button
-            type="button"
-            class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
-          >
-            <svg
-              class="h-3.5 w-3.5 mr-2"
-              fill="currentColor"
-              viewbox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <path
-                clip-rule="evenodd"
-                fill-rule="evenodd"
-                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-              />
-            </svg>
-            Add category
-          </button>
-        </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-            <tr>
-              <th scope="col" class="px-4 py-3">Category</th>
-              <th scope="col" class="px-4 py-3 text-right">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for category in budget.categorized_envelopes %}
-            <tr
-              class="border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
-            >
-              <th
-                scope="row"
-                class="flex px-4 py-3 text-lg font-medium text-gray-900 whitespace-nowrap dark:text-white"
-              >
-                {{ category.name }}
-                <button
-                  class="flex ml-4 px-3 items-center justify-center rounded-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700"
-                  data-modal-target="envelope-modal"
-                  data-modal-toggle="envelope-modal"
-                  @click="startNewEnvelope('{{ category.id }}')"
-                >
-                  <svg
-                    class="w-[8px] h-[8px] text-white dark:text-white mr-1"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 18 18"
-                  >
-                    <path
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 1v16M1 9h16"
-                    />
-                  </svg>
-                  <svg
-                    class="w-[15px] h-[15px] text-white dark:text-white"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 20 16"
-                  >
-                    <path
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="m19 2-8.4 7.05a1 1 0 0 1-1.2 0L1 2m18 0a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1m18 0v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2"
-                    />
-                  </svg>
-                </button>
-              </th>
-              <td class="px-4 py-3 text-right">{{ category.balance | money }}</td>
-            </tr>
-            {% for envelope in category.envelopes %}
-            <tr class="border-b dark:border-gray-700">
-              <th scope="row" class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                {{ envelope.name }}
-              </th>
-              <td class="px-4 py-3 text-right">{{ envelope.balance | money }}</td>
-            </tr>
-            {% endfor %} {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <nav
-        class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
-        aria-label="Table navigation"
-      >
-        table footer
-      </nav>
     </div>
-  </div>
-
-  <!-- Envelope modal -->
-  <div
-    id="envelope-modal"
-    tabindex="-1"
-    aria-hidden="true"
-    class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
-  >
-    <div class="relative p-4 w-full max-w-md max-h-full">
-      <!-- Modal content -->
-      <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
-        <!-- Modal header -->
-        <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create New Envelope</h3>
-          <button
-            type="button"
-            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
-            data-modal-toggle="envelope-modal"
-          >
-            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-              />
-            </svg>
-            <span class="sr-only">Close modal</span>
-          </button>
-        </div>
-        <!-- Modal body -->
-        <form class="p-4 md:p-5">
-          <div class="grid gap-4 mb-4 grid-cols-2">
-            <div class="col-span-2" id="emoji-picker"></div>
-            <div class="col-span-2">
-              <label for="name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Name</label>
-              <input
-                type="text"
-                name="name"
-                id="name"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                placeholder="Type envelope name"
-                x-model="envelope.name"
-                required=""
-              />
-            </div>
-            <div class="col-span-2 sm:col-span-1">
-              <label for="balance" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Balance</label>
-              <input
-                type="number"
-                name="balance"
-                id="balance"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                placeholder="0.00"
-                required=""
-                x-model="envelope.balance"
-              />
-            </div>
-            <div class="col-span-2 sm:col-span-1">
-              <label for="category" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                >Category</label
-              >
-              <select
-                id="category"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                x-model="envelope.category_id"
-              >
-                <option selected="">Select category</option>
-                {% for category in budget.categorized_envelopes %}
-                <option value="{{ category.id }}">{{ category.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-span-2">
-              <label for="notes" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Notes</label>
-              <textarea
-                id="notes"
-                rows="4"
-                class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                placeholder="Write any notes here"
-                x-model="envelope.notes"
-              ></textarea>
-            </div>
+    <!-- End category modal -->
+    <!-- Envelope modal -->
+    <div id="envelope-modal"
+         tabindex="-1"
+         aria-hidden="true"
+         class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+      <div class="relative p-4 w-full max-w-md max-h-full">
+        <!-- Modal content -->
+        <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+          <!-- Modal header -->
+          <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create New Envelope</h3>
+            <button type="button"
+                    class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                    data-modal-toggle="envelope-modal">
+              <svg class="w-3 h-3"
+                   aria-hidden="true"
+                   xmlns="http://www.w3.org/2000/svg"
+                   fill="none"
+                   viewBox="0 0 14 14">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+              </svg>
+              <span class="sr-only">Close modal</span>
+            </button>
           </div>
-          <button
-            type="button"
-            class="text-white inline-flex items-center bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-            @click="createEnvelope()"
-          >
-            <svg class="me-1 -ms-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path
-                fill-rule="evenodd"
-                d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                clip-rule="evenodd"
-              ></path>
-            </svg>
-            Add new envelope
-          </button>
-        </form>
+          <!-- Modal body -->
+          <form class="p-4 md:p-5">
+            <div class="grid gap-4 mb-4 grid-cols-2">
+              <div class="col-span-2" id="emoji-picker"></div>
+              <div class="col-span-2">
+                <label for="name"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                <input type="text"
+                       name="name"
+                       id="name"
+                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                       placeholder="Type envelope name"
+                       x-model="envelope.name"
+                       required="" />
+              </div>
+              <div class="col-span-2 sm:col-span-1">
+                <label for="balance"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Balance</label>
+                <input type="number"
+                       name="balance"
+                       id="balance"
+                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                       placeholder="0.00"
+                       required=""
+                       x-model="envelope.balance" />
+              </div>
+              <div class="col-span-2 sm:col-span-1">
+                <label for="category"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Category</label>
+                <select id="category"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                        x-model="envelope.category_id">
+                  <option selected="">Select category</option>
+                  {% for category in budget.categorized_envelopes %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-span-2">
+                <label for="notes"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Notes</label>
+                <textarea id="notes"
+                          rows="4"
+                          class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                          placeholder="Write any notes here"
+                          x-model="envelope.notes"></textarea>
+              </div>
+            </div>
+            <button type="button"
+                    class="text-white inline-flex items-center bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                    @click="createEnvelope()">
+              <svg class="me-1 -ms-1 w-5 h-5"
+                   fill="currentColor"
+                   viewBox="0 0 20 20"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd">
+                </path>
+              </svg>
+              Add new envelope
+            </button>
+          </form>
+        </div>
       </div>
     </div>
-  </div>
-  <!-- End of Modal -->
-</section>
-
+    <!-- End of Modal -->
+  </section>
 {% endblock %}
 <!-- End Content -->
-
 {% block js %}
-<script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
-{% compress js %}
-<script src="{% static 'envelopes/js/envelopes.js' %}"></script>
-{% endcompress %} {% endblock js%}
+  <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+  {% compress js %}
+    <script src="{% static 'envelopes/js/envelopes.js' %}"></script>
+  {% endcompress %}
+{% endblock js %}
