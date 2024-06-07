@@ -26,6 +26,8 @@ function envelopeData() {
       note: 'Test Note',
     },
 
+    createCategory() {},
+
     startNewEnvelope(category_id) {
       this.envelope.id = '';
       this.envelope.name = '';

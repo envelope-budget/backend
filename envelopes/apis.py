@@ -1,4 +1,3 @@
-from uuid import UUID
 from typing import List, Optional
 from datetime import datetime
 
@@ -21,7 +20,7 @@ class createEnvelopeSchema(Schema):
 class EnvelopeSchema(Schema):
     id: str
     budget_id: str
-    category_id: Optional[UUID]
+    category_id: Optional[str]
     name: str
     sort_order: int = 99
     balance: int
@@ -40,8 +39,8 @@ class CategorySchema(Schema):
 
 
 class EnvelopeGoalSchema(Schema):
-    id: UUID
-    envelope_id: UUID
+    id: str
+    envelope_id: str
     type: str
     day: Optional[int]
     cadence: Optional[str]
@@ -62,7 +61,7 @@ class EnvelopeGoalSchema(Schema):
     auth=django_auth,
     tags=["Envelopes"],
 )
-def list_envelopes(request, budget_id: UUID):
+def list_envelopes(request, budget_id: str):
     from budgets.models import Budget
 
     budget = get_object_or_404(Budget, id=budget_id)
@@ -75,7 +74,7 @@ def list_envelopes(request, budget_id: UUID):
     auth=django_auth,
     tags=["Envelopes"],
 )
-def get_envelope(request, budget_id: UUID, envelope_id: UUID):
+def get_envelope(request, budget_id: str, envelope_id: str):
     pass
 
 
@@ -102,5 +101,18 @@ def create_envelope(request, budget_id: str, envelope: createEnvelopeSchema):
     auth=django_auth,
     tags=["Envelopes"],
 )
-def update_envelope(request, budget_id: UUID, envelope_id: UUID):
+def update_envelope(request, budget_id: str, envelope_id: str):
     pass
+
+
+@router.delete(
+    "/{budget_id}/{envelope_id}",
+    response=EnvelopeSchema,
+    auth=django_auth,
+    tags=["Envelopes"],
+)
+def delete_envelope(request, budget_id: str, envelope_id: str):
+    envelope = get_object_or_404(Envelope, id=envelope_id, budget_id=budget_id)
+    envelope.deleted = True
+    envelope.save()
+    return envelope

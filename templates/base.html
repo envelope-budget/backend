@@ -10,6 +10,8 @@
     <title>EnvelopeBudget</title>
     <meta name="description"
           content="Budgeting app based on the classic envelope method." />
+    <meta name="keywords"
+          content="envelope budget, envelope budgeting, envelope budget app, envelope budgeting app" />
     {% compress css %}
       <link rel="stylesheet" href="{% static 'src/output.css' %}" />
       <link rel="stylesheet" href="{% static 'css/base.css' %}" />
@@ -759,7 +761,9 @@
       <!-- End Sidebar -->
       <!-- Main content -->
       <main class="md:ml-64 h-auto pt-16">
-        {% block content %}DEFAULT CONTENT{% endblock content %}
+        {% block content %}
+          DEFAULT CONTENT
+        {% endblock content %}
       </main>
       <!-- End Main content -->
     </div>

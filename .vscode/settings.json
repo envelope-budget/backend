@@ -27,5 +27,12 @@
   "pylint.args": [
     "--load-plugins=pylint_django",
     "--django-settings-module=budgetapp.settings",
+  ],
+  "djlint.blankLineAfterTag": [
+    "endblock",
+    "extends"
+  ],
+  "djlint.blankLineBeforeTag": [
+    "block"
   ]
 }
