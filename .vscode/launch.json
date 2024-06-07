@@ -9,10 +9,7 @@
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/manage.py",
-      "args": [
-        "runserver",
-        "8007"
-      ],
+      "args": ["runserver", "8007"],
       "django": true,
       "justMyCode": true
     }

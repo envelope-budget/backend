@@ -47,3 +47,11 @@ echo "✉️ Installing requirements..."
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install -r dev_requirements.txt
+
+# Install pnpm if not installed
+if ! command -v pnpm &> /dev/null; then
+  echo "✉️ Installing pnpm..."
+  npm install -g pnpm
+fi
+pnpm install
+npx lefthook install

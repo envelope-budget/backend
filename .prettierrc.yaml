@@ -1,0 +1,34 @@
+singleQuote: true
+useTabs: false
+tabWidth: 2
+printWidth: 120
+trailingComma: 'es5'
+twigPrintWidth: 5000
+twigMultiTags: ['with,endwith']
+twigAlwaysBreakObjects: false
+twigSingleQuote: false
+
+overrides:
+  - files: ['*.jinja', '*.django', '**/views/**/*.html']
+    options:
+      parser: 'melody'
+  - files: '*.{yaml,yml}'
+    options:
+      parser: 'yaml'
+      proseWrap: 'always'
+  - files: '*.md'
+    options:
+      parser: 'markdown'
+      proseWrap: 'always'
+  - files: 'README'
+    options:
+      parser: 'markdown'
+      proseWrap: 'always'
+  - files: '*.html'
+    options:
+      parser: 'html'
+  - files: '*.css'
+    options:
+      parser: 'css'
+
+plugins: ['/Users/dustin/sd/src/eb/node_modules/prettier-plugin-django']
