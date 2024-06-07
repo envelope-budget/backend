@@ -1,0 +1,17 @@
+# Ignore all the files that biome supports
+# Ignore JavaScript files
+*.js
+*.jsx
+*.mjs
+*.cjs
+
+# Ignore TypeScript files
+*.ts
+*.tsx
+
+# Ignore JSON files
+*.json
+*.jsonc
+
+# Explicitly ignore pnpm-lock.yaml
+pnpm-lock.yaml
