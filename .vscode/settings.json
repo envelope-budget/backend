@@ -34,5 +34,8 @@
   ],
   "djlint.blankLineBeforeTag": [
     "block"
+  ],
+  "cSpell.words": [
+    "budgetapp"
   ]
 }

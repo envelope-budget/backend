@@ -1,10 +1,14 @@
 from accounts.models import Account
+from budgetapp.models import UserProfile
 from budgets.models import Budget
 
 
 def global_context(request):
     if not request.user.is_authenticated:
         return {}
+
+    if not UserProfile.objects.filter(user=request.user).exists():
+        UserProfile.objects.create(user=request.user)
 
     budget = None
     user_budgets = Budget.objects.filter(user=request.user)
