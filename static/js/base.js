@@ -75,3 +75,37 @@ window.getCookie = name => {
   }
   return cookieValue;
 };
+
+// side menu drop-down toggles
+document.addEventListener('DOMContentLoaded', event => {
+  const dropdowns = ['loans', 'credit-cards', 'accounts'];
+
+  // Restore the state from local storage
+  for (const dropdown of dropdowns) {
+    const button = document.querySelector(`[data-collapse-toggle="dropdown-${dropdown}"]`);
+    const content = document.querySelector(`#dropdown-${dropdown}`);
+    const icon = button.querySelector('svg:last-child');
+    const isOpen = localStorage.getItem(`dropdown-${dropdown}`) === 'true';
+
+    if (isOpen) {
+      icon.classList.add('rotate-90');
+      content.classList.add('hidden');
+    } else {
+      icon.classList.remove('rotate-90');
+      content.classList.remove('hidden');
+    }
+
+    setTimeout(() => {
+      icon.classList.remove('transition-transform');
+      icon.classList.remove('duration-200');
+    }, 500);
+
+    // Save the state in local storage on toggle
+    button.addEventListener('click', () => {
+      icon.classList.toggle('rotate-90');
+      content.classList.toggle('hidden');
+      const isCurrentlyOpen = icon.classList.contains('rotate-90');
+      localStorage.setItem(`dropdown-${dropdown}`, isCurrentlyOpen);
+    });
+  }
+});

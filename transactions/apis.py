@@ -80,7 +80,7 @@ class BulkDeleteSchema(Schema):
     tags=["Transactions"],
 )
 @paginate
-def list_transactions(request, budget_id: str):
+def list_transactions(request, budget_id: str, account_id: Optional[str] = None):
     """List all transactions with pagination"""
     # Ensure the budget belongs to the authenticated user
     if not Budget.objects.filter(id=budget_id, user=request.user).exists():
@@ -89,6 +89,10 @@ def list_transactions(request, budget_id: str):
         )  # Return an empty list or raise an error if the budget does not belong to the user
 
     transactions_query = Transaction.objects.filter(budget_id=budget_id, deleted=False)
+
+    if account_id:
+        transactions_query = transactions_query.filter(account_id=account_id)
+
     return transactions_query
 
 

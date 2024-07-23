@@ -7,6 +7,7 @@ import requests
 
 from budgetapp.utils import money_db_prep
 from budgets.models import Budget
+from envelopes.models import Category, Envelope
 
 from .forms import AccountForm
 from .models import Account
@@ -89,3 +90,26 @@ def x_add_account_form(request):
         form = AccountForm()
 
     return render(request, "accounts/_add_account_form.html", {"form": form})
+
+
+@login_required
+def account_transactions(request, slug):
+    account = Account.objects.get(slug=slug)
+    categories = Category.objects.filter(budget=request.session.get("budget"))
+    categorized_envelopes = []
+    for category in categories:
+        categorized_envelopes.append(
+            {
+                "category": category,
+                "envelopes": Envelope.objects.filter(category=category),
+            }
+        )
+
+    response = render(
+        request,
+        "transactions/transactions.html",
+        {"categorized_envelopes": categorized_envelopes, "account": account},
+    )
+    response.set_cookie("budget_id", request.session.get("budget"))
+    response.set_cookie("account_id", account.id)
+    return response

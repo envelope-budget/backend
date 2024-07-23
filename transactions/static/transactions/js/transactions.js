@@ -13,10 +13,14 @@ function getCookie(name) {
   return cookieValue;
 }
 
-async function get_transactions(budgetId, page = 1, pageSize = 20) {
+async function get_transactions(budgetId, page = 1, pageSize = 20, accountId = null) {
   const offset = (page - 1) * pageSize;
-  const url = `/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}`;
+  let url = `/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}`;
   const csrfToken = getCookie('csrftoken');
+
+  if (accountId) {
+    url += `&account_id=${accountId}`;
+  }
 
   try {
     const response = await fetch(url, {
@@ -141,8 +145,10 @@ function transactionData() {
 
     async fetchTransactions() {
       const budgetId = getCookie('budget_id');
+      const accountId = getCookie('account_id');
+      console.log('accountId:', accountId);
       try {
-        const data = await get_transactions(budgetId, this.currentPage, this.transactionsPerPage);
+        const data = await get_transactions(budgetId, this.currentPage, this.transactionsPerPage, accountId);
         if (data?.items) {
           this.transactions = data.items.map(transaction => ({
             ...transaction,

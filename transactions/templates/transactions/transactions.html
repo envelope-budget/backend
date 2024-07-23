@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+
 {% load static %}
 {% load compress %}
+
 {% block content %}
   <section class="bg-gray-50 dark:bg-gray-900" x-data="transactionData()">
     <div class="mx-auto">
       <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden min-h-screen">
+        <h2 class="text-3xl font-extrabold dark:text-white">{{ account.name }}</h2>
         <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
           <div class="w-full md:w-1/2">
             <form class="flex items-center">
@@ -405,6 +408,7 @@
     </div>
   </section>
 {% endblock %}
+
 {% block js %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/datepicker.min.js"></script>
   {% compress js %}

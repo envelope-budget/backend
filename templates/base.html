@@ -442,8 +442,8 @@
             <li>
               <button type="button"
                       class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                      aria-controls="dropdown-pages"
-                      data-collapse-toggle="dropdown-pages">
+                      aria-controls="dropdown-accounts"
+                      data-collapse-toggle="dropdown-accounts">
                 <svg class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
                      aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg"
@@ -454,7 +454,7 @@
                 </svg>
                 <span class="flex-1 ml-3 text-left whitespace-nowrap">Accounts</span>
                 <svg aria-hidden="true"
-                     class="w-6 h-6"
+                     class="w-6 h-6 rotate-90"
                      fill="currentColor"
                      viewBox="0 0 20 20"
                      xmlns="http://www.w3.org/2000/svg">
@@ -462,10 +462,10 @@
                   </path>
                 </svg>
               </button>
-              <ul id="dropdown-pages" class="py-2 space-y-2">
+              <ul id="dropdown-accounts" class="hidden py-2 space-y-2">
                 {% for account in accounts %}
                   <li>
-                    <a href="{% url 'account' %}"
+                    <a href="{% url 'account_transactions' slug=account.slug %}"
                        class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700 account-link">
                       <span class="flex-1 whitespace-nowrap truncate mr-1 account-name">{{ account.name }}</span>
                       <span id="id_account_balance_{{ account.id }}"
@@ -480,8 +480,8 @@
             <li>
               <button type="button"
                       class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                      aria-controls="dropdown-sales"
-                      data-collapse-toggle="dropdown-sales">
+                      aria-controls="dropdown-credit-cards"
+                      data-collapse-toggle="dropdown-credit-cards">
                 <svg class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
                      aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg"
@@ -492,7 +492,7 @@
                 </svg>
                 <span class="flex-1 ml-3 text-left whitespace-nowrap">Credit Cards</span>
                 <svg aria-hidden="true"
-                     class="w-6 h-6"
+                     class="w-6 h-6 rotate-90"
                      fill="currentColor"
                      viewBox="0 0 20 20"
                      xmlns="http://www.w3.org/2000/svg">
@@ -500,10 +500,10 @@
                   </path>
                 </svg>
               </button>
-              <ul id="dropdown-sales" class="py-2 space-y-2">
+              <ul id="dropdown-credit-cards" class="hidden py-2 space-y-2">
                 {% for cc in credit_cards %}
                   <li>
-                    <a href="#"
+                    <a href="{% url 'account_transactions' slug=cc.slug %}"
                        class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700">
                       <span class="flex-1 whitespace-nowrap truncate mr-1">{{ cc.name }}</span>
                       <span id="id_account_balance_{{ cc.id }}"
@@ -529,7 +529,7 @@
                 </svg>
                 <span class="flex-1 ml-3 text-left whitespace-nowrap">Loans</span>
                 <svg aria-hidden="true"
-                     class="w-6 h-6"
+                     class="w-6 h-6 rotate-90"
                      fill="currentColor"
                      viewBox="0 0 20 20"
                      xmlns="http://www.w3.org/2000/svg">
@@ -540,7 +540,7 @@
               <ul id="dropdown-loans" class="hidden py-2 space-y-2">
                 {% for l in loans %}
                   <li>
-                    <a href="#"
+                    <a href="{% url 'account_transactions' slug=l.slug %}"
                        class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700">
                       <span class="flex-1 whitespace-nowrap truncate mr-1">{{ l.name }}</span>
                       <span id="id_account_balance_{{ l.id }}"

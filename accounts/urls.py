@@ -8,4 +8,5 @@ urlpatterns = [
     ),
     path("x-add-plaid", views.x_add_plaid, name="x_add_plaid"),
     path("x-add-account-form", views.x_add_account_form, name="x_add_account_form"),
+    path("<slug:slug>/", views.account_transactions, name="account_transactions"),
 ]
