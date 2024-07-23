@@ -60,7 +60,6 @@ const handler = Plaid.create({
   onEvent: (eventName, metadata) => {},
 });
 
-//
 window.getCookie = name => {
   let cookieValue = null;
   if (document.cookie && document.cookie !== '') {
@@ -76,36 +75,32 @@ window.getCookie = name => {
   return cookieValue;
 };
 
+window.setCookie = (name, value, days) => {
+  let expires = '';
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+    expires = `; expires=${date.toUTCString()}`;
+  }
+  document.cookie = `${name}=${value || ''}${expires}; path=/`;
+};
+
 // side menu drop-down toggles
 document.addEventListener('DOMContentLoaded', event => {
   const dropdowns = ['loans', 'credit-cards', 'accounts'];
 
-  // Restore the state from local storage
+  // Restore the state from cookies
   for (const dropdown of dropdowns) {
     const button = document.querySelector(`[data-collapse-toggle="dropdown-${dropdown}"]`);
     const content = document.querySelector(`#dropdown-${dropdown}`);
     const icon = button.querySelector('svg:last-child');
-    const isOpen = localStorage.getItem(`dropdown-${dropdown}`) === 'true';
 
-    if (isOpen) {
-      icon.classList.add('rotate-90');
-      content.classList.add('hidden');
-    } else {
-      icon.classList.remove('rotate-90');
-      content.classList.remove('hidden');
-    }
-
-    setTimeout(() => {
-      icon.classList.remove('transition-transform');
-      icon.classList.remove('duration-200');
-    }, 500);
-
-    // Save the state in local storage on toggle
+    // Save the state in cookies on toggle
     button.addEventListener('click', () => {
       icon.classList.toggle('rotate-90');
       content.classList.toggle('hidden');
-      const isCurrentlyOpen = icon.classList.contains('rotate-90');
-      localStorage.setItem(`dropdown-${dropdown}`, isCurrentlyOpen);
+      const isCurrentlyOpen = !icon.classList.contains('rotate-90');
+      setCookie(`show-${dropdown}`, isCurrentlyOpen, 30); // Cookie expires in 30 days
     });
   }
 });

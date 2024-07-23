@@ -54,6 +54,9 @@ def global_context(request):
         "loans": loans,
         "budget": budget,
         "budgets": user_budgets,
+        "show_accounts": request.COOKIES.get("show-accounts") == "true",
+        "show_credit_cards": request.COOKIES.get("show-credit-cards") == "true",
+        "show_loans": request.COOKIES.get("show-loans") == "true",
     }
 
 

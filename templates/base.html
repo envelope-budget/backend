@@ -454,7 +454,7 @@
                 </svg>
                 <span class="flex-1 ml-3 text-left whitespace-nowrap">Accounts</span>
                 <svg aria-hidden="true"
-                     class="w-6 h-6 rotate-90"
+                     class="w-6 h-6 transition-transform duration-200 {% if not show_accounts %}rotate-90{% endif %}"
                      fill="currentColor"
                      viewBox="0 0 20 20"
                      xmlns="http://www.w3.org/2000/svg">
@@ -462,7 +462,8 @@
                   </path>
                 </svg>
               </button>
-              <ul id="dropdown-accounts" class="hidden py-2 space-y-2">
+              <ul id="dropdown-accounts"
+                  class="{% if not show_accounts %}hidden{% endif %} py-2 space-y-2">
                 {% for account in accounts %}
                   <li>
                     <a href="{% url 'account_transactions' slug=account.slug %}"
@@ -492,7 +493,7 @@
                 </svg>
                 <span class="flex-1 ml-3 text-left whitespace-nowrap">Credit Cards</span>
                 <svg aria-hidden="true"
-                     class="w-6 h-6 rotate-90"
+                     class="w-6 h-6 transition-transform duration-200 {% if not show_credit_cards %}rotate-90{% endif %}"
                      fill="currentColor"
                      viewBox="0 0 20 20"
                      xmlns="http://www.w3.org/2000/svg">
@@ -500,7 +501,8 @@
                   </path>
                 </svg>
               </button>
-              <ul id="dropdown-credit-cards" class="hidden py-2 space-y-2">
+              <ul id="dropdown-credit-cards"
+                  class="{% if not show_credit_cards %}hidden{% endif %} py-2 space-y-2">
                 {% for cc in credit_cards %}
                   <li>
                     <a href="{% url 'account_transactions' slug=cc.slug %}"
@@ -529,7 +531,7 @@
                 </svg>
                 <span class="flex-1 ml-3 text-left whitespace-nowrap">Loans</span>
                 <svg aria-hidden="true"
-                     class="w-6 h-6 rotate-90"
+                     class="w-6 h-6 transition-transform duration-200 {% if not show_loans %}rotate-90{% endif %}"
                      fill="currentColor"
                      viewBox="0 0 20 20"
                      xmlns="http://www.w3.org/2000/svg">
@@ -537,7 +539,8 @@
                   </path>
                 </svg>
               </button>
-              <ul id="dropdown-loans" class="hidden py-2 space-y-2">
+              <ul id="dropdown-loans"
+                  class="{% if not show_loans %}hidden{% endif %} py-2 space-y-2">
                 {% for l in loans %}
                   <li>
                     <a href="{% url 'account_transactions' slug=l.slug %}"
