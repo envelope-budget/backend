@@ -382,10 +382,13 @@ function transactionData() {
         approved: this.editableTransaction.approved,
         cleared: this.editableTransaction.cleared,
         date: formattedDate,
-        envelope_id: this.editableTransaction.envelope,
         memo: this.editableTransaction.memo,
         payee: this.editableTransaction.payee,
       };
+
+      if (this.editableTransaction.envelope) {
+        postData.envelope_id = this.editableTransaction.envelope;
+      }
 
       if (this.editableTransaction.id) {
         url += `/${this.editableTransaction.id}`;

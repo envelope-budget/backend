@@ -123,7 +123,10 @@ def create_transaction(
 
     account = get_object_or_404(Account, id=transaction.account_id)
     payee = Payee.objects.get_or_create(name=transaction.payee, budget=budget)[0]
-    envelope = get_object_or_404(Envelope, id=transaction.envelope_id)
+    if transaction.envelope_id:
+        envelope = get_object_or_404(Envelope, id=transaction.envelope_id)
+    else:
+        envelope = None
     new_transaction = Transaction.objects.create(
         budget=budget,
         account=account,
