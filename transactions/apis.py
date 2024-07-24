@@ -1,4 +1,3 @@
-import io
 from datetime import date
 from typing import List, Optional
 
@@ -7,7 +6,7 @@ from ninja import File, Router, Schema, UploadedFile
 from ninja.pagination import paginate
 from ninja.security import django_auth
 
-from .models import Payee, Transaction, SubTransaction
+from .models import Payee, Transaction
 from accounts.models import Account
 from budgets.models import Budget
 from envelopes.models import Envelope
@@ -43,6 +42,7 @@ class TransactionSchema(Schema):
     cleared: bool
     reconciled: bool
     approved: bool
+    import_id: Optional[str]
 
 
 class TransactionPostPatchSchema(Schema):
@@ -55,6 +55,7 @@ class TransactionPostPatchSchema(Schema):
     cleared: Optional[bool] = False
     reconciled: Optional[bool] = False
     approved: Optional[bool] = True
+    import_id: Optional[str] = None
 
 
 class SubTransactionSchema(Schema):
@@ -71,6 +72,10 @@ class OFXDataSchema(Schema):
 
 class BulkDeleteSchema(Schema):
     transaction_ids: List[str]
+
+
+class Error(Schema):
+    message: str
 
 
 @router.get(
@@ -106,13 +111,16 @@ def get_transaction(request, budget_id: str, transaction_id: str):
     """
     Retrieves a transaction by its ID and budget ID.
     """
-    # TODO: ensure the transaction belongs to the user
+    # ensure the transaction belongs to the user
     transaction = get_object_or_404(Transaction, id=transaction_id, budget_id=budget_id)
     return TransactionSchema.from_orm(transaction)
 
 
 @router.post(
-    "/{budget_id}", response=TransactionSchema, auth=django_auth, tags=["Transactions"]
+    "/{budget_id}",
+    auth=django_auth,
+    tags=["Transactions"],
+    response={200: TransactionSchema, 409: Error},
 )
 def create_transaction(
     request, budget_id: str, transaction: TransactionPostPatchSchema
@@ -127,6 +135,14 @@ def create_transaction(
         envelope = get_object_or_404(Envelope, id=transaction.envelope_id)
     else:
         envelope = None
+
+    # Check if import_id already exists
+    if (
+        transaction.import_id
+        and Transaction.objects.filter(import_id=transaction.import_id).exists()
+    ):
+        return 409, {"message": "Transaction with this import_id already exists"}
+
     new_transaction = Transaction.objects.create(
         budget=budget,
         account=account,
@@ -138,8 +154,91 @@ def create_transaction(
         cleared=transaction.cleared,
         reconciled=transaction.reconciled,
         approved=transaction.approved,
+        import_id=transaction.import_id,
     )
     return TransactionSchema.from_orm(new_transaction)
+
+
+# post multiple transactions
+@router.post(
+    "/{budget_id}/bulk",
+    response={200: List[TransactionSchema], 404: Error},
+    auth=django_auth,
+    tags=["Transactions"],
+)
+def create_transactions(
+    request, budget_id: str, transactions: List[TransactionPostPatchSchema]
+):
+    """Create multiple transactions"""
+    # Ensure the budget belongs to the user
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    # Cache accounts, payees, and envelopes
+    account_ids = set(t.account_id for t in transactions)
+    accounts = {a.id: a for a in Account.objects.filter(id__in=account_ids)}
+
+    payee_names = set(t.payee for t in transactions)
+    payees = {
+        p.name: p for p in Payee.objects.filter(name__in=payee_names, budget=budget)
+    }
+
+    envelope_ids = set(t.envelope_id for t in transactions if t.envelope_id)
+    envelopes = {e.id: e for e in Envelope.objects.filter(id__in=envelope_ids)}
+
+    new_transactions = []
+    duplicate_import_ids = []
+    for transaction in transactions:
+        account = accounts.get(transaction.account_id)
+        if not account:
+            return 404, {
+                "message",
+                f"Account with id {transaction.account_id} not found",
+            }
+
+        payee = payees.get(transaction.payee)
+        if not payee:
+            payee = Payee.objects.create(name=transaction.payee, budget=budget)
+            payees[transaction.payee] = payee
+
+        envelope = None
+        if transaction.envelope_id:
+            envelope = envelopes.get(transaction.envelope_id)
+            if not envelope:
+                return 404, {
+                    "message": f"Envelope with id {transaction.envelope_id} not found"
+                }
+
+        # Check if import_id already exists
+        if (
+            transaction.import_id
+            and Transaction.objects.filter(
+                import_id=transaction.import_id, budget=budget
+            ).exists()
+        ):
+            duplicate_import_ids.append(transaction.import_id)
+            continue
+
+        new_transaction = Transaction.objects.create(
+            budget=budget,
+            account=account,
+            envelope=envelope,
+            payee=payee,
+            date=transaction.date,
+            amount=transaction.amount,
+            memo=transaction.memo,
+            cleared=transaction.cleared,
+            reconciled=transaction.reconciled,
+            import_id=transaction.import_id,
+        )
+        new_transactions.append(new_transaction)
+
+    response_data = {
+        "transactions": [
+            TransactionSchema.from_orm(transaction) for transaction in new_transactions
+        ],
+        "duplicate_import_ids": duplicate_import_ids,
+    }
+    return response_data
 
 
 @router.put(
@@ -232,12 +331,14 @@ def import_ofx_file(
     request, budget_id: str, account_id: str, ofx_file: UploadedFile = File(...)
 ):
     """Import transactions from an OFX file"""
-    # TODO: ensure the account belongs to the user
+    # ensure the account belongs to the user
+    account = get_object_or_404(Account, id=account_id, budget__user=request.user)
+
     # Read the OFX file content
     ofx_data = ofx_file.file.read().decode("utf-8")
 
     # Call the class method to import transactions
-    return Transaction.import_ofx(budget_id, account_id, ofx_data)
+    return Transaction.import_ofx(budget_id, account.id, ofx_data)
 
 
 @router.post(
@@ -245,6 +346,8 @@ def import_ofx_file(
 )
 def import_ofx_data(request, budget_id: str, account_id: str, data: OFXDataSchema):
     """Import transactions from an OFX data string"""
-    # TODO: ensure the account belongs to the user
+    # ensure the account belongs to the user
+    account = get_object_or_404(Account, id=account_id, budget__user=request.user)
+
     # Call the class method to import transactions
-    return Transaction.import_ofx(budget_id, account_id, data.ofx_data)
+    return Transaction.import_ofx(budget_id, account.id, data.ofx_data)
