@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load compress %}
+
+{% block content %}
+  <section class="bg-gray-50 dark:bg-gray-900" x-data="transactionData()">
+    <div class="mx-auto">
+      <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden min-h-screen">
+        <h2 class="text-3xl font-extrabold dark:text-white p-3">API Keys</h2>
+        <p class="dark:text-white p-3 text-lg font-normal text-gray-500 lg:text-xl dark:text-gray-400">
+          Developer API keys allow secure access to our API endpoints, enabling integration of our services into your applications and automating tasks. See the <a href="/api/docs"
+    target="_blank"
+    class="font-medium text-blue-600 dark:text-blue-500 hover:underline">API Documentation</a> for available endpoints you can integrate with.
+        </p>
+        <p class="dark:text-white p-3 text-lg font-normal text-gray-500 lg:text-xl dark:text-gray-400">
+          <strong>Note:</strong> API keys are only displayed at the time of creation. If you have lost your key, you will need to generate a new one.
+        </p>
+        <div class="p-3">
+          <button data-modal-target="api-key-modal"
+                  data-modal-toggle="api-key-modal"
+                  class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800">
+            <svg class="h-3.5 w-3.5 mr-2"
+                 fill="currentColor"
+                 viewbox="0 0 20 20"
+                 xmlns="http://www.w3.org/2000/svg"
+                 aria-hidden="true">
+              <path clip-rule="evenodd" fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+            </svg>
+            Generate New API Key
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+              <tr>
+                <th scope="col" class="px-4 py-3">API Key</th>
+                <th scope="col" class="px-4 py-3">Date Generated</th>
+                <th scope="col" class="px-4 py-3">Termination Date</th>
+                <th scope="col" class="px-4 py-3">Note</th>
+                <th scope="col" class="px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">abc1***def9</td>
+                <td class="px-4 py-3">2023-05-01</td>
+                <td class="px-4 py-3">2024-05-01</td>
+                <td class="px-4 py-3">Production API</td>
+                <td class="px-4 py-3">
+                  <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded flex items-center">
+                    <svg class="w-4 h-4 text-white mr-1"
+                         aria-hidden="true"
+                         xmlns="http://www.w3.org/2000/svg"
+                         width="24"
+                         height="24"
+                         fill="none"
+                         viewBox="0 0 24 24">
+                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
+                    </svg>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">xyz9***uvw2</td>
+                <td class="px-4 py-3">2023-06-15</td>
+                <td class="px-4 py-3">-</td>
+                <td class="px-4 py-3">Testing Environment</td>
+                <td class="px-4 py-3">
+                  <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded flex items-center">
+                    <svg class="w-4 h-4 text-white mr-1"
+                         aria-hidden="true"
+                         xmlns="http://www.w3.org/2000/svg"
+                         width="24"
+                         height="24"
+                         fill="none"
+                         viewBox="0 0 24 24">
+                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
+                    </svg>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              <tr class="bg-white dark:bg-gray-800">
+                <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">mno5***pqr7</td>
+                <td class="px-4 py-3">2023-07-01</td>
+                <td class="px-4 py-3">2023-12-31</td>
+                <td class="px-4 py-3">Temporary Project</td>
+                <td class="px-4 py-3">
+                  <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded flex items-center">
+                    <svg class="w-4 h-4 text-white mr-1"
+                         aria-hidden="true"
+                         xmlns="http://www.w3.org/2000/svg"
+                         width="24"
+                         height="24"
+                         fill="none"
+                         viewBox="0 0 24 24">
+                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z" />
+                    </svg>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="dark:text-white p-3 text-lg font-normal text-gray-500 lg:text-xl dark:text-gray-400">
+          You can use the API keys in your headers with either the X-API-Key or as the Authorization Bearer Token. Here's how to use each method:
+        </p>
+        <div class="p-4 mb-4 text-sm text-blue-800 rounded-lg bg-blue-50 dark:bg-gray-800 dark:text-blue-400 m-5"
+             role="alert">
+          <h3 class="text-lg font-medium mb-2">1. X-API-Key:</h3>
+          <p class="mb-2">Add the following header to your HTTP request:</p>
+          <code class="px-2 py-1 font-mono text-base font-semibold text-gray-900 bg-gray-100 rounded-lg dark:bg-gray-800 dark:text-white">X-API-Key: your_api_key_here</code>
+        </div>
+        <div class="p-4 mb-4 text-sm text-blue-800 rounded-lg bg-blue-50 dark:bg-gray-800 dark:text-blue-400 m-5"
+             role="alert">
+          <h3 class="text-lg font-medium mb-2">2. Authorization Bearer Token:</h3>
+          <p class="mb-2">Add the following header to your HTTP request:</p>
+          <code class="px-2 py-1 font-mono text-base font-semibold text-gray-900 bg-gray-100 rounded-lg dark:bg-gray-800 dark:text-white">Authorization: Bearer your_api_key_here</code>
+        </div>
+        <p class="dark:text-white p-3 text-lg font-normal text-gray-500 lg:text-xl dark:text-gray-400">
+          Both methods are equally valid and secure. Choose the one that best fits your implementation.
+        </p>
+      </div>
+    </div>
+  </section>
+  <div id="api-key-modal"
+       tabindex="-1"
+       aria-hidden="true"
+       class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+    <div class="relative p-4 w-full max-w-md max-h-full">
+      <!-- Modal content -->
+      <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+        <!-- Modal header -->
+        <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Create API Key</h3>
+          <button type="button"
+                  class="end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                  data-modal-hide="api-key-modal">
+            <svg class="w-3 h-3"
+                 aria-hidden="true"
+                 xmlns="http://www.w3.org/2000/svg"
+                 fill="none"
+                 viewBox="0 0 14 14">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+            </svg>
+            <span class="sr-only">Close modal</span>
+          </button>
+        </div>
+        <!-- Modal body -->
+        <div class="p-4 md:p-5">
+          <form class="space-y-4" action="#">
+            <div>
+              <label for="termination-date"
+                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                Termination Date/Time (Optional)
+              </label>
+              <input type="datetime-local"
+                     name="termination-date"
+                     id="termination-date"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" />
+            </div>
+            <div>
+              <label for="note"
+                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Note (Optional)</label>
+              <textarea name="note"
+                        id="note"
+                        rows="3"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                        placeholder="Add a note for this API key"></textarea>
+            </div>
+            <button type="submit"
+                    class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+              Create API Key
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}
+
+{% block js %}
+  <script>
+
+  </script>
+{% endblock js %}

@@ -5,6 +5,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     get_user_model,
 )
+from django.views.generic import TemplateView
 from .forms import UserRegisterForm, UserLoginForm
 
 
@@ -41,3 +42,7 @@ def login(request):
 def logout(request):
     auth_logout(request)
     return redirect("login")
+
+
+class APIKeysView(TemplateView):
+    template_name = "api_keys.html"
