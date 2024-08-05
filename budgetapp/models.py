@@ -1,6 +1,8 @@
-from datetime import timezone
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.db import models
+
+from budgetapp.utils import generate_uuid_hex
 
 
 User = get_user_model()
@@ -20,6 +22,12 @@ import secrets
 
 
 class APIKey(models.Model):
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="api_keys")
     key = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -32,6 +40,10 @@ class APIKey(models.Model):
     @property
     def is_active(self):
         return self.termination_date is None or self.termination_date > timezone.now()
+
+    @property
+    def masked_key(self):
+        return f"{self.key[:4]}***{self.key[-4:]}"
 
     def save(self, *args, **kwargs):
         if not self.key:

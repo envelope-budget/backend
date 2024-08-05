@@ -10,13 +10,30 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
-    list_display = ("user", "key", "created_at", "is_active")
+    list_display = (
+        "user",
+        "obfuscated_key",
+        "created_at",
+        "termination_date",
+        "is_active_emoji",
+    )
     list_filter = ("created_at",)
     search_fields = ("user__username", "user__email", "key")
-    raw_id_fields = ("user",)
-    readonly_fields = ("key", "created_at")
+    readonly_fields = ("obfuscated_key", "created_at", "key", "id")
 
     def get_readonly_fields(self, request, obj=None):
-        if obj:  # editing an existing object
+        if obj:
             return self.readonly_fields + ("user",)
         return self.readonly_fields
+
+    def obfuscated_key(self, obj):
+        if obj.key:
+            return f"{obj.key[:4]}...{obj.key[-4:]}"
+        return ""
+
+    obfuscated_key.short_description = "Key"
+
+    def is_active_emoji(self, obj):
+        return "✅" if obj.is_active else "❌"
+
+    is_active_emoji.short_description = "Is Active"

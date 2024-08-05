@@ -1,5 +1,6 @@
 from datetime import date
 from typing import List, Optional
+import logging
 
 from django.shortcuts import get_object_or_404
 from ninja import File, Router, Schema, UploadedFile
@@ -11,6 +12,8 @@ from accounts.models import Account
 from budgets.models import Budget
 from envelopes.models import Envelope
 
+
+logger = logging.getLogger(__name__)
 router = Router()
 
 

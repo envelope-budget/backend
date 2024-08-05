@@ -1,5 +1,5 @@
 from ninja import NinjaAPI
-from ninja.security import HttpBearer, APIKeyHeader
+from ninja.security import HttpBearer, APIKeyHeader, django_auth
 import logging
 
 from budgets.apis import router as budgets_router
@@ -39,7 +39,7 @@ class ApiKeyAuth(APIKeyHeader):
 api = NinjaAPI(
     title="EnvelopeBudget API",
     csrf=True,
-    auth=[AuthBearer(), ApiKeyAuth()],
+    auth=[AuthBearer(), ApiKeyAuth(), django_auth],
     openapi_extra={
         "components": {
             "securitySchemes": {

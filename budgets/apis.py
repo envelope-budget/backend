@@ -22,7 +22,7 @@ class createBudgetSchema(Schema):
 
 
 class BudgetSchema(Schema):
-    id: UUID
+    id: str
     user_id: int
     name: str
     date_format: str

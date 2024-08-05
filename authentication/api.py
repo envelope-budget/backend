@@ -58,3 +58,22 @@ def create_api_key(request, data: APIKeyCreateSerializer):
     logger.debug("API key created: %s", api_key)
 
     return APIKeyResponseSerializer.from_orm(api_key)
+
+
+@router.delete("/api-key/{api_key_id}")
+def delete_api_key(request, api_key_id: str):
+    user = request.auth
+    logger.debug("Deleting API key %s for user: %s", api_key_id, user)
+
+    if not user:
+        logger.error("User not found")
+        return {"success": False, "message": "User not authenticated"}
+
+    try:
+        api_key = APIKey.objects.get(id=api_key_id, user=user)
+        api_key.delete()
+        logger.debug("API key deleted: %s", api_key_id)
+        return {"success": True, "message": "API key deleted successfully"}
+    except APIKey.DoesNotExist:
+        logger.error("API key not found: %s", api_key_id)
+        return {"success": False, "message": "API key not found"}

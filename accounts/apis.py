@@ -35,7 +35,7 @@ class AccountSchema(Schema):
     type: str
     on_budget: bool
     closed: bool
-    note: str = None
+    note: Optional[str] = None
     balance: int
     cleared_balance: int
     deleted: bool
@@ -57,7 +57,6 @@ class AccountCreateSchema(Schema):
 @router.get(
     "/{budget_id}",
     response=List[AccountSchema],
-    auth=django_auth,
     tags=["Accounts"],
 )
 def list_accounts(request, budget_id: str):
