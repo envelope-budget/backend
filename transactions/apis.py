@@ -22,6 +22,15 @@ class PayeeSchema(Schema):
     name: str
 
 
+class PayeeCreateSchema(Schema):
+    name: str
+
+
+class PayeeUpdateSchema(Schema):
+    name: str
+    deleted: bool = False
+
+
 class EnvelopeSchema(Schema):
     id: str
     name: str
@@ -82,7 +91,7 @@ class Error(Schema):
 
 
 @router.get(
-    "/{budget_id}",
+    "/transactions/{budget_id}",
     response=List[TransactionSchema],
     auth=django_auth,
     tags=["Transactions"],
@@ -105,7 +114,7 @@ def list_transactions(request, budget_id: str, account_id: Optional[str] = None)
 
 
 @router.get(
-    "/{budget_id}/{transaction_id}",
+    "/transactions/{budget_id}/{transaction_id}",
     response=TransactionSchema,
     auth=django_auth,
     tags=["Transactions"],
@@ -120,7 +129,7 @@ def get_transaction(request, budget_id: str, transaction_id: str):
 
 
 @router.post(
-    "/{budget_id}",
+    "/transactions/{budget_id}",
     auth=django_auth,
     tags=["Transactions"],
     response={200: TransactionSchema, 409: Error},
@@ -164,7 +173,7 @@ def create_transaction(
 
 # post multiple transactions
 @router.post(
-    "/{budget_id}/bulk",
+    "/transactions/{budget_id}/bulk",
     response={200: List[TransactionSchema], 404: Error},
     auth=django_auth,
     tags=["Transactions"],
@@ -245,7 +254,7 @@ def create_transactions(
 
 
 @router.put(
-    "/{budget_id}/{transaction_id}",
+    "/transactions/{budget_id}/{transaction_id}",
     response=TransactionSchema,
     auth=django_auth,
     tags=["Transactions"],
@@ -286,9 +295,8 @@ def update_transaction(
 
 
 @router.patch(
-    "/{budget_id}/{transaction_id}",
+    "/transactions/{budget_id}/{transaction_id}",
     response=TransactionSchema,
-    auth=django_auth,
     tags=["Transactions"],
 )
 def patch_transaction(
@@ -312,7 +320,7 @@ def patch_transaction(
     return TransactionSchema.from_orm(trans)
 
 
-@router.delete("/{budget_id}/{transaction_id}", auth=django_auth, tags=["Transactions"])
+@router.delete("/transactions/{budget_id}/{transaction_id}", tags=["Transactions"])
 def delete_transaction(request, budget_id: str, transaction_id: str):
     """
     Delete a transaction.
@@ -328,7 +336,7 @@ def delete_transaction(request, budget_id: str, transaction_id: str):
 
 
 @router.post(
-    "/{budget_id}/{account_id}/import/ofx/file", auth=django_auth, tags=["Transactions"]
+    "/transactions/{budget_id}/{account_id}/import/ofx/file", tags=["Transactions"]
 )
 def import_ofx_file(
     request, budget_id: str, account_id: str, ofx_file: UploadedFile = File(...)
@@ -345,7 +353,7 @@ def import_ofx_file(
 
 
 @router.post(
-    "/{budget_id}/{account_id}/import/ofx/data", auth=django_auth, tags=["Transactions"]
+    "/transactions/{budget_id}/{account_id}/import/ofx/data", tags=["Transactions"]
 )
 def import_ofx_data(request, budget_id: str, account_id: str, data: OFXDataSchema):
     """Import transactions from an OFX data string"""
@@ -354,3 +362,60 @@ def import_ofx_data(request, budget_id: str, account_id: str, data: OFXDataSchem
 
     # Call the class method to import transactions
     return Transaction.import_ofx(budget_id, account.id, data.ofx_data)
+
+
+@router.get("/payees/{budget_id}", response=List[PayeeSchema], tags=["Payees"])
+def list_payees(request, budget_id: str):
+    user = request.auth
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+    payees = Payee.objects.filter(budget=budget)
+    return [PayeeSchema.from_orm(payee) for payee in payees]
+
+
+@router.get(
+    "/payees/{budget_id}/{payee_id}",
+    response=PayeeSchema,
+    auth=django_auth,
+    tags=["Payees"],
+)
+def get_payee(request, budget_id: str, payee_id: str):
+    user = request.auth
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+    payee = get_object_or_404(Payee, id=payee_id, budget=budget)
+    return PayeeSchema.from_orm(payee)
+
+
+@router.post(
+    "/payees/{budget_id}", response=PayeeSchema, auth=django_auth, tags=["Payees"]
+)
+def create_payee(request, budget_id: str, payee_in: PayeeCreateSchema):
+    user = request.auth
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+    payee = Payee.objects.create(budget=budget, **payee_in.dict())
+    return PayeeSchema.from_orm(payee)
+
+
+@router.put(
+    "/payees/{budget_id}/{payee_id}",
+    response=PayeeSchema,
+    auth=django_auth,
+    tags=["Payees"],
+)
+def update_payee(request, budget_id: str, payee_id: str, payee_in: PayeeUpdateSchema):
+    user = request.auth
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+    payee = get_object_or_404(Payee, id=payee_id, budget=budget)
+    for attr, value in payee_in.dict().items():
+        setattr(payee, attr, value)
+    payee.save()
+    return PayeeSchema.from_orm(payee)
+
+
+@router.delete("/payees/{budget_id}/{payee_id}", auth=django_auth, tags=["Payees"])
+def delete_payee(request, budget_id: str, payee_id: str):
+    user = request.auth
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+    payee = get_object_or_404(Payee, id=payee_id, budget=budget)
+    payee.deleted = True
+    payee.save()
+    return {"detail": "Payee deleted successfully"}

@@ -19,6 +19,7 @@ class AuthBearer(HttpBearer):
         user = APIKey.get_user_from_key(token)
         if user:
             logger.debug("User authenticated: %s", user)
+            request.user = user
             return user
         logger.debug("Authentication failed: Invalid token")
         return None
@@ -31,6 +32,7 @@ class ApiKeyAuth(APIKeyHeader):
         user = APIKey.get_user_from_key(key)
         if user:
             logger.debug("Successfully authenticated user: %s", user)
+            request.user = user
             return user
         logger.debug("Authentication failed: Invalid API key")
         return None
@@ -38,7 +40,7 @@ class ApiKeyAuth(APIKeyHeader):
 
 api = NinjaAPI(
     title="EnvelopeBudget API",
-    csrf=True,
+    csrf=False,
     auth=[AuthBearer(), ApiKeyAuth(), django_auth],
     openapi_extra={
         "components": {
@@ -55,5 +57,5 @@ api.add_router("/budgets", budgets_router)
 api.add_router("/accounts", accounts_router)
 api.add_router("/envelopes", envelopes_router)
 api.add_router("/categories", category_router)
-api.add_router("/transactions", transactions_router)
+api.add_router("", transactions_router)
 api.add_router("/auth", authentication_router)
