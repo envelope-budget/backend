@@ -413,9 +413,30 @@ def update_payee(request, budget_id: str, payee_id: str, payee_in: PayeeUpdateSc
 
 @router.delete("/payees/{budget_id}/{payee_id}", auth=django_auth, tags=["Payees"])
 def delete_payee(request, budget_id: str, payee_id: str):
+    if payee_id == "delete-unused":
+        return delete_unused_payees(request, budget_id)
     user = request.auth
     budget = get_object_or_404(Budget, id=budget_id, user=user)
     payee = get_object_or_404(Payee, id=payee_id, budget=budget)
     payee.deleted = True
     payee.save()
     return {"detail": "Payee deleted successfully"}
+
+
+@router.delete("/payees/{budget_id}/delete-unused", auth=django_auth, tags=["Payees"])
+def delete_unused_payees(request, budget_id: str):
+    """
+    Delete all payees that are not used in any transactions for the given budget.
+
+    This performs a hard delete, completely removing unused payees from the database.
+    """
+    user = request.auth
+    # Ensure the budget belongs to the authenticated user
+    # get_object_or_404(Budget, id=budget_id, user=user)
+    # Call the method to delete unused payees
+    deleted_count = Payee.delete_unused_payees(budget_id)
+
+    return {
+        "detail": f"Successfully deleted {deleted_count} unused payees",
+        "count": deleted_count,
+    }

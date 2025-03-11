@@ -24,6 +24,38 @@ class Payee(models.Model):
     def __str__(self):
         return str(self.name)
 
+    @classmethod
+    def delete_unused_payees(cls, budget_id):
+        """
+        Hard deletes any payees that are not used in any transactions for the given budget.
+
+        Args:
+            budget_id (str): The ID of the budget to clean up payees for
+
+        Returns:
+            int: Number of payees deleted
+        """
+        # Get all payees for this budget
+        payees = cls.objects.filter(budget_id=budget_id)
+
+        # Get IDs of payees that are used in transactions
+        used_payee_ids = (
+            Transaction.objects.filter(budget_id=budget_id)
+            .values_list("payee_id", flat=True)
+            .distinct()
+        )
+
+        # Find payees that are not used in any transactions
+        unused_payees = payees.exclude(id__in=used_payee_ids)
+
+        # Count payees before deletion
+        count = unused_payees.count()
+
+        # Hard delete unused payees
+        unused_payees.delete()
+
+        return count
+
 
 class TransactionManager(models.Manager):
     def get_queryset(self):

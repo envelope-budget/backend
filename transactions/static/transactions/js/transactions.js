@@ -1,18 +1,3 @@
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-      const trimmedCookie = cookie.trim();
-      if (trimmedCookie.substring(0, name.length + 1) === `${name}=`) {
-        cookieValue = decodeURIComponent(trimmedCookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
 async function get_transactions(budgetId, page = 1, pageSize = 20, accountId = null) {
   const offset = (page - 1) * pageSize;
   let url = `/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}`;
@@ -453,6 +438,32 @@ function transactionData() {
 
     setupKeyboardShortcuts() {
       document.addEventListener('keydown', event => {
+        // Check if the active element is the search input or any other input/textarea
+        const activeElement = document.activeElement;
+        const isInputActive =
+          activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.tagName === 'SELECT';
+
+        if (event.key === 'Escape') {
+          this.cancelTransaction();
+        }
+
+        // Save transaction on Enter key if form is active (except when in a textarea)
+        if (event.key === 'Enter' && this.showEditForm && !(activeElement.tagName === 'TEXTAREA')) {
+          // Prevent form submission if the enter was pressed in an input field
+          if (isInputActive) {
+            event.preventDefault();
+          }
+          this.saveTransaction();
+          return;
+        }
+
+        // If user is typing in an input field, don't trigger other keyboard shortcuts
+        if (isInputActive) {
+          return;
+        }
+
         if ((event.key === 'j' || event.key === 'k') && !this.showEditForm) {
           const newIndex = this.activeIndex + (event.key === 'j' ? 1 : -1);
           if (newIndex >= 0 && newIndex < this.transactions.length) {
@@ -462,14 +473,16 @@ function transactionData() {
           this.startNewTransaction();
         } else if (event.key === 'c') {
           this.toggleCleared(this.getActiveTransaction());
-        } else if (event.key === 'e' && !this.showEditForm) {
+        } else if ((event.key === 'e' || event.key === 'Enter') && !this.showEditForm) {
           this.editTransactionAtIndex(this.getActiveTransaction(), this.activeIndex);
+          // set envelope selector as active
+          Alpine.nextTick(() => {
+            document.getElementById('id_envelope').focus();
+          });
         } else if (event.key === 'x') {
           this.toggleCheckboxInActiveRow();
         } else if (event.key === '#') {
           this.deleteCheckedRows();
-        } else if (event.key === 'Escape') {
-          this.cancelTransaction();
         }
       });
     },
