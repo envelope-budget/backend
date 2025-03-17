@@ -914,6 +914,28 @@
                 Use 3rd party (Plaid) account aggregation service to automatically import transactions.
               </div>
             </button>
+
+            <button class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-lg px-5 py-2.5 text-center inline-flex items-center me-2 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mb-5 flex-col"
+              hx-get="{% url 'x_add_sfin' %}"
+              hx-target="#add-account-modal-body"
+              hx-swap="innerHTML"
+              x-on:click="addAccountStep += 1"
+              >
+              <div class="flex items-center">
+                <svg class="w-6 h-7 text-white mr-3"
+                     aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg"
+                     fill="none"
+                     viewBox="0 0 18 18">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.013 7.962a3.519 3.519 0 0 0-4.975 0l-3.554 3.554a3.518 3.518 0 0 0 4.975 4.975l.461-.46m-.461-4.515a3.518 3.518 0 0 0 4.975 0l3.553-3.554a3.518 3.518 0 0 0-4.974-4.975L10.3 3.7" />
+                </svg>
+                Linked Account with SimpleFIN
+              </div>
+              <div class="block font-normal text-sm mt-2">
+                SimpleFIN (also SFIN) stands for Simple Financial Interchange. An affordable account aggregation solution.
+              </div>
+            </button>
+
             <button class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-lg px-5 py-2.5 text-center inline-flex items-center me-2 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mb-5 flex-col">
               <div class="flex items-center">
                 <svg class="w-6 h-7 text-white mr-3"

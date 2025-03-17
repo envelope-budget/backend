@@ -10,7 +10,7 @@ from budgets.models import Budget
 from envelopes.models import Category, Envelope
 
 from .forms import AccountForm
-from .models import Account
+from .models import Account, SimpleFINConnection
 
 
 @login_required
@@ -69,6 +69,26 @@ def x_add_plaid(request):
     response_data["client_id"] = os.environ.get("PLAID_CLIENT_ID")
     # assert False, response_data
     return render(request, "accounts/_add_plaid.html", response_data)
+
+
+@login_required
+def x_add_sfin(request):
+    if request.method == "POST":
+        setup_token = request.POST.get("setup_token")
+        if setup_token:
+            try:
+                # Store the SimpleFIN setup token associated with the user/budget
+                SimpleFINConnection.create_from_setup_token(
+                    budget=Budget.objects.get(id=request.session.get("budget")),
+                    setup_token=setup_token,
+                )
+                messages.success(request, "SimpleFIN connection added successfully")
+                return redirect(request.META.get("HTTP_REFERER"))
+            except Exception as e:
+                messages.error(request, f"Failed to add SimpleFIN connection: {str(e)}")
+                return redirect(request.META.get("HTTP_REFERER"))
+
+    return render(request, "accounts/_add_sfin.html")
 
 
 @login_required
