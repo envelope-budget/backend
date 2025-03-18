@@ -1,4 +1,3 @@
-from uuid import UUID
 from typing import List, Optional
 from datetime import datetime
 
@@ -9,8 +8,9 @@ from django.shortcuts import get_object_or_404
 import plaid
 from plaid.api import plaid_api
 
-from .models import Account
+from .models import Account, SimpleFINConnection
 from budgets.models import Budget
+
 
 router = Router()
 
@@ -54,6 +54,23 @@ class AccountCreateSchema(Schema):
     # deleted is omitted because it defaults to False and typically wouldn't be set on create
 
 
+class SimpleFINConnectionSchema(Schema):
+    """
+    SimpleFINConnectionSchema represents the schema for a simple financial connection.
+
+    Attributes:
+        id (str): The unique identifier for the financial connection.
+        budget_id (str): The identifier for the associated budget.
+        access_url (str): The URL used to access the financial connection.
+        created_at (datetime): The timestamp when the financial connection was created.
+    """
+
+    id: str
+    budget_id: str
+    access_url: str
+    created_at: datetime
+
+
 @router.get(
     "/{budget_id}",
     response=List[AccountSchema],
@@ -69,12 +86,41 @@ def list_accounts(request, budget_id: str):
 
 
 @router.get(
+    "/{budget_id}/simplefin",
+    response=Optional[SimpleFINConnectionSchema],
+    auth=django_auth,
+    tags=["Accounts"],
+)
+def get_simplefin_connection(request, budget_id: str):
+    """
+    Get the SimpleFIN connection information for a budget.
+    Returns None if no connection exists.
+    """
+    user = request.auth
+
+    budget = get_object_or_404(
+        Budget, id=budget_id, user=user
+    )  # Ensure the budget belongs to the user
+
+    try:
+        connection = SimpleFINConnection.objects.get(budget=budget)
+        return SimpleFINConnectionSchema(
+            id=connection.id,
+            budget_id=str(budget.id),
+            access_url=connection.access_url,
+            created_at=connection.created_at,
+        )
+    except SimpleFINConnection.DoesNotExist:
+        return None
+
+
+@router.get(
     "/{budget_id}/{account_id}",
     response=AccountSchema,
     auth=django_auth,
     tags=["Accounts"],
 )
-def get_account(request, budget_id: UUID, account_id: UUID):
+def get_account(request, budget_id: str, account_id: str):
     user = request.auth
     get_object_or_404(
         Budget, id=budget_id, user=user
@@ -88,7 +134,7 @@ def get_account(request, budget_id: UUID, account_id: UUID):
 @router.post(
     "/{budget_id}", response=AccountSchema, auth=django_auth, tags=["Accounts"]
 )
-def create_account(request, budget_id: UUID, account_in: AccountCreateSchema):
+def create_account(request, budget_id: str, account_in: AccountCreateSchema):
     user = request.auth
     budget = get_object_or_404(
         Budget, id=budget_id, user=user

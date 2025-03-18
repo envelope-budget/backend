@@ -85,6 +85,56 @@ window.setCookie = (name, value, days) => {
   document.cookie = `${name}=${value || ''}${expires}; path=/`;
 };
 
+// SimpleFIN connection handling
+window.getSimpleFINConnection = async budgetId => {
+  // Check if we already have a stored access URL for this budget
+  const storedBudgetId = getCookie('simplefin-budget-id');
+  const storedAccessUrl = getCookie('simplefin-access-url');
+
+  // If we have a stored access URL for the current budget, return it
+  if (storedBudgetId === budgetId && storedAccessUrl) {
+    console.log('Using cached SimpleFIN access URL');
+    return storedAccessUrl;
+  }
+
+  try {
+    // Get the CSRF token for the request
+    const csrftoken = getCookie('csrftoken');
+
+    // Fetch the SimpleFIN connection info
+    const response = await fetch(`/api/accounts/${budgetId}/simplefin`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+      },
+      credentials: 'same-origin',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch SimpleFIN connection: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data) {
+      // Store the budget ID and access URL in cookies (30 days expiration)
+      setCookie('simplefin-budget-id', budgetId, 30);
+      setCookie('simplefin-access-url', data.access_url, 30);
+      console.log('SimpleFIN connection info updated');
+      return data.access_url;
+    }
+    // Clear cookies if no connection exists
+    setCookie('simplefin-budget-id', '', -1);
+    setCookie('simplefin-access-url', '', -1);
+    console.log('No SimpleFIN connection found for this budget');
+    return null;
+  } catch (error) {
+    console.error('Error fetching SimpleFIN connection:', error);
+    return null;
+  }
+};
+
 // side menu drop-down toggles
 document.addEventListener('DOMContentLoaded', event => {
   const dropdowns = ['loans', 'credit-cards', 'accounts'];
@@ -102,5 +152,19 @@ document.addEventListener('DOMContentLoaded', event => {
       const isCurrentlyOpen = !icon.classList.contains('rotate-90');
       setCookie(`show-${dropdown}`, isCurrentlyOpen, 30); // Cookie expires in 30 days
     });
+  }
+
+  // Look for a budget ID in the cookie
+  const budgetId = getCookie('budget_id');
+  if (budgetId) {
+    getSimpleFINConnection(budgetId)
+      .then(accessUrl => {
+        if (accessUrl) {
+          console.log('SimpleFIN connection loaded successfully');
+        }
+      })
+      .catch(error => {
+        console.error('Failed to load SimpleFIN connection:', error);
+      });
   }
 });
