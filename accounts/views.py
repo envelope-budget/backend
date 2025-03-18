@@ -1,3 +1,4 @@
+import logging
 import os
 
 from django.contrib import messages
@@ -11,6 +12,8 @@ from envelopes.models import Category, Envelope
 
 from .forms import AccountForm
 from .models import Account, SimpleFINConnection
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -88,7 +91,22 @@ def x_add_sfin(request):
                 messages.error(request, f"Failed to add SimpleFIN connection: {str(e)}")
                 return redirect(request.META.get("HTTP_REFERER"))
 
-    return render(request, "accounts/_add_sfin.html")
+    # Get sfin access token
+    try:
+        sfin_connection = SimpleFINConnection.objects.get(
+            budget=Budget.objects.get(id=request.session.get("budget"))
+        )
+        return render(
+            request,
+            "accounts/_add_sfin_account.html",
+            {"sfin_connection": sfin_connection},
+        )
+    except SimpleFINConnection.DoesNotExist:
+        sfin_connection = None
+
+    return render(
+        request, "accounts/_add_sfin.html", {"sfin_connection": sfin_connection}
+    )
 
 
 @login_required

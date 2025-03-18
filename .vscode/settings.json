@@ -54,6 +54,8 @@
     "linejoin",
     "nowrap",
     "optgroup",
+    "sfin",
+    "SimpleFIN",
     "viewbox"
   ]
 }
