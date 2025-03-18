@@ -96,6 +96,13 @@ def x_add_sfin(request):
         sfin_connection = SimpleFINConnection.objects.get(
             budget=Budget.objects.get(id=request.session.get("budget"))
         )
+
+        # Get accounts from SimpleFIN
+        # accounts = sfin_connection.get_accounts()
+        # logger.info("Accounts: %s", accounts)
+
+        # Just render the form. It will load the accounts via ajax
+
         return render(
             request,
             "accounts/_add_sfin_account.html",
@@ -132,7 +139,7 @@ def x_add_account_form(request):
 
 @login_required
 def account_transactions(request, slug):
-    account = Account.objects.get(slug=slug)
+    account = Account.objects.get(slug=slug, budget=request.session.get("budget"))
     categories = Category.objects.filter(budget=request.session.get("budget"))
     categorized_envelopes = []
     for category in categories:

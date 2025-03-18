@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from ninja import Router, Schema
@@ -110,6 +110,27 @@ def get_simplefin_connection(request, budget_id: str):
             access_url=connection.access_url,
             created_at=connection.created_at,
         )
+    except SimpleFINConnection.DoesNotExist:
+        return None
+
+
+@router.get(
+    "/{budget_id}/simplefin/accounts",
+    response=Dict[str, Any],
+    auth=django_auth,
+    tags=["Accounts"],
+)
+def get_simplefin_accounts(request, budget_id: str):
+    """
+    Get the accounts from the SimpleFIN connection for a budget.
+    """
+    user = request.auth
+
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+
+    try:
+        connection = SimpleFINConnection.objects.get(budget=budget)
+        return connection.get_accounts()
     except SimpleFINConnection.DoesNotExist:
         return None
 

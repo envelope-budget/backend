@@ -135,3 +135,18 @@ class SimpleFINConnection(models.Model):
         except Exception as e:
             logger.error("Error processing SimpleFIN setup token: %s", str(e))
             raise ValueError(f"Error processing SimpleFIN setup token: {str(e)}")
+
+    def get_accounts(self):
+        """
+        Retrieve accounts from the SimpleFIN connection's access URL.
+
+        Sends a GET request to the configured access URL's '/accounts' endpoint
+        and returns the JSON response containing account information.
+
+        Returns:
+            dict: A JSON-decoded response containing account details
+        """
+        endpoint = f"{self.access_url}/accounts"
+        response = requests.get(endpoint, timeout=30)
+        # logger.info("SimpleFIN Accounts: %s", response.json())
+        return response.json()
