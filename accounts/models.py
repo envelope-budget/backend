@@ -31,6 +31,7 @@ class Account(models.Model):
     cleared_balance = models.PositiveIntegerField(default=0)
     last_reconciled_at = models.DateTimeField(blank=True, null=True)
     deleted = models.BooleanField(default=False)
+    sfin_id = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         unique_together = ["budget", "slug"]
