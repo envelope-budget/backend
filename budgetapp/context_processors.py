@@ -36,7 +36,7 @@ def global_context(request):
             )
         request.session["budget"] = budget.id
 
-    all_accounts = Account.objects.filter(budget=budget)
+    all_accounts = Account.objects.filter(budget=budget).order_by("-balance")
     accounts = []
     credit_cards = []
     loans = []

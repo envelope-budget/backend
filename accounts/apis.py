@@ -75,6 +75,20 @@ class SimpleFINConnectionSchema(Schema):
     created_at: datetime
 
 
+class SimpleFINAccountSchema(Schema):
+    """Schema for SimpleFIN account data to be added"""
+
+    id: str
+    type: str = "account"
+
+
+class AddSimpleFINAccountsRequest(Schema):
+    """Request schema for adding SimpleFIN accounts"""
+
+    accounts: List[SimpleFINAccountSchema]
+    sfinData: Dict[str, Any]
+
+
 @router.get(
     "/{budget_id}",
     response=List[AccountSchema],
@@ -137,6 +151,80 @@ def get_simplefin_accounts(request, budget_id: str):
         return connection.get_accounts()
     except SimpleFINConnection.DoesNotExist:
         return None
+
+
+@router.post(
+    "/{budget_id}/simplefin/add-accounts",
+    response=Dict[str, Any],
+    auth=django_auth,
+    tags=["Accounts"],
+)
+def add_simplefin_accounts(request, budget_id: str, data: AddSimpleFINAccountsRequest):
+    """
+    Add selected SimpleFIN accounts to the budget.
+
+    Takes a list of SimpleFIN account IDs with their types and creates
+    corresponding Account objects in the database.
+
+    Args:
+        budget_id: The ID of the budget to add accounts to
+        data: Contains accounts to add and the full SimpleFIN data
+
+    Returns:
+        Dictionary with results of the account creation process
+    """
+    user = request.auth
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+
+    # Get or create SimpleFIN connection
+    try:
+        connection = SimpleFINConnection.objects.get(budget=budget)
+    except SimpleFINConnection.DoesNotExist:
+        return {
+            "error": "No SimpleFIN connection exists for this budget",
+            "accounts_added": 0,
+        }
+
+    results = {"success": True, "accounts_added": 0, "accounts": [], "errors": []}
+
+    # Process each selected account
+    for account_data in data.accounts:
+        try:
+            # Import the account using the connection's import_account method
+            account = connection.import_account(
+                data.sfinData, account_data.id, account_type=account_data.type
+            )
+
+            if isinstance(account, dict) and "error" in account:
+                # Handle error case
+                results["errors"].append(
+                    {"account_id": account_data.id, "error": account["error"]}
+                )
+                continue
+
+            # Add the created account to results
+            results["accounts"].append(
+                {
+                    "id": account.id,
+                    "name": account.name,
+                    "type": account.type,
+                    "balance": account.balance,
+                    "sfin_id": account.sfin_id,
+                }
+            )
+            results["accounts_added"] += 1
+
+        except (ValueError, TypeError, AttributeError, KeyError) as e:
+            logger.error(
+                "Error importing SimpleFIN account %s: %s", account_data.id, str(e)
+            )
+            results["errors"].append({"account_id": account_data.id, "error": str(e)})
+
+    # Update success flag if any errors occurred
+    if results["errors"]:
+        results["success"] = False
+
+    return results
 
 
 @router.get(

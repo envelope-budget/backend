@@ -31,7 +31,7 @@ class Account(models.Model):
     closed = models.BooleanField(default=False)
     note = models.TextField(blank=True, null=True)
     balance = models.IntegerField(default=0)
-    cleared_balance = models.PositiveIntegerField(default=0)
+    cleared_balance = models.IntegerField(default=0)
     last_reconciled_at = models.DateTimeField(blank=True, null=True)
     deleted = models.BooleanField(default=False)
     sfin_id = models.CharField(max_length=255, blank=True, null=True)
@@ -154,6 +154,51 @@ class SimpleFINConnection(models.Model):
         response = requests.get(endpoint, timeout=30)
         # logger.info("SimpleFIN Accounts: %s", response.json())
         return response.json()
+
+    def import_account(self, sfin_data, sfin_account_id, account_type="account"):
+        """
+        Import a SimpleFIN account into the current budget.
+
+        Finds a specific account from SimpleFIN data by its account ID and creates
+        a corresponding Account object in the database with transformed details.
+
+        Args:
+            sfin_data (dict): The complete SimpleFIN account data dictionary.
+            sfin_account_id (str): The specific account ID to import.
+            account_type (str, optional): The type of account to create. Defaults to "account".
+
+        Returns:
+            dict: An error dictionary if the account is not found, otherwise None.
+        """
+        sfin_account = next(
+            (
+                account
+                for account in sfin_data.get("accounts", [])
+                if account.get("id") == sfin_account_id
+            ),
+            None,
+        )
+        if not sfin_account:
+            return {"error": "Account not found in SimpleFIN data"}
+
+        account_name = sfin_account["org"]["name"] + ": " + sfin_account["name"]
+
+        logger.info("Importing SimpleFIN account: %s", sfin_account)
+        logger.info("Account type: %s", account_type)
+        logger.info("Account name: %s", account_name)
+        logger.info("Slug: %s", slugify(account_name))
+
+        account = Account.objects.create(
+            budget=self.budget,
+            name=account_name,
+            slug=slugify(account_name),
+            type=account_type,
+            balance=int(float(sfin_account["balance"]) * 1000),
+            cleared_balance=int(float(sfin_account["balance"]) * 1000),
+            sfin_id=sfin_account["id"],
+        )
+
+        return account
 
     def get_transactions(
         self,
