@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime
+import logging
 
 from ninja import Router, Schema
 from ninja.security import django_auth
@@ -10,6 +11,9 @@ from plaid.api import plaid_api
 
 from .models import Account, SimpleFINConnection
 from budgets.models import Budget
+
+
+logger = logging.getLogger(__name__)
 
 
 router = Router()
@@ -133,6 +137,61 @@ def get_simplefin_accounts(request, budget_id: str):
         return connection.get_accounts()
     except SimpleFINConnection.DoesNotExist:
         return None
+
+
+@router.get(
+    "/{budget_id}/simplefin/transactions",
+    response=Dict[str, Any],
+    auth=django_auth,
+    tags=["Accounts"],
+)
+def get_simplefin_transactions(
+    request,
+    budget_id: str,
+    account_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    include_pending: bool = True,
+    import_transactions: bool = True,
+):
+    """
+    Get transactions from the SimpleFIN connection for a budget.
+
+    Args:
+        budget_id: The ID of the budget
+        account_id: Optional specific account to retrieve transactions for
+        start_date: Optional start date for transaction filtering in 'YYYY-MM-DD' format
+        end_date: Optional end date for transaction filtering in 'YYYY-MM-DD' format
+        include_pending: Whether to include pending transactions (defaults to True)
+        import_transactions: Whether to import the transactions to a matching EB account (defaults to True)
+
+    Returns:
+        JSON response containing transaction details from the SimpleFIN API
+    """
+    user = request.auth
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+
+    try:
+        connection = SimpleFINConnection.objects.get(budget=budget)
+        result = connection.get_transactions(
+            account_id=account_id,
+            start_date=start_date,
+            end_date=end_date,
+            include_pending=include_pending,
+            import_transactions=import_transactions,
+        )
+
+        # Check if there was an error in the result
+        if "error" in result:
+            logger.error("SimpleFIN API error: %s", result["error"])
+            return result
+
+        return result
+    except SimpleFINConnection.DoesNotExist:
+        return {"error": "No SimpleFIN connection exists for this budget"}
+    except (ValueError, KeyError, AttributeError) as e:
+        logger.error("Unexpected error in get_simplefin_transactions: %s", str(e))
+        return {"error": f"Failed to retrieve transactions: {str(e)}"}
 
 
 @router.get(

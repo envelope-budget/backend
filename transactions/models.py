@@ -5,7 +5,6 @@ from django.dispatch import receiver
 from django.db import models
 from ofxparse import OfxParser
 
-from accounts.models import Account
 from budgetapp.utils import generate_uuid_hex
 from budgets.models import Budget
 
@@ -86,9 +85,11 @@ class Transaction(models.Model):
     amount = models.IntegerField()
     memo = models.TextField(blank=True, null=True, max_length=1023)
     cleared = models.BooleanField(default=False)
+    pending = models.BooleanField(default=False)
     reconciled = models.BooleanField(default=False)
     approved = models.BooleanField(default=False)
     import_id = models.CharField(max_length=255, blank=True, null=True)
+    sfin_id = models.CharField(max_length=255, blank=True, null=True)
     import_payee_name = models.CharField(max_length=255, blank=True, null=True)
     deleted = models.BooleanField(default=False)
 
@@ -100,14 +101,19 @@ class Transaction(models.Model):
     # Override the save method
     def save(self, *args, **kwargs):
         if self.import_id:
-            # Check if a transaction with the same budget, account, and import_id already exists
+            # Check if a transaction with the same budget, account, and import_id/sfin_id already exists
             if (
                 Transaction.objects.filter(
-                    budget=self.budget, account=self.account, import_id=self.import_id
+                    budget=self.budget,
+                    account=self.account,
+                )
+                .filter(
+                    models.Q(import_id=self.import_id) | models.Q(sfin_id=self.sfin_id)
                 )
                 .exclude(id=self.id)
                 .exists()
             ):
+
                 raise ValidationError(
                     f"A transaction with import_id '{self.import_id}' already exists for this budget and account."
                 )
@@ -181,6 +187,8 @@ class Transaction(models.Model):
         :type ofx_data: str
         :return: Dictionary with lists of created and duplicate transaction IDs
         """
+        from accounts.models import Account
+
         budget = Budget.objects.get(id=budget_id)
         account = Account.objects.get(id=account_id, budget_id=budget_id)
         # Convert string data to a file-like object

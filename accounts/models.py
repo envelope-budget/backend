@@ -1,6 +1,8 @@
 import base64
+import datetime
 import logging
 import requests
+import urllib
 
 from django.db import models
 from django.db.models.signals import pre_save
@@ -8,6 +10,7 @@ from django.dispatch import receiver
 from django.utils.text import slugify
 
 from budgetapp.utils import generate_uuid_hex
+from transactions.models import Payee, Transaction
 
 
 logger = logging.getLogger(__name__)
@@ -147,7 +150,147 @@ class SimpleFINConnection(models.Model):
         Returns:
             dict: A JSON-decoded response containing account details
         """
-        endpoint = f"{self.access_url}/accounts"
+        endpoint = f"{self.access_url}/accounts?balances-only=true"
         response = requests.get(endpoint, timeout=30)
         # logger.info("SimpleFIN Accounts: %s", response.json())
         return response.json()
+
+    def get_transactions(
+        self,
+        account_id=None,
+        start_date=None,
+        end_date=None,
+        include_pending=True,
+        import_transactions=True,
+    ):
+        """
+        Retrieve transactions from the SimpleFIN connection's access URL.
+
+        Fetches transactions with optional filtering by account, date range, and pending status.
+
+        Args:
+            account_id (str, optional): Specific account to retrieve transactions for.
+            start_date (str, optional): Start date for transaction filtering in 'YYYY-MM-DD' format.
+            end_date (str, optional): End date for transaction filtering in 'YYYY-MM-DD' format.
+            include_pending (bool, optional): Whether to include pending transactions. Defaults to True.
+            import_transactions (bool, optional): Whether to import the transactions to a matching EB account. Defaults to True.
+
+        Returns:
+            dict: A JSON-decoded response containing transaction details from the SimpleFIN API.
+        """
+        parameters = {}
+        if account_id:
+            parameters["account"] = account_id
+        if start_date:
+            parameters["start-date"] = int(
+                datetime.datetime.strptime(start_date, "%Y-%m-%d").timestamp()
+            )
+        if end_date:
+            parameters["end-date"] = int(
+                datetime.datetime.strptime(end_date, "%Y-%m-%d")
+                .replace(hour=23, minute=59, second=59)
+                .timestamp()
+            )
+
+        if include_pending:
+            parameters["pending"] = 1 if include_pending else 0
+
+        endpoint = f"{self.access_url}/accounts?{urllib.parse.urlencode(parameters)}"
+        logger.info("SimpleFIN Transactions endpoint: %s", endpoint)
+
+        try:
+            response = requests.get(endpoint, timeout=30)
+
+            # Log the response for debugging
+            logger.debug("SimpleFIN API response status: %s", response.status_code)
+            logger.debug(
+                "SimpleFIN API response content: %s...", response.text[:200]
+            )  # Log first 200 chars
+
+            # Check if response is successful and contains content
+            if response.status_code != 200:
+                return {
+                    "error": f"SimpleFIN API returned status code {response.status_code}",
+                    "details": response.text,
+                }
+
+            if not response.text.strip():
+                return {"error": "SimpleFIN API returned empty response"}
+
+            if import_transactions:
+                # Import the transactions to the budget
+                self.import_transactions(response.json())
+
+            return response.json()
+        except requests.exceptions.JSONDecodeError as e:
+            logger.error("JSON decode error: %s", str(e))
+            return {
+                "error": "Failed to parse SimpleFIN API response as JSON",
+                "details": str(e),
+                "raw_response": (
+                    response.text if "response" in locals() else "No response"
+                ),
+            }
+        except requests.exceptions.RequestException as e:
+            logger.error("Request error: %s", str(e))
+            return {"error": "Failed to connect to SimpleFIN API", "details": str(e)}
+
+        except (ValueError, TypeError) as e:
+            logger.error("Data processing error in get_transactions: %s", str(e))
+            return {
+                "error": "Error processing transaction data",
+                "details": str(e),
+            }
+
+    def import_transactions(self, sfin_data):
+        logger.info("Importing SimpleFIN transactions, data: %s", sfin_data)
+        for sfin_account in sfin_data.get("accounts", []):
+            try:
+                account = Account.objects.get(sfin_id=sfin_account.get("id"))
+                logger.info("Found account for SimpleFIN account: %s", account)
+            except Account.DoesNotExist:
+                logger.warning(
+                    "No account found for SimpleFIN account: %s", sfin_account["id"]
+                )
+                continue
+            duplicate_transaction_ids = []
+            created_transaction_ids = []
+            for transaction in sfin_account.get("transactions", []):
+                logger.info("Importing SimpleFIN transaction: %s", transaction)
+                # Check for existing transaction with the same import_id
+                transaction_exists = (
+                    Transaction.objects.include_deleted()
+                    .filter(
+                        budget=self.budget,
+                        account=account,
+                        import_id=transaction.get("id"),
+                    )
+                    .first()
+                )
+
+                if transaction_exists:
+                    # If transaction exists, add its ID to duplicate_transaction_ids
+                    duplicate_transaction_ids.append(transaction_exists.id)
+                else:
+                    # Create a new Transaction for each unique OFX transaction
+                    payee = None
+                    if transaction["payee"]:
+                        payee = Payee.objects.get_or_create(
+                            name=transaction["payee"], budget=self.budget
+                        )[0]
+
+                    new_transaction = Transaction.objects.create(
+                        budget=self.budget,
+                        account=account,
+                        date=datetime.datetime.fromtimestamp(
+                            transaction["transacted_at"]
+                        ).date(),
+                        amount=int(float(transaction["amount"]) * 1000),
+                        memo=transaction["description"],
+                        payee=payee,
+                        sfin_id=transaction["id"],
+                        import_payee_name=transaction["payee"],
+                        cleared=False if transaction.get("pending") else True,
+                        pending=transaction.get("pending", False),
+                    )
+                    created_transaction_ids.append(new_transaction.id)
