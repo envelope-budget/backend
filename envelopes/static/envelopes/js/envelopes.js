@@ -4,15 +4,25 @@ const picker = new EmojiMart.Picker(pickerOptions);
 document.getElementById('emoji-picker').appendChild(picker);
 
 function addEmojiToName(emoji) {
-  const $name = document.getElementById('name');
+  console.log('Emoji selected:', emoji.native);
+  const $name = document.getElementById('envelope-name');
   let name = $name.value;
+  console.log('Name before removing emoji:', name);
 
   // If name starts with an emoji, remove the emoji first
-  // biome-ignore lint/suspicious/noMisleadingCharacterClass: it works
-  const emojiRegexPattern = /^[\p{Emoji}\u200d]+/u;
+  const emojiRegexPattern = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|\u200d)+/u;
   name = name.replace(emojiRegexPattern, '').replace(/\s+/, '').trim();
 
-  $name.value = `${emoji.native} ${name}`;
+  const newName = `${emoji.native} ${name}`;
+  $name.value = newName;
+  console.log('Name after removing emoji:', $name.value);
+
+  // Set Alpine envelope.name value
+  const envelopeComponent = Alpine.evaluate($name, 'envelope');
+  if (envelopeComponent) {
+    envelopeComponent.name = newName;
+  }
+
   $name.focus();
 }
 
@@ -26,7 +36,49 @@ function envelopeData() {
       note: 'Test Note',
     },
 
-    createCategory() {},
+    category: {
+      name: '',
+    },
+
+    createCategory() {
+      const budgetId = window.getCookie('budget_id');
+      const endpoint = `/api/categories/${budgetId}`;
+      const csrfToken = window.getCookie('csrftoken');
+
+      // Prepare the headers
+      const headers = new Headers({
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      });
+
+      // Prepare the request options
+      const requestOptions = {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          name: this.category.name,
+        }),
+        credentials: 'include', // necessary for cookies to be sent with the request
+      };
+
+      // Post to endpoint
+      fetch(endpoint, requestOptions)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Category created successfully:', data);
+          // Refresh the page to show the new category
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error creating category:', error);
+          // Handle the error case here
+        });
+    },
 
     startNewEnvelope(category_id) {
       this.envelope.id = '';
