@@ -19,6 +19,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 
 from .api import api
 
@@ -32,6 +33,10 @@ urlpatterns = [
     path("developer/", include("developer.urls")),
     path("envelopes/", include("envelopes.urls")),
     path("transactions/", include("transactions.urls")),
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url=settings.STATIC_URL + "img/favicon/favicon.ico"),
+    ),
 ]
 
 if settings.DEBUG:

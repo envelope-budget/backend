@@ -31,7 +31,7 @@ function fetchSimpleFINAccounts() {
     })
     .catch(error => {
       console.error('Error fetching SimpleFIN accounts:', error);
-      document.querySelector('.text-center').innerHTML = `
+      document.querySelector('.simplefin-modal-container').innerHTML = `
           <div class="text-red-500 mt-4">
             <p>Error loading accounts: ${error.message}</p>
             <button class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="fetchSimpleFINAccounts()">
