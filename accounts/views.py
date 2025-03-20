@@ -139,7 +139,7 @@ def x_add_account_form(request):
 
 @login_required
 def account_transactions(request, slug):
-    account = Account.objects.get(slug=slug, budget=request.session.get("budget"))
+    _account = Account.objects.get(slug=slug, budget=request.session.get("budget"))
     categories = Category.objects.filter(budget=request.session.get("budget"))
     categorized_envelopes = []
     for category in categories:
@@ -153,8 +153,8 @@ def account_transactions(request, slug):
     response = render(
         request,
         "transactions/transactions.html",
-        {"categorized_envelopes": categorized_envelopes, "account": account},
+        {"categorized_envelopes": categorized_envelopes, "account": _account},
     )
     response.set_cookie("budget_id", request.session.get("budget"))
-    response.set_cookie("account_id", account.id)
+    response.set_cookie("account_id", _account.id)
     return response
