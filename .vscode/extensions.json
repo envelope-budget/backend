@@ -1,0 +1,6 @@
+{
+    "recommendations": [
+        "monosans.djlint",
+        "esbenp.prettier-vscode"
+    ]
+}

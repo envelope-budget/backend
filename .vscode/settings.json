@@ -36,7 +36,8 @@
   ],
   "djlint.blankLineAfterTag": [
     "endblock",
-    "extends"
+    "extends",
+    "load"
   ],
   "djlint.blankLineBeforeTag": [
     "block"
@@ -45,17 +46,35 @@
     "budgetapp",
     "datepicker",
     "describedby",
+    "Deutsch",
     "endcompress",
     "endfor",
     "evenodd",
     "fitbit",
+    "FOUC",
+    "Italiano",
     "labelledby",
     "linecap",
     "linejoin",
     "nowrap",
     "optgroup",
     "sfin",
+    "Sidenav",
     "SimpleFIN",
-    "viewbox"
-  ]
+    "stylesheet",
+    "tabindex",
+    "viewbox",
+    "xlink"
+  ],
+  "djlint.configuration": "",
+  "djlint.enableLinting": true,
+  "djlint.formatCss": true,
+  "djlint.formatJs": true,
+  "djlint.ignore": [
+    "node_modules/",
+    "venv/",
+    "staticfiles/",
+    "dist/"
+  ],
+  "djlint.preserveBlankLines": true
 }
