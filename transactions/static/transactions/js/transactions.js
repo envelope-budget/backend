@@ -146,6 +146,58 @@ function transactionData() {
       }
     },
 
+    pullSimpleFINTransactions() {
+      const budgetId = getCookie('budget_id');
+      const endpoint = `/api/accounts/${budgetId}/simplefin/transactions`;
+
+      // Get button element
+      const button = document.getElementById('pull-simplefin-button');
+
+      // Disable button and show spinner
+      if (button) {
+        button.disabled = true;
+        const buttonText = button.querySelector('span');
+        const originalText = buttonText.textContent;
+
+        // Replace text with spinner and loading text
+        buttonText.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Pulling...
+        `;
+      }
+
+      fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+          if (data.errors && data.errors.length > 0) {
+            // Display errors if any
+            alert(`Error pulling transactions: ${data.errors.join(', ')}`);
+
+            // Reset button
+            if (button) {
+              button.disabled = false;
+              button.querySelector('span').textContent = 'Pull';
+            }
+          } else {
+            // Success - reload the page to show new transactions
+            window.location.reload();
+          }
+        })
+        .catch(error => {
+          console.error('Error pulling SimpleFIN transactions:', error);
+          alert(`Failed to pull transactions: ${error.message}`);
+
+          // Reset button
+          if (button) {
+            button.disabled = false;
+            button.querySelector('span').textContent = 'Pull';
+          }
+        });
+    },
+
     async importTransactions() {
       const budgetId = getCookie('budget_id');
       const accountId = document.getElementById('import_account_id').value;
@@ -436,60 +488,9 @@ function transactionData() {
       }
     },
 
-    setupKeyboardShortcuts() {
-      document.addEventListener('keydown', event => {
-        // Check if the active element is the search input or any other input/textarea
-        const activeElement = document.activeElement;
-        const isInputActive =
-          activeElement.tagName === 'INPUT' ||
-          activeElement.tagName === 'TEXTAREA' ||
-          activeElement.tagName === 'SELECT';
-
-        if (event.key === 'Escape') {
-          this.cancelTransaction();
-        }
-
-        // Save transaction on Enter key if form is active (except when in a textarea)
-        if (event.key === 'Enter' && this.showEditForm && !(activeElement.tagName === 'TEXTAREA')) {
-          // Prevent form submission if the enter was pressed in an input field
-          if (isInputActive) {
-            event.preventDefault();
-          }
-          this.saveTransaction();
-          return;
-        }
-
-        // If user is typing in an input field, don't trigger other keyboard shortcuts
-        if (isInputActive) {
-          return;
-        }
-
-        if ((event.key === 'j' || event.key === 'k') && !this.showEditForm) {
-          const newIndex = this.activeIndex + (event.key === 'j' ? 1 : -1);
-          if (newIndex >= 0 && newIndex < this.transactions.length) {
-            this.setActiveTransaction(newIndex);
-          }
-        } else if (event.key === 'a' && !this.showEditForm) {
-          this.startNewTransaction();
-        } else if (event.key === 'c') {
-          this.toggleCleared(this.getActiveTransaction());
-        } else if ((event.key === 'e' || event.key === 'Enter') && !this.showEditForm) {
-          this.editTransactionAtIndex(this.getActiveTransaction(), this.activeIndex);
-          // set envelope selector as active
-          Alpine.nextTick(() => {
-            document.getElementById('id_envelope').focus();
-          });
-        } else if (event.key === 'x') {
-          this.toggleCheckboxInActiveRow();
-        } else if (event.key === '#') {
-          this.deleteCheckedRows();
-        }
-      });
-    },
-
     init() {
       this.fetchTransactions();
-      this.setupKeyboardShortcuts();
+      initKeyboardShortcuts(this);
     },
   };
 }

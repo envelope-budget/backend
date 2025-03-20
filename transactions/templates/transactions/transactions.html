@@ -41,7 +41,20 @@
                    aria-hidden="true">
                 <path clip-rule="evenodd" fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
               </svg>
-              Add transaction
+              Add
+            </button>
+            <button type="button"
+                    id="pull-simplefin-button"
+                    class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800 mr-2"
+                    @click="pullSimpleFINTransactions()">
+              <svg class="h-3.5 w-3.5 mr-2"
+                   aria-hidden="true"
+                   xmlns="http://www.w3.org/2000/svg"
+                   fill="none"
+                   viewBox="0 0 20 20">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 15v2a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-2m-8 1V4m0 12-4-4m4 4 4-4" />
+              </svg>
+              <span>Pull</span>
             </button>
             <button id="importDropdownButton"
                     data-dropdown-toggle="importDropdown"
@@ -173,7 +186,7 @@
                 <th scope="col" class="px-2 py-3">Memo</th>
                 <th scope="col" class="px-2 py-3 text-right">Outflow</th>
                 <th scope="col" class="px-2 py-3 text-right">Inflow</th>
-                <th scope="col" class="px-2 py-3">&copy;</th>
+                <th scope="col" class="px-2 py-3">©</th>
               </tr>
             </thead>
             <tbody>
@@ -407,11 +420,12 @@
       </div>
     </div>
   </section>
-{% endblock %}
+{% endblock content %}
 
 {% block js %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/datepicker.min.js"></script>
   {% compress js %}
+    <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
     <script src="{% static 'transactions/js/transactions.js' %}"></script>
   {% endcompress %}
 {% endblock js %}

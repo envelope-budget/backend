@@ -89,7 +89,7 @@ class Transaction(models.Model):
     reconciled = models.BooleanField(default=False)
     approved = models.BooleanField(default=False)
     import_id = models.CharField(max_length=255, blank=True, null=True)
-    sfin_id = models.CharField(max_length=255, blank=True, null=True)
+    sfin_id = models.CharField("SimpleFIN ID", max_length=255, blank=True, null=True)
     import_payee_name = models.CharField(max_length=255, blank=True, null=True)
     deleted = models.BooleanField(default=False)
 
@@ -172,7 +172,10 @@ class Transaction(models.Model):
 
     class Meta:
         # Define unique_together constraint
-        unique_together = ("budget", "account", "import_id")
+        unique_together = (
+            ("budget", "account", "import_id"),
+            ("budget", "account", "sfin_id"),
+        )
 
     @classmethod
     def import_ofx(cls, budget_id: str, account_id: str, ofx_data: str):

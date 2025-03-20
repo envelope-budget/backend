@@ -302,13 +302,16 @@ class SimpleFINConnection(models.Model):
             created_transaction_ids = []
             for transaction in sfin_account.get("transactions", []):
                 logger.info("Importing SimpleFIN transaction: %s", transaction)
-                # Check for existing transaction with the same import_id
+                # Check for existing transaction with the same sfin_id or import_id
                 transaction_exists = (
                     Transaction.objects.include_deleted()
                     .filter(
                         budget=self.budget,
                         account=account,
-                        import_id=transaction.get("id"),
+                    )
+                    .filter(
+                        models.Q(import_id=transaction.get("id"))
+                        | models.Q(sfin_id=transaction.get("id"))
                     )
                     .first()
                 )
@@ -316,26 +319,35 @@ class SimpleFINConnection(models.Model):
                 if transaction_exists:
                     # If transaction exists, add its ID to duplicate_transaction_ids
                     duplicate_transaction_ids.append(transaction_exists.id)
+                    # Update the existing transaction if needed
+                    # You could add logic here to update fields if necessary
                 else:
-                    # Create a new Transaction for each unique OFX transaction
-                    payee = None
-                    if transaction["payee"]:
-                        payee = Payee.objects.get_or_create(
-                            name=transaction["payee"], budget=self.budget
-                        )[0]
+                    # Create a new Transaction for each unique transaction
+                    try:
+                        payee = None
+                        if transaction["payee"]:
+                            payee = Payee.objects.get_or_create(
+                                name=transaction["payee"], budget=self.budget
+                            )[0]
 
-                    new_transaction = Transaction.objects.create(
-                        budget=self.budget,
-                        account=account,
-                        date=datetime.datetime.fromtimestamp(
-                            transaction["transacted_at"]
-                        ).date(),
-                        amount=int(float(transaction["amount"]) * 1000),
-                        memo=transaction["description"],
-                        payee=payee,
-                        sfin_id=transaction["id"],
-                        import_payee_name=transaction["payee"],
-                        cleared=False if transaction.get("pending") else True,
-                        pending=transaction.get("pending", False),
-                    )
-                    created_transaction_ids.append(new_transaction.id)
+                        new_transaction = Transaction.objects.create(
+                            budget=self.budget,
+                            account=account,
+                            date=datetime.datetime.fromtimestamp(
+                                transaction["transacted_at"]
+                            ).date(),
+                            amount=int(float(transaction["amount"]) * 1000),
+                            memo=transaction["description"],
+                            payee=payee,
+                            sfin_id=transaction["id"],
+                            import_payee_name=transaction["payee"],
+                            cleared=False if transaction.get("pending") else True,
+                            pending=transaction.get("pending", False),
+                        )
+                        created_transaction_ids.append(new_transaction.id)
+                    except Exception as e:
+                        logger.error(
+                            "Error creating transaction: %s for transaction: %s",
+                            str(e),
+                            transaction,
+                        )
