@@ -122,7 +122,7 @@ function transactionData() {
   return {
     activeIndex: 0,
     transactions: [],
-    totalTransactions: 0,
+    totalTransactions: null,
     currentPage: 1,
     transactionsPerPage: 20,
     showEditForm: false,

@@ -11,3 +11,6 @@
   bottom: 0;
   margin: auto;
 } */
+[x-cloak] {
+  display: none !important;
+}
