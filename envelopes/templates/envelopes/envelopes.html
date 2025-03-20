@@ -4,6 +4,23 @@
 {% load static %}
 {% load compress %}
 
+{% block head %}
+  <style>
+  .drag-handle {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  .category-item:hover > div .drag-handle {
+    opacity: 1;
+  }
+
+  .envelope-item:hover > div .drag-handle {
+    opacity: 1;
+  }
+  </style>
+{% endblock head %}
+
 {% block content %}
   <section class="bg-gray-50 dark:bg-gray-900" x-data="envelopeData()">
     <div class="mx-auto max-w-screen-xl">
@@ -48,20 +65,24 @@
           </div>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-              <tr>
-                <th scope="col" class="px-4 py-3">Category</th>
-                <th scope="col" class="px-4 py-3 text-right">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for category in budget.categorized_envelopes %}
-                <tr class="border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                  <th scope="row"
-                      class="flex px-4 py-3 text-lg font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                    {{ category.name }}
-                    <button class="flex ml-4 px-3 items-center justify-center rounded-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700"
+          <ul id="categories-list" class="w-full">
+            {% for category in budget.categorized_envelopes %}
+              <li class="category-item mb-4" data-id="{{ category.id }}">
+                <div class="border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 flex justify-between items-center px-4 py-3">
+                  <div class="flex items-center">
+                    <span class="drag-handle cursor-move mr-2">
+                      <svg class="w-5 h-5 text-gray-800 dark:text-white"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           width="20"
+                           height="20"
+                           fill="currentColor"
+                           viewBox="0 0 20 20">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 20V10m0 10-3-3m3 3 3-3m5-13v10m0-10 3 3m-3-3-3 3" />
+                      </svg>
+                    </span>
+                    <span class="text-lg font-medium text-gray-900 dark:text-white">{{ category.name }}</span>
+                    <button class="flex ml-4 px-3 py-1 items-center justify-center rounded-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700"
                             data-modal-target="envelope-modal"
                             data-modal-toggle="envelope-modal"
                             @click="startNewEnvelope('{{ category.id }}')">
@@ -80,21 +101,34 @@
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 2-8.4 7.05a1 1 0 0 1-1.2 0L1 2m18 0a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1m18 0v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2" />
                       </svg>
                     </button>
-                  </th>
-                  <td class="px-4 py-3 text-right">{{ category.balance | money }}</td>
-                </tr>
-                {% for envelope in category.envelopes %}
-                  <tr class="border-b dark:border-gray-700">
-                    <th scope="row"
-                        class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                      {{ envelope.name }}
-                    </th>
-                    <td class="px-4 py-3 text-right">{{ envelope.balance | money }}</td>
-                  </tr>
-                {% endfor %}
-              {% endfor %}
-            </tbody>
-          </table>
+                  </div>
+                  <div class="px-4 py-3 text-right font-medium">{{ category.balance | money }}</div>
+                </div>
+                <ul class="envelopes-list w-full" data-category-id="{{ category.id }}">
+                  {% for envelope in category.envelopes %}
+                    <li class="envelope-item border-b dark:border-gray-700 flex justify-between items-center"
+                        data-id="{{ envelope.id }}">
+                      <div class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white flex items-center">
+                        <span class="drag-handle cursor-move mr-2">
+                          <svg class="w-4 h-4 text-gray-800 dark:text-white"
+                               aria-hidden="true"
+                               xmlns="http://www.w3.org/2000/svg"
+                               width="20"
+                               height="20"
+                               fill="none"
+                               viewBox="0 0 20 20">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 20V10m0 10-3-3m3 3 3-3m5-13v10m0-10 3 3m-3-3-3 3" />
+                          </svg>
+                        </span>
+                        {{ envelope.name }}
+                      </div>
+                      <div class="px-4 py-3 text-right">{{ envelope.balance | money }}</div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
         <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
              aria-label="Table navigation">
@@ -253,6 +287,7 @@
 
 {% block js %}
   <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   {% compress js %}
     <script src="{% static 'envelopes/js/envelopes.js' %}"></script>
   {% endcompress %}

@@ -27,6 +27,7 @@
         document.documentElement.classList.remove("dark");
       }
     </script>
+    {% block head %}{% endblock head %}
   </head>
   <body class="bg-gray-50 dark:bg-gray-900 dark:text-white"
         x-data="{ addAccountStep: 0 }">
