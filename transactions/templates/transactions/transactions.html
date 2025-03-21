@@ -266,18 +266,9 @@
                          x-model="editableTransaction.payee" />
                 </td>
                 <td class="px-1 py-3 align-text-top">
-                  <select id="id_envelope"
-                          class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                          x-model="editableTransaction.envelope">
-                    <option value="">Unassigned</option>
-                    {% for ce in categorized_envelopes %}
-                      <optgroup label="{{ ce.category }}">
-                        {% for envelope in ce.envelopes %}<option value="{{ envelope.id }}">{{ envelope.name }}</option>{% endfor %}
-
-                      {% endfor %}
-                    </optgroup>
-                  </select>
+                  <searchable-select id="id_envelope" class="block w-full" x-ref="envelopeSelect" x-init="$nextTick(() => { $refs.envelopeSelect.addEventListener('change', (e) => { editableTransaction.envelope = e.detail.value; }); })"></searchable-select>
                 </td>
+
                 <td class="px-1 py-3 align-text-top">
                   <textarea rows="1"
                             id="id_memo"
@@ -482,6 +473,7 @@
   {% compress js %}
     <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
     <script src="{% static 'transactions/js/transactions.js' %}"></script>
+    <script src="{% static 'transactions/js/envelope-select.js' %}"></script>
     {% if account %}
       <script src="{% static 'transactions/js/edit-account.js' %}"></script>
     {% endif %}

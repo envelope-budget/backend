@@ -39,9 +39,13 @@ function initKeyboardShortcuts(context) {
       context.toggleCleared(context.getActiveTransaction());
     } else if ((event.key === 'e' || event.key === 'Enter') && !context.showEditForm) {
       context.editTransactionAtIndex(context.getActiveTransaction(), context.activeIndex);
-      // set envelope selector as active
+      // Focus the searchable-select component instead
       Alpine.nextTick(() => {
-        document.getElementById('id_envelope').focus();
+        const searchableSelect = document.getElementById('id_envelope');
+        if (searchableSelect) {
+          const input = searchableSelect.querySelector('input');
+          if (input) input.focus();
+        }
       });
     } else if (event.key === 'x') {
       context.toggleCheckboxInActiveRow();
