@@ -1,658 +1,490 @@
-{% extends "base.html" %} {% load static %} {% load compress %} {% block content %}
-<section class="bg-gray-50 dark:bg-gray-900" x-data="transactionData()">
-  <div class="mx-auto">
-    <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden min-h-screen">
-      {% if account.name %}
-      <div class="flex justify-between items-center p-3">
-        <h2 class="text-3xl font-extrabold dark:text-white">{{ account.name }}</h2>
-        <button
-          type="button"
-          class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
-          @click="editAccount()"
-        >
-          <svg
-            class="h-3.5 w-3.5 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            ></path>
-          </svg>
-          Edit
-        </button>
-      </div>
-      {% endif %}
-      <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
-        <div class="w-full md:w-1/2">
-          <form class="flex items-center">
-            <label for="simple-search" class="sr-only">Search</label>
-            <div class="relative w-full">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg
-                  aria-hidden="true"
-                  class="w-5 h-5 text-gray-500 dark:text-gray-400"
-                  fill="currentColor"
-                  viewbox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+{% extends "base.html" %}
+
+{% load static %}
+
+{% load compress %}
+
+{% block content %}
+  <section class="bg-gray-50 dark:bg-gray-900" x-data="transactionData()">
+    <div class="mx-auto">
+      <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden min-h-screen">
+        {% if account.name %}
+          <div class="flex justify-between items-center p-3">
+            <h2 class="text-3xl font-extrabold dark:text-white">{{ account.name }}</h2>
+            <button type="button"
+                    class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
+                    @click="editAccount('{{ account.id }}')">
+              <svg class="h-3.5 w-3.5 mr-2"
+                   fill="none"
+                   stroke="currentColor"
+                   viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                </path>
+              </svg>
+              Edit
+            </button>
+          </div>
+        {% endif %}
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+          <div class="w-full md:w-1/2">
+            <form class="flex items-center">
+              <label for="simple-search" class="sr-only">Search</label>
+              <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <svg aria-hidden="true"
+                       class="w-5 h-5 text-gray-500 dark:text-gray-400"
+                       fill="currentColor"
+                       viewbox="0 0 20 20"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <input type="text"
+                       id="simple-search"
+                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                       placeholder="Search"
+                       required="" />
               </div>
-              <input
-                type="text"
-                id="simple-search"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                placeholder="Search"
-                required=""
-              />
-            </div>
-          </form>
-        </div>
-        <div
-          class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0"
-        >
-          <button
-            type="button"
-            class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
-            @click="startNewTransaction()"
-          >
-            <svg
-              class="h-3.5 w-3.5 mr-2"
-              fill="currentColor"
-              viewbox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <path
-                clip-rule="evenodd"
-                fill-rule="evenodd"
-                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-              />
-            </svg>
-            Add
-          </button>
-          <button
-            type="button"
-            id="pull-simplefin-button"
-            class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800 mr-2"
-            @click="pullSimpleFINTransactions()"
-          >
-            <svg
-              class="h-3.5 w-3.5 mr-2"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 20 20"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 15v2a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-2m-8 1V4m0 12-4-4m4 4 4-4"
-              />
-            </svg>
-            <span>Pull</span>
-          </button>
-          <button
-            id="importDropdownButton"
-            data-dropdown-toggle="importDropdown"
-            type="button"
-            class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
-          >
-            <svg
-              class="w-3.5 h-3.5 mr-2"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 18 20"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 8V5.828a2 2 0 0 1 .586-1.414l2.828-2.828A2 2 0 0 1 7.828 1h8.239A.969.969 0 0 1 17 2v16a.969.969 0 0 1-.933 1H3.933A.97.97 0 0 1 3 18v-2M8 1v4a1 1 0 0 1-1 1H3m-2 6h10M9.061 9.232 11.828 12l-2.767 2.768"
-              />
-            </svg>
-            Import
-          </button>
-          <div
-            id="importDropdown"
-            class="hidden z-10 w-144 bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 border-primary-500 border-solid border-2 p-3"
-          >
-            <form class="max-w-lg mx-auto" @submit.prevent="importTransactions">
-              <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white" for="user_avatar"
-                >Upload OFX file</label
-              >
-              <label for="countries" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                >Select account</label
-              >
-              <select
-                id="import_account_id"
-                class="mb-4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-              >
-                {% if accounts %}
-                <optgroup label="Accounts">
-                  {% for account in accounts %}
-                  <option value="{{ account.id }}">{{ account }}</option>
-                  {% endfor %}
-                </optgroup>
-                {% endif %} {% if credit_cards %}
-                <optgroup label="Credit Cards">
-                  {% for credit_card in credit_cards %}
-                  <option value="{{ credit_card.id }}">{{ credit_card }}</option>
-                  {% endfor %}
-                </optgroup>
-                {% endif %}
-              </select>
-              <input
-                class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
-                aria-describedby="ofx_file_help"
-                id="ofx_file"
-                type="file"
-                accept=".ofx"
-              />
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-300" id="ofx_file_help">
-                Download OFX transaction file from your bank
-              </div>
-              <button
-                id="import-transactions-button"
-                type="submit"
-                class="float-right mt-4 text-white bg-primary-700 hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-              >
-                Upload &amp; Import
-              </button>
             </form>
           </div>
-          <!-- Actions Button & Dropdown -->
-          <div class="flex items-center space-x-3 w-full md:w-auto">
-            <button
-              id="actionsDropdownButton"
-              data-dropdown-toggle="actionsDropdown"
-              class="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-              type="button"
-            >
-              <svg
-                class="-ml-1 mr-1.5 w-5 h-5"
-                fill="currentColor"
-                viewbox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  clip-rule="evenodd"
-                  fill-rule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                />
+          <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
+            <button type="button"
+                    class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
+                    @click="startNewTransaction()">
+              <svg class="h-3.5 w-3.5 mr-2"
+                   fill="currentColor"
+                   viewbox="0 0 20 20"
+                   xmlns="http://www.w3.org/2000/svg"
+                   aria-hidden="true">
+                <path clip-rule="evenodd" fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
               </svg>
-              Actions
+              Add
             </button>
-            <div
-              id="actionsDropdown"
-              class="hidden z-10 w-44 bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600"
-            >
-              <ul class="py-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="actionsDropdownButton">
-                <li>
-                  <a href="#" class="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                    >Mass Edit</a
-                  >
-                </li>
-              </ul>
-              <div class="py-1">
-                <a
-                  href="#"
-                  class="block py-2 px-4 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
-                  >Delete all</a
-                >
-              </div>
+            <button type="button"
+                    id="pull-simplefin-button"
+                    class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800 mr-2"
+                    @click="pullSimpleFINTransactions()">
+              <svg class="h-3.5 w-3.5 mr-2"
+                   aria-hidden="true"
+                   xmlns="http://www.w3.org/2000/svg"
+                   fill="none"
+                   viewBox="0 0 20 20">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 15v2a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-2m-8 1V4m0 12-4-4m4 4 4-4" />
+              </svg>
+              <span>Pull</span>
+            </button>
+            <button id="importDropdownButton"
+                    data-dropdown-toggle="importDropdown"
+                    type="button"
+                    class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800">
+              <svg class="w-3.5 h-3.5 mr-2"
+                   aria-hidden="true"
+                   xmlns="http://www.w3.org/2000/svg"
+                   fill="none"
+                   viewBox="0 0 18 20">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8V5.828a2 2 0 0 1 .586-1.414l2.828-2.828A2 2 0 0 1 7.828 1h8.239A.969.969 0 0 1 17 2v16a.969.969 0 0 1-.933 1H3.933A.97.97 0 0 1 3 18v-2M8 1v4a1 1 0 0 1-1 1H3m-2 6h10M9.061 9.232 11.828 12l-2.767 2.768" />
+              </svg>
+              Import
+            </button>
+            <div id="importDropdown"
+                 class="hidden z-10 w-144 bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 border-primary-500 border-solid border-2 p-3">
+              <form class="max-w-lg mx-auto" @submit.prevent="importTransactions">
+                <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                       for="user_avatar">Upload OFX file</label>
+                <label for="countries"
+                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Select account</label>
+                <select id="import_account_id"
+                        class="mb-4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                  {% if accounts %}
+                    <optgroup label="Accounts">
+                      {% for account in accounts %}<option value="{{ account.id }}">{{ account }}</option>{% endfor %}
+                    </optgroup>
+                  {% endif %}
+
+                  {% if credit_cards %}
+                    <optgroup label="Credit Cards">
+                      {% for credit_card in credit_cards %}<option value="{{ credit_card.id }}">{{ credit_card }}</option>{% endfor %}
+                    </optgroup>
+                  {% endif %}
+                </select>
+                <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                       aria-describedby="ofx_file_help"
+                       id="ofx_file"
+                       type="file"
+                       accept=".ofx" />
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-300"
+                     id="ofx_file_help">Download OFX transaction file from your bank</div>
+                <button id="import-transactions-button"
+                        type="submit"
+                        class="float-right mt-4 text-white bg-primary-700 hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                  Upload &amp; Import
+                </button>
+              </form>
             </div>
-            <!-- Filter Button & Dropdown -->
-            <button
-              id="filterDropdownButton"
-              data-dropdown-toggle="filterDropdown"
-              class="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-              type="button"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-                class="h-4 w-4 mr-2 text-gray-400"
-                viewbox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              Inbox
-              <svg
-                class="-mr-1 ml-1.5 w-5 h-5"
-                fill="currentColor"
-                viewbox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  clip-rule="evenodd"
-                  fill-rule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                />
-              </svg>
-            </button>
-            <div id="filterDropdown" class="z-10 hidden w-48 p-3 bg-white rounded-lg shadow dark:bg-gray-700">
-              <h6 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">Choose brand</h6>
-              <ul class="space-y-2 text-sm" aria-labelledby="filterDropdownButton">
-                <li class="flex items-center">
-                  <input
-                    id="apple"
-                    type="checkbox"
-                    value=""
-                    class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                  />
-                  <label for="apple" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >Apple (56)</label
-                  >
-                </li>
-                <li class="flex items-center">
-                  <input
-                    id="fitbit"
-                    type="checkbox"
-                    value=""
-                    class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                  />
-                  <label for="fitbit" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >Microsoft (16)</label
-                  >
-                </li>
-                <li class="flex items-center">
-                  <input
-                    id="razor"
-                    type="checkbox"
-                    value=""
-                    class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                  />
-                  <label for="razor" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >Razor (49)</label
-                  >
-                </li>
-                <li class="flex items-center">
-                  <input
-                    id="nikon"
-                    type="checkbox"
-                    value=""
-                    class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-                  />
-                  <label for="nikon" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    >Nikon (12)</label
-                  >
-                </li>
-              </ul>
+            <!-- Actions Button & Dropdown -->
+            <div class="flex items-center space-x-3 w-full md:w-auto">
+              <button id="actionsDropdownButton"
+                      data-dropdown-toggle="actionsDropdown"
+                      class="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                      type="button">
+                <svg class="-ml-1 mr-1.5 w-5 h-5"
+                     fill="currentColor"
+                     viewbox="0 0 20 20"
+                     xmlns="http://www.w3.org/2000/svg"
+                     aria-hidden="true">
+                  <path clip-rule="evenodd" fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+                Actions
+              </button>
+              <div id="actionsDropdown"
+                   class="hidden z-10 w-44 bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600">
+                <ul class="py-1 text-sm text-gray-700 dark:text-gray-200"
+                    aria-labelledby="actionsDropdownButton">
+                  <li>
+                    <a href="#"
+                       class="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Mass Edit</a>
+                  </li>
+                </ul>
+                <div class="py-1">
+                  <a href="#"
+                     class="block py-2 px-4 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Delete all</a>
+                </div>
+              </div>
+              <!-- Filter Button & Dropdown -->
+              <button id="filterDropdownButton"
+                      data-dropdown-toggle="filterDropdown"
+                      class="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                      type="button">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     aria-hidden="true"
+                     class="h-4 w-4 mr-2 text-gray-400"
+                     viewbox="0 0 20 20"
+                     fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                </svg>
+                Inbox
+                <svg class="-mr-1 ml-1.5 w-5 h-5"
+                     fill="currentColor"
+                     viewbox="0 0 20 20"
+                     xmlns="http://www.w3.org/2000/svg"
+                     aria-hidden="true">
+                  <path clip-rule="evenodd" fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </button>
+              <div id="filterDropdown"
+                   class="z-10 hidden w-48 p-3 bg-white rounded-lg shadow dark:bg-gray-700">
+                <h6 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">Choose brand</h6>
+                <ul class="space-y-2 text-sm" aria-labelledby="filterDropdownButton">
+                  <li class="flex items-center">
+                    <input id="apple"
+                           type="checkbox"
+                           value=""
+                           class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500" />
+                    <label for="apple"
+                           class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100">Apple (56)</label>
+                  </li>
+                  <li class="flex items-center">
+                    <input id="fitbit"
+                           type="checkbox"
+                           value=""
+                           class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500" />
+                    <label for="fitbit"
+                           class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100">Microsoft (16)</label>
+                  </li>
+                  <li class="flex items-center">
+                    <input id="razor"
+                           type="checkbox"
+                           value=""
+                           class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500" />
+                    <label for="razor"
+                           class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100">Razor (49)</label>
+                  </li>
+                  <li class="flex items-center">
+                    <input id="nikon"
+                           type="checkbox"
+                           value=""
+                           class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500" />
+                    <label for="nikon"
+                           class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100">Nikon (12)</label>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead
-            class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b dark:border-gray-700 border-l-4 border-l-gray-50 dark:border-l-gray-700"
-          >
-            <tr>
-              <th scope="col" class="px-2 py-3">
-                <input type="checkbox" />
-              </th>
-              <th scope="col" class="px-2 py-3">Account</th>
-              <th scope="col" class="px-2 py-3">Date</th>
-              <th scope="col" class="px-2 py-3">Payee</th>
-              <th scope="col" class="px-2 py-3">Envelope</th>
-              <th scope="col" class="px-2 py-3">Memo</th>
-              <th scope="col" class="px-2 py-3 text-right">Outflow</th>
-              <th scope="col" class="px-2 py-3 text-right">Inflow</th>
-              <th scope="col" class="px-2 py-3">©</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- New Transaction Form -->
-            <tr class="transaction-edit" x-show="showEditForm" x-ref="editForm" x-cloak>
-              <td class="px-2 py-3 align-text-top"></td>
-              <td class="px-1 py-3 align-text-top">
-                <select
-                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  id="id_account"
-                  x-model="editableTransaction.account"
-                >
-                  <option value="">Select account</option>
-                  {% for account in accounts %}
-                  <option value="{{ account.id }}">{{ account.name }}</option>
-                  {% endfor %} {% for credit_card in credit_cards %}
-                  <option value="{{ credit_card.id }}">{{ credit_card.name }}</option>
-                  {% endfor %}
-                </select>
-              </td>
-              <td class="px-1 py-3 align-text-top">
-                <div class="relative max-w-sm">
-                  <input
-                    datepicker
-                    datepicker-format="yyyy-mm-dd"
-                    type="text"
-                    id="id_date"
-                    class="editable-transaction-date block w-24 p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="Select date"
-                    x-model="editableTransaction.date"
-                  />
-                </div>
-              </td>
-              <td class="px-1 py-3 align-text-top">
-                <input
-                  type="text"
-                  id="id_payee"
-                  class="payee-input block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-model="editableTransaction.payee"
-                />
-              </td>
-              <td class="px-1 py-3 align-text-top">
-                <select
-                  id="id_envelope"
-                  class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-model="editableTransaction.envelope"
-                >
-                  <option value="">Unassigned</option>
-                  {% for ce in categorized_envelopes %}
-                  <optgroup label="{{ ce.category }}">
-                    {% for envelope in ce.envelopes %}
-                    <option value="{{ envelope.id }}">{{ envelope.name }}</option>
-                    {% endfor %} {% endfor %}
-                  </optgroup>
-                </select>
-              </td>
-              <td class="px-1 py-3 align-text-top">
-                <textarea
-                  rows="1"
-                  id="id_memo"
-                  class="block p-1 w-full text-sm text-gray-900 bg-gray-50 rounded border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="Memo..."
-                  x-model="editableTransaction.memo"
-                ></textarea>
-              </td>
-              <td class="px-1 py-3 align-text-top w-5">
-                <input
-                  type="text"
-                  id="id_outflow"
-                  class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-model="editableTransaction.outflow"
-                  placeholder="0.00"
-                  @blur="calculateAmount('outflow')"
-                />
-              </td>
-              <td class="px-1 py-3 align-text-top w-5">
-                <input
-                  type="text"
-                  id="id_inflow"
-                  class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  x-model="editableTransaction.inflow"
-                  placeholder="0.00"
-                  @blur="calculateAmount('inflow')"
-                />
-              </td>
-              <td>
-                <a x-show="!editableTransaction.cleared" x-on:click="toggleCleared(editableTransaction)">
-                  <svg
-                    class="w-3.5 h-3.5"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="m7 10 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                    />
-                  </svg>
-                </a>
-                <a x-show="editableTransaction.cleared" x-on:click="toggleCleared(editableTransaction)">
-                  <svg
-                    class="w-3.5 h-3.5 text-green-600 dark:text-green-500"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"
-                    />
-                  </svg>
-                </a>
-              </td>
-            </tr>
-            <tr class="transaction-edit" x-show="showEditForm" x-ref="editFormButtons" x-cloak>
-              <td colspan="9" class="text-right">
-                <!-- Adjust the colspan to match the number of columns in your table -->
-                <button
-                  type="button"
-                  class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mr-2 mb-2"
-                  @click="saveTransaction()"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-white mr-2 mb-2"
-                  @click="cancelTransaction()"
-                >
-                  Cancel
-                </button>
-              </td>
-            </tr>
-            <!-- End New Transaction Form -->
-            <template x-for="(transaction, index) in transactions" :key="index">
-              <tr
-                :id="'transaction-' + transaction.id"
-                class="transaction-row"
-                :class="{'transaction-active': index === activeIndex, 'transaction-checked': transaction.checked}"
-              >
-                <td class="px-2 py-3">
-                  <input type="checkbox" x-model="transaction.checked" />
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b dark:border-gray-700 border-l-4 border-l-gray-50 dark:border-l-gray-700">
+              <tr>
+                <th scope="col" class="px-2 py-3">
+                  <input type="checkbox" />
+                </th>
+                <th scope="col" class="px-2 py-3">Account</th>
+                <th scope="col" class="px-2 py-3">Date</th>
+                <th scope="col" class="px-2 py-3">Payee</th>
+                <th scope="col" class="px-2 py-3">Envelope</th>
+                <th scope="col" class="px-2 py-3">Memo</th>
+                <th scope="col" class="px-2 py-3 text-right">Outflow</th>
+                <th scope="col" class="px-2 py-3 text-right">Inflow</th>
+                <th scope="col" class="px-2 py-3">©</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- New Transaction Form -->
+              <tr class="transaction-edit"
+                  x-show="showEditForm"
+                  x-ref="editForm"
+                  x-cloak>
+                <td class="px-2 py-3 align-text-top"></td>
+                <td class="px-1 py-3 align-text-top">
+                  <select class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          id="id_account"
+                          x-model="editableTransaction.account">
+                    <option value="">Select account</option>
+                    {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
+
+                    {% for credit_card in credit_cards %}<option value="{{ credit_card.id }}">{{ credit_card.name }}</option>{% endfor %}
+                  </select>
                 </td>
-                <td
-                  class="px-2 py-3 whitespace-nowrap truncate cursor-pointer"
-                  x-text="transaction.account.name"
-                  @click="editTransactionAtIndex(transaction, index, 'account')"
-                ></td>
-                <td
-                  class="px-2 py-3 whitespace-nowrap truncate cursor-pointer"
-                  x-text="transaction.date"
-                  @click="editTransactionAtIndex(transaction, index, 'date')"
-                ></td>
-                <td
-                  class="px-2 py-3 whitespace-nowrap truncate max-w-xs cursor-pointer"
-                  x-text="transaction.payee ? transaction.payee.name : ''"
-                  @click="editTransactionAtIndex(transaction, index, 'payee')"
-                ></td>
-                <td
-                  class="px-2 py-3 whitespace-nowrap truncate"
-                  @click="editTransactionAtIndex(transaction, index, 'envelope')"
-                >
-                  <button
-                    type="button"
-                    class="px-4 py-1 text-xs font-medium text-center inline-flex items-center text-white bg-yellow-700 rounded-full hover:bg-yellow-800 focus:ring-1 focus:outline-none focus:ring-yellow-300"
-                    x-show="!transaction.envelope"
-                  >
-                    <svg
-                      class="w-3 h-3 text-white me-2"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      viewBox="0 0 20 16"
-                    >
-                      <path
-                        d="m10.036 8.278 9.258-7.79A1.979 1.979 0 0 0 18 0H2A1.987 1.987 0 0 0 .641.541l9.395 7.737Z"
-                      />
-                      <path
-                        d="M11.241 9.817c-.36.275-.801.425-1.255.427-.428 0-.845-.138-1.187-.395L0 2.6V14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V2.5l-8.759 7.317Z"
-                      />
-                    </svg>
-                    Select...
-                  </button>
-                  <button
-                    x-show="transaction.envelope"
-                    x-text="transaction.envelope ? transaction.envelope.name : ''"
-                  ></button>
+                <td class="px-1 py-3 align-text-top">
+                  <div class="relative max-w-sm">
+                    <input datepicker
+                           datepicker-format="yyyy-mm-dd"
+                           type="text"
+                           id="id_date"
+                           class="editable-transaction-date block w-24 p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                           placeholder="Select date"
+                           x-model="editableTransaction.date" />
+                  </div>
                 </td>
-                <td
-                  class="px-2 py-3 whitespace-nowrap truncate max-w-xs cursor-pointer"
-                  x-text="transaction.memo"
-                  @click="editTransactionAtIndex(transaction, index, 'memo')"
-                ></td>
-                <td
-                  class="px-2 py-3 text-right cursor-pointer"
-                  x-text="formatAmount(transaction.amount, 'outflow')"
-                  @click="editTransactionAtIndex(transaction, index, 'outflow')"
-                ></td>
-                <td
-                  class="px-2 py-3 text-right text-green-700 dark:text-green-400 cursor-pointer"
-                  x-text="formatAmount(transaction.amount, 'inflow')"
-                  @click="editTransactionAtIndex(transaction, index, 'inflow')"
-                ></td>
+                <td class="px-1 py-3 align-text-top">
+                  <input type="text"
+                         id="id_payee"
+                         class="payee-input block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                         x-model="editableTransaction.payee" />
+                </td>
+                <td class="px-1 py-3 align-text-top">
+                  <select id="id_envelope"
+                          class="block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          x-model="editableTransaction.envelope">
+                    <option value="">Unassigned</option>
+                    {% for ce in categorized_envelopes %}
+                      <optgroup label="{{ ce.category }}">
+                        {% for envelope in ce.envelopes %}<option value="{{ envelope.id }}">{{ envelope.name }}</option>{% endfor %}
+
+                      {% endfor %}
+                    </optgroup>
+                  </select>
+                </td>
+                <td class="px-1 py-3 align-text-top">
+                  <textarea rows="1"
+                            id="id_memo"
+                            class="block p-1 w-full text-sm text-gray-900 bg-gray-50 rounded border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                            placeholder="Memo..."
+                            x-model="editableTransaction.memo"></textarea>
+                </td>
+                <td class="px-1 py-3 align-text-top w-5">
+                  <input type="text"
+                         id="id_outflow"
+                         class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                         x-model="editableTransaction.outflow"
+                         placeholder="0.00"
+                         @blur="calculateAmount('outflow')" />
+                </td>
+                <td class="px-1 py-3 align-text-top w-5">
+                  <input type="text"
+                         id="id_inflow"
+                         class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                         x-model="editableTransaction.inflow"
+                         placeholder="0.00"
+                         @blur="calculateAmount('inflow')" />
+                </td>
                 <td>
-                  <a x-show="!transaction.cleared" x-on:click="toggleCleared(transaction)">
-                    <svg
-                      class="w-3.5 h-3.5"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        stroke="currentColor"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="m7 10 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                      />
+                  <a x-show="!editableTransaction.cleared"
+                     x-on:click="toggleCleared(editableTransaction)">
+                    <svg class="w-3.5 h-3.5"
+                         aria-hidden="true"
+                         xmlns="http://www.w3.org/2000/svg"
+                         fill="none"
+                         viewBox="0 0 20 20">
+                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m7 10 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                   </a>
-                  <a x-show="transaction.cleared" x-on:click="toggleCleared(transaction)">
-                    <svg
-                      class="w-3.5 h-3.5 text-green-600 dark:text-green-500"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"
-                      />
+                  <a x-show="editableTransaction.cleared"
+                     x-on:click="toggleCleared(editableTransaction)">
+                    <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-500"
+                         aria-hidden="true"
+                         xmlns="http://www.w3.org/2000/svg"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                      <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z" />
                     </svg>
                   </a>
                 </td>
               </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
-      <!-- Pagination nav -->
-      <nav
-        class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
-        aria-label="Table navigation"
-        x-cloak
-      >
-        <span class="text-sm font-normal text-gray-500 dark:text-gray-400" x-show="totalTransactions > 0">
-          Showing
-          <span
-            class="font-semibold text-gray-900 dark:text-white"
-            x-text="((currentPage - 1) * transactionsPerPage) + 1"
-          ></span>
-          -
-          <span
-            class="font-semibold text-gray-900 dark:text-white"
-            x-text="Math.min(currentPage * transactionsPerPage, totalTransactions)"
-          ></span>
-          of
-          <span class="font-semibold text-gray-900 dark:text-white" x-text="totalTransactions"></span>
-        </span>
-        <span class="text-sm font-normal text-gray-500 dark:text-gray-400" x-show="totalTransactions === 0" x-cloak
-          >No transaction data to show.</span
-        >
-        <ul class="inline-flex items-stretch -space-x-px" x-show="totalPages > 1">
-          <li>
-            <a
-              href="#"
-              class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              x-on:click.prevent="currentPage > 1 && changePage(currentPage - 1)"
-            >
-              <span class="sr-only">Previous</span>
-              <svg
-                class="w-5 h-5"
-                aria-hidden="true"
-                fill="currentColor"
-                viewbox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </a>
-          </li>
-          <template x-for="page in totalPages" :key="page">
+              <tr class="transaction-edit"
+                  x-show="showEditForm"
+                  x-ref="editFormButtons"
+                  x-cloak>
+                <td colspan="9" class="text-right">
+                  <!-- Adjust the colspan to match the number of columns in your table -->
+                  <button type="button"
+                          class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mr-2 mb-2"
+                          @click="saveTransaction()">Save</button>
+                  <button type="button"
+                          class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-white mr-2 mb-2"
+                          @click="cancelTransaction()">Cancel</button>
+                </td>
+              </tr>
+              <!-- End New Transaction Form -->
+              <template x-for="(transaction, index) in transactions" :key="index">
+                <tr :id="'transaction-' + transaction.id"
+                    class="transaction-row"
+                    :class="{'transaction-active': index === activeIndex, 'transaction-checked': transaction.checked}">
+                  <td class="px-2 py-3">
+                    <input type="checkbox" x-model="transaction.checked" />
+                  </td>
+                  <td class="px-2 py-3 whitespace-nowrap truncate cursor-pointer"
+                      x-text="transaction.account.name"
+                      @click="editTransactionAtIndex(transaction, index, 'account')"></td>
+                  <td class="px-2 py-3 whitespace-nowrap truncate cursor-pointer"
+                      x-text="transaction.date"
+                      @click="editTransactionAtIndex(transaction, index, 'date')"></td>
+                  <td class="px-2 py-3 whitespace-nowrap truncate max-w-xs cursor-pointer"
+                      x-text="transaction.payee ? transaction.payee.name : ''"
+                      @click="editTransactionAtIndex(transaction, index, 'payee')"></td>
+                  <td class="px-2 py-3 whitespace-nowrap truncate"
+                      @click="editTransactionAtIndex(transaction, index, 'envelope')">
+                    <button type="button"
+                            class="px-4 py-1 text-xs font-medium text-center inline-flex items-center text-white bg-yellow-700 rounded-full hover:bg-yellow-800 focus:ring-1 focus:outline-none focus:ring-yellow-300"
+                            x-show="!transaction.envelope">
+                      <svg class="w-3 h-3 text-white me-2"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           fill="currentColor"
+                           viewBox="0 0 20 16">
+                        <path d="m10.036 8.278 9.258-7.79A1.979 1.979 0 0 0 18 0H2A1.987 1.987 0 0 0 .641.541l9.395 7.737Z" />
+                        <path d="M11.241 9.817c-.36.275-.801.425-1.255.427-.428 0-.845-.138-1.187-.395L0 2.6V14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V2.5l-8.759 7.317Z" />
+                      </svg>
+                      Select...
+                    </button>
+                    <button x-show="transaction.envelope"
+                            x-text="transaction.envelope ? transaction.envelope.name : ''"></button>
+                  </td>
+                  <td class="px-2 py-3 whitespace-nowrap truncate max-w-xs cursor-pointer"
+                      x-text="transaction.memo"
+                      @click="editTransactionAtIndex(transaction, index, 'memo')"></td>
+                  <td class="px-2 py-3 text-right cursor-pointer"
+                      x-text="formatAmount(transaction.amount, 'outflow')"
+                      @click="editTransactionAtIndex(transaction, index, 'outflow')"></td>
+                  <td class="px-2 py-3 text-right text-green-700 dark:text-green-400 cursor-pointer"
+                      x-text="formatAmount(transaction.amount, 'inflow')"
+                      @click="editTransactionAtIndex(transaction, index, 'inflow')"></td>
+                  <td>
+                    <a x-show="!transaction.cleared" x-on:click="toggleCleared(transaction)">
+                      <svg class="w-3.5 h-3.5"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           fill="none"
+                           viewBox="0 0 20 20">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m7 10 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </a>
+                    <a x-show="transaction.cleared" x-on:click="toggleCleared(transaction)">
+                      <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-500"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           fill="currentColor"
+                           viewBox="0 0 20 20">
+                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z" />
+                      </svg>
+                    </a>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <!-- Pagination nav -->
+        <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+             aria-label="Table navigation"
+             x-cloak>
+          <span class="text-sm font-normal text-gray-500 dark:text-gray-400"
+                x-show="totalTransactions > 0">
+            Showing
+            <span class="font-semibold text-gray-900 dark:text-white"
+                  x-text="((currentPage - 1) * transactionsPerPage) + 1"></span>
+            -
+            <span class="font-semibold text-gray-900 dark:text-white"
+                  x-text="Math.min(currentPage * transactionsPerPage, totalTransactions)"></span>
+            of
+            <span class="font-semibold text-gray-900 dark:text-white"
+                  x-text="totalTransactions"></span>
+          </span>
+          <span class="text-sm font-normal text-gray-500 dark:text-gray-400"
+                x-show="totalTransactions === 0"
+                x-cloak>No transaction data to show.</span>
+          <ul class="inline-flex items-stretch -space-x-px" x-show="totalPages > 1">
             <li>
-              <a
-                href="#"
-                class="pagination-page"
-                x-text="page"
-                :class="{'pagination-page-active': currentPage === page}"
-                x-on:click.prevent="changePage(page)"
-              ></a>
+              <a href="#"
+                 class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                 x-on:click.prevent="currentPage > 1 && changePage(currentPage - 1)">
+                <span class="sr-only">Previous</span>
+                <svg class="w-5 h-5"
+                     aria-hidden="true"
+                     fill="currentColor"
+                     viewbox="0 0 20 20"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              </a>
             </li>
-          </template>
-          <li>
-            <a
-              href="#"
-              class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-              x-on:click.prevent="currentPage < totalPages && changePage(currentPage + 1)"
-            >
-              <span class="sr-only">Next</span>
-              <svg
-                class="w-5 h-5"
-                aria-hidden="true"
-                fill="currentColor"
-                viewbox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </a>
-          </li>
-        </ul>
-      </nav>
-      <!-- End Pagination nav -->
+            <template x-for="page in totalPages" :key="page">
+              <li>
+                <a href="#"
+                   class="pagination-page"
+                   x-text="page"
+                   :class="{'pagination-page-active': currentPage === page}"
+                   x-on:click.prevent="changePage(page)"></a>
+              </li>
+            </template>
+            <li>
+              <a href="#"
+                 class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                 x-on:click.prevent="currentPage < totalPages && changePage(currentPage + 1)">
+                <span class="sr-only">Next</span>
+                <svg class="w-5 h-5"
+                     aria-hidden="true"
+                     fill="currentColor"
+                     viewbox="0 0 20 20"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <!-- End Pagination nav -->
+      </div>
     </div>
-  </div>
-</section>
-{% endblock content %} {% block js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/datepicker.min.js"></script>
-{% compress js %}
-<script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
-<script src="{% static 'transactions/js/transactions.js' %}"></script>
-{% endcompress %} {% endblock js %}
+    {% if account %}
+      <!-- Edit Account Modal -->
+      {% include "transactions/_edit_account_modal.html" %}
+      <!-- /End Edit Account Modal -->
+    {% endif %}
+  </section>
+{% endblock content %}
+
+{% block js %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/datepicker.min.js"></script>
+  {% compress js %}
+    <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
+    <script src="{% static 'transactions/js/transactions.js' %}"></script>
+    {% if account %}
+      <script src="{% static 'transactions/js/edit-account.js' %}"></script>
+    {% endif %}
+
+  {% endcompress %}
+
+{% endblock js %}

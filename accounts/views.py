@@ -1,9 +1,11 @@
+from decimal import Decimal
 import logging
 import os
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.http import HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
 import requests
 
 from budgetapp.utils import money_db_prep
@@ -158,3 +160,49 @@ def account_transactions(request, slug):
     response.set_cookie("budget_id", request.session.get("budget"))
     response.set_cookie("account_id", _account.id)
     return response
+
+
+def edit_account_form(request, account_id):
+    """
+    View to render the account edit form or process the form submission
+    """
+    user = request.user
+    _account = get_object_or_404(Account, id=account_id)
+
+    # Ensure the account belongs to a budget owned by the user
+    if _account.budget.user != user:
+        return HttpResponseForbidden("You don't have permission to edit this account")
+
+    if request.method == "POST":
+        # Process form submission
+        name = request.POST.get("name")
+        slug = request.POST.get("slug")
+        account_type = request.POST.get("type")
+        balance = request.POST.get("balance")
+        description = request.POST.get("description", "")
+
+        # Validate slug uniqueness
+        if (
+            slug != _account.slug
+            and Account.objects.filter(budget=_account.budget, slug=slug).exists()
+        ):
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "An account with this slug already exists in this budget.",
+                }
+            )
+
+        # Update account
+        _account.name = name
+        _account.slug = slug  # Add this line to update the slug
+        _account.type = account_type
+        if balance:
+            _account.balance = Decimal(balance) * 1000
+        _account.description = description
+        _account.save()
+
+        return JsonResponse({"status": "success"})
+
+    # Render the form with account data
+    return render(request, "accounts/_edit_account_form.html", {"account": _account})

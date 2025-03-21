@@ -13,9 +13,6 @@ twigFollowOfficialCodingStandards: false # Set to false if you want spacing arou
 djangoTemplateBracketSpacing: true
 
 overrides:
-  - files: ['*.jinja', '*.django', '**/views/**/*.html']
-    options:
-      parser: 'melody'
   - files: '*.{yaml,yml}'
     options:
       parser: 'yaml'
@@ -34,5 +31,3 @@ overrides:
   - files: '*.css'
     options:
       parser: 'css'
-
-plugins: ['prettier-plugin-django']

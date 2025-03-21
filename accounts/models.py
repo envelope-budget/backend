@@ -42,6 +42,10 @@ class Account(models.Model):
     def __str__(self):
         return str(self.name)
 
+    @property
+    def balance_dollars(self):
+        return round(self.balance / 1000, 2)
+
 
 @receiver(pre_save, sender=Account)
 def slugify_name(sender, instance, *args, **kwargs):
