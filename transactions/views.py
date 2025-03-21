@@ -8,12 +8,15 @@ from .models import Payee
 @login_required
 def transactions(request):
     categories = Category.objects.filter(budget=request.session.get("budget"))
+    _envelopes = Envelope.objects.filter(category__in=categories).select_related(
+        "category"
+    )
     categorized_envelopes = []
     for category in categories:
         categorized_envelopes.append(
             {
                 "category": category,
-                "envelopes": Envelope.objects.filter(category=category),
+                "envelopes": [e for e in _envelopes if e.category_id == category.id],
             }
         )
 
@@ -29,5 +32,5 @@ def transactions(request):
 
 @login_required
 def payees(request):
-    payees = Payee.objects.filter(budget=request.session.get("budget"))
-    return render(request, "transactions/payees.html", {"payees": payees})
+    _payees = Payee.objects.filter(budget=request.session.get("budget"))
+    return render(request, "transactions/payees.html", {"payees": _payees})

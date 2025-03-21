@@ -174,7 +174,7 @@ function transactionData() {
         .then(data => {
           if (data.errors && data.errors.length > 0) {
             // Display errors if any
-            alert(`Error pulling transactions: ${data.errors.join(', ')}`);
+            showToast(`Error pulling transactions: ${data.errors.join(', ')}`);
 
             // Reset button
             if (button) {
@@ -188,7 +188,7 @@ function transactionData() {
         })
         .catch(error => {
           console.error('Error pulling SimpleFIN transactions:', error);
-          alert(`Failed to pull transactions: ${error.message}`);
+          showToast(`Failed to pull transactions: ${error.message}`);
 
           // Reset button
           if (button) {
