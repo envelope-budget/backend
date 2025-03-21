@@ -7,10 +7,6 @@ twigPrintWidth: 5000
 twigMultiTags: ['with,endwith']
 twigAlwaysBreakObjects: false
 twigSingleQuote: false
-twigFollowOfficialCodingStandards: false # Set to false if you want spacing around filter pipes
-
-# This is key - it will maintain the template tag formatting you prefer
-djangoTemplateBracketSpacing: true
 
 overrides:
   - files: '*.{yaml,yml}'

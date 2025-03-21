@@ -5,6 +5,10 @@
 *.mjs
 *.cjs
 
+# Ignore html files as they are handled by djlint
+*.html
+*.htm
+
 # Ignore TypeScript files
 *.ts
 *.tsx
