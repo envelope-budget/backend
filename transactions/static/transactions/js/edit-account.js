@@ -1,4 +1,5 @@
 const Modal = window.Modal;
+let editModal = undefined;
 
 function editAccount(accountId) {
   const modal = document.getElementById('accountEditModal');
@@ -20,6 +21,7 @@ function editAccount(accountId) {
 
       // Create a new Modal instance
       const modalInstance = new Modal(modal, options);
+      editModal = modalInstance;
       modalInstance.show();
 
       // Update form action to point to the edit endpoint
@@ -92,7 +94,9 @@ function editAccount(accountId) {
 }
 
 function archiveAccount(accountId) {
-  fetch(`/accounts/archive/${accountId}/`, {
+  const budgetId = getCookie('budget_id');
+  console.log(`Archiving account with ID: ${accountId} in budget with ID: ${budgetId}`);
+  fetch(`/api/accounts/${budgetId}/archive/${accountId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -101,11 +105,10 @@ function archiveAccount(accountId) {
   })
     .then(response => response.json())
     .then(data => {
+      console.log('Response:', data);
       if (data.status === 'success') {
         // Close the modal
-        const modal = document.getElementById('accountEditModal');
-        const modalInstance = Modal.getInstance(modal);
-        modalInstance.hide();
+        editModal.hide();
 
         // Refresh the page to show updated account status
         window.location.reload();

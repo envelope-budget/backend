@@ -43,6 +43,7 @@
   ],
   "cSpell.words": [
     "budgetapp",
+    "csrfmiddlewaretoken",
     "datepicker",
     "describedby",
     "Deutsch",
@@ -67,7 +68,6 @@
     "xlink"
   ],
   "djlint.configuration": ".djlintrc",
-  "djlint.enableLinting": true,
   "djlint.formatCss": true,
   "djlint.formatJs": true,
   "djlint.ignore": [

@@ -1,8 +1,9 @@
 import base64
 import datetime
 import logging
-import requests
 import urllib
+
+import requests
 
 from django.db import models
 from django.db.models.signals import pre_save
@@ -48,7 +49,7 @@ class Account(models.Model):
 
 
 @receiver(pre_save, sender=Account)
-def slugify_name(sender, instance, *args, **kwargs):
+def slugify_name(_, instance, *args, **kwargs):
     if not instance.slug:
         base_slug = slugify(instance.name)
         slug = base_slug
@@ -142,7 +143,7 @@ class SimpleFINConnection(models.Model):
             return connection
         except Exception as e:
             logger.error("Error processing SimpleFIN setup token: %s", str(e))
-            raise ValueError(f"Error processing SimpleFIN setup token: {str(e)}")
+            raise ValueError(f"Error processing SimpleFIN setup token: {str(e)}") from e
 
     def get_accounts(self):
         """
@@ -221,8 +222,10 @@ class SimpleFINConnection(models.Model):
             account_id (str, optional): Specific account to retrieve transactions for.
             start_date (str, optional): Start date for transaction filtering in 'YYYY-MM-DD' format.
             end_date (str, optional): End date for transaction filtering in 'YYYY-MM-DD' format.
-            include_pending (bool, optional): Whether to include pending transactions. Defaults to True.
-            import_transactions (bool, optional): Whether to import the transactions to a matching EB account. Defaults to True.
+            include_pending (bool, optional): Whether to include pending transactions.
+                Defaults to True.
+            import_transactions (bool, optional): Whether to import the transactions to a
+                matching EB account. Defaults to True.
 
         Returns:
             dict: A JSON-decoded response containing transaction details from the SimpleFIN API.
@@ -349,7 +352,13 @@ class SimpleFINConnection(models.Model):
                             pending=transaction.get("pending", False),
                         )
                         created_transaction_ids.append(new_transaction.id)
-                    except Exception as e:
+                    except (
+                        ValueError,
+                        TypeError,
+                        KeyError,
+                        Payee.DoesNotExist,
+                        Transaction.DoesNotExist,
+                    ) as e:
                         logger.error(
                             "Error creating transaction: %s for transaction: %s",
                             str(e),

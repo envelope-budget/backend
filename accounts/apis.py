@@ -2,15 +2,17 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 import logging
 
+from django.conf import settings
+from django.db import DatabaseError
+from django.forms import ValidationError
+from django.shortcuts import get_object_or_404
 from ninja import Router, Schema
 from ninja.security import django_auth
-from django.conf import settings
-from django.shortcuts import get_object_or_404
-import plaid
 from plaid.api import plaid_api
+import plaid
 
-from .models import Account, SimpleFINConnection
 from budgets.models import Budget
+from .models import Account, SimpleFINConnection
 
 
 logger = logging.getLogger(__name__)
@@ -251,7 +253,8 @@ def get_simplefin_transactions(
         start_date: Optional start date for transaction filtering in 'YYYY-MM-DD' format
         end_date: Optional end date for transaction filtering in 'YYYY-MM-DD' format
         include_pending: Whether to include pending transactions (defaults to True)
-        import_transactions: Whether to import the transactions to a matching EB account (defaults to True)
+        import_transactions: Whether to import the transactions to a matching EB account
+            (defaults to True)
 
     Returns:
         JSON response containing transaction details from the SimpleFIN API
@@ -309,3 +312,43 @@ def create_account(request, budget_id: str, account_in: AccountCreateSchema):
     )  # Ensure the budget belongs to the user
     account = Account.objects.create(**account_in.dict(), budget=budget)
     return AccountSchema.from_orm(account)
+
+
+@router.post(
+    "/{budget_id}/archive/{account_id}",
+    response=Dict[str, Any],
+    auth=django_auth,
+    tags=["Accounts"],
+)
+def archive_account(request, budget_id: str, account_id: str):
+    """
+    Archive an account by setting its 'closed' field to True.
+
+    Args:
+        budget_id: The ID of the budget
+        account_id: The ID of the account to archive
+
+    Returns:
+        Dictionary with status and message
+    """
+    user = request.auth
+    get_object_or_404(
+        Budget, id=budget_id, user=user
+    )  # Ensure the budget belongs to the user
+
+    try:
+        account = get_object_or_404(
+            Account, id=account_id, budget_id=budget_id, deleted=False
+        )
+
+        # Set the account as closed
+        account.closed = True
+        account.save()
+
+        return {
+            "status": "success",
+            "message": f"Account '{account.name}' has been archived successfully.",
+        }
+    except (Account.DoesNotExist, ValidationError, DatabaseError) as e:
+        logger.error("Error archiving account %s: %s", account_id, str(e))
+        return {"status": "error", "message": f"Failed to archive account: {str(e)}"}
