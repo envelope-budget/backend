@@ -36,8 +36,7 @@
   ],
   "djlint.blankLineAfterTag": [
     "endblock",
-    "extends",
-    "load"
+    "extends"
   ],
   "djlint.blankLineBeforeTag": [
     "block"
