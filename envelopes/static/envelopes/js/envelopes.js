@@ -179,6 +179,14 @@ function envelopeData() {
       name: '',
     },
 
+    selectedItem: {
+      id: null,
+      type: null,
+      name: '',
+      balance: '',
+      categoryName: '',
+    },
+
     createCategory() {
       const budgetId = window.getCookie('budget_id');
       const endpoint = `/api/categories/${budgetId}`;
@@ -267,6 +275,60 @@ function envelopeData() {
           console.error('Error creating envelope:', error);
           // Handle the error case here
         });
+    },
+
+    selectCategory(id, name, balance) {
+      this.selectedItem = {
+        id: id,
+        type: 'category',
+        name: name,
+        balance: balance,
+        categoryName: '',
+      };
+
+      // Add selected class to the clicked category
+      for (const el of document.querySelectorAll('.category-item, .envelope-item')) {
+        el.classList.remove('selected-item');
+      }
+      document.querySelector(`.category-item[data-id="${id}"]`).classList.add('selected-item');
+    },
+    selectEnvelope(id, name, balance, categoryName) {
+      this.selectedItem = {
+        id: id,
+        type: 'envelope',
+        name: name,
+        balance: balance,
+        categoryName: categoryName,
+      };
+
+      // Add selected class to the clicked envelope
+      for (const el of document.querySelectorAll('.category-item, .envelope-item')) {
+        el.classList.remove('selected-item');
+      }
+      document.querySelector(`.envelope-item[data-id="${id}"]`).classList.add('selected-item');
+    },
+    closeDetails() {
+      this.selectedItem = {
+        id: null,
+        type: null,
+        name: '',
+        balance: '',
+        categoryName: '',
+      };
+
+      // Remove selected class from all items
+      for (const el of document.querySelectorAll('.category-item, .envelope-item')) {
+        el.classList.remove('selected-item');
+      }
+    },
+    editCategory(id) {
+      // Implement category editing logic
+      console.log('Edit category:', id);
+    },
+
+    editEnvelope(id) {
+      // Implement envelope editing logic
+      console.log('Edit envelope:', id);
     },
   };
 }

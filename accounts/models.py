@@ -49,7 +49,7 @@ class Account(models.Model):
 
 
 @receiver(pre_save, sender=Account)
-def slugify_name(_, instance, *args, **kwargs):
+def slugify_name(sender, instance, *args, **kwargs):  # pylint: disable=unused-argument
     if not instance.slug:
         base_slug = slugify(instance.name)
         slug = base_slug
