@@ -2,7 +2,9 @@ pre-commit:
   commands:
     biome:
       glob: '*'
-      run: npx biome check --apply --no-errors-on-unmatched --files-ignore-unknown=true {staged_files} && git update-index --again
+      run:
+        npx biome check --apply --no-errors-on-unmatched --files-ignore-unknown=true {staged_files} && git update-index
+        --again
     prettier:
       run: |
         npx prettier --write {staged_files}
@@ -13,3 +15,8 @@ pre-commit:
         black {staged_files}
         git add {staged_files}
       glob: '*.py'
+    djlint:
+      run: |
+        djlint --reformat {staged_files}
+        git add {staged_files}
+      glob: '*.html'

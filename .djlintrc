@@ -1,0 +1,12 @@
+{
+  "indent": 2,
+  "profile": "django",
+  "format_css": true,
+  "format_js": true,
+  "preserve_blank_lines": true,
+  "ignore": "node_modules/,venv/,staticfiles/,dist/",
+  "blank_line_after_tag": "endblock,extends",
+  "blank_line_before_tag": "block",
+  "extension": "html",
+  "linter_output": "colored"
+}
