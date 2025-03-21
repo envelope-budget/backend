@@ -13,7 +13,7 @@ function editAccount(accountId) {
       // Initialize the modal using Flowbite's Modal class
       const options = {
         placement: 'center',
-        backdrop: 'dynamic',
+        backdrop: 'static',
         backdropClasses: 'bg-gray-900/50 dark:bg-gray-900/80 fixed inset-0 z-40',
         closable: true,
       };
@@ -71,6 +71,8 @@ function editAccount(accountId) {
               } else {
                 // Display error message
                 console.error('Error updating account:', data.message);
+                showToast(data.message || 'Error updating account');
+
                 // You could add code here to show the error message to the user
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'mt-2 text-sm text-red-600';
@@ -86,5 +88,35 @@ function editAccount(accountId) {
     })
     .catch(error => {
       console.error('Error loading account form:', error);
+    });
+}
+
+function archiveAccount(accountId) {
+  fetch(`/accounts/archive/${accountId}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+    },
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        // Close the modal
+        const modal = document.getElementById('accountEditModal');
+        const modalInstance = Modal.getInstance(modal);
+        modalInstance.hide();
+
+        // Refresh the page to show updated account status
+        window.location.reload();
+      } else {
+        // Show toast message instead of alert
+        showToast(`Failed to archive account: ${data.message}`);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      // Show toast message instead of alert
+      showToast('An error occurred while trying to archive the account.');
     });
 }

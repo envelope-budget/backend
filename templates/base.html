@@ -1006,11 +1006,14 @@
     <script defer
             src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="{% static 'js/base.js' %}"></script>
-    <script src="{% static 'js/sfin.js' %}"></script>
+
+    {% compress js %}
+      <script src="{% static 'js/base.js' %}"></script>
+      <script src="{% static 'js/sfin.js' %}"></script>
+      <script src="{% static 'js/toasts.js' %}"></script>
+    {% endcompress %}
 
     {% block js %}
-
     {% endblock js %}
 
   </body>
