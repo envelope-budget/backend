@@ -1,23 +1,29 @@
 #!/bin/bash
 
 # Start the Tailwind CSS process in the background
-npx tailwindcss -i ./static/src/input.css -o ./static/src/output.css --watch=always &
+echo "🎨 Starting Tailwind CSS process..."
+npx @tailwindcss/cli -i ./static/src/input.css -o ./static/src/output.css --watch=always &
 TAILWIND_PID=$!
+echo "✅ Tailwind CSS process started with PID: $TAILWIND_PID"
 
 # Start the Django server in the background
+echo "🚀 Starting Django server..."
 python manage.py runserver 8007 &
 DJANGO_PID=$!
+echo "✅ Django server started with PID: $DJANGO_PID"
 
 # Function to handle SIGINT (ctrl+c)
 cleanup() {
-  echo "Terminating Tailwind CSS and Django Server..."
+  echo "🛑 Terminating Tailwind CSS and Django Server..."
   kill $TAILWIND_PID
   kill $DJANGO_PID
+  echo "👋 Processes terminated successfully"
 }
 
 # Trap SIGINT and call the cleanup function
 trap cleanup SIGINT
 
+echo "⏳ Waiting for processes to complete..."
 # Wait for both processes to exit
 wait $TAILWIND_PID
 wait $DJANGO_PID
