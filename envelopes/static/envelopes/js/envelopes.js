@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
 // Save the order of categories
 function saveCategoriesOrder() {
   const categoryItems = document.querySelectorAll('.category-item');
@@ -187,44 +188,10 @@ function envelopeData() {
       categoryName: '',
     },
 
-    createCategory() {
-      const budgetId = window.getCookie('budget_id');
-      const endpoint = `/api/categories/${budgetId}`;
-      const csrfToken = window.getCookie('csrftoken');
-
-      // Prepare the headers
-      const headers = new Headers({
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken,
-      });
-
-      // Prepare the request options
-      const requestOptions = {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({
-          name: this.category.name,
-        }),
-        credentials: 'include', // necessary for cookies to be sent with the request
-      };
-
-      // Post to endpoint
-      fetch(endpoint, requestOptions)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('Category created successfully:', data);
-          // Refresh the page to show the new category
-          window.location.reload();
-        })
-        .catch(error => {
-          console.error('Error creating category:', error);
-          // Handle the error case here
-        });
+    categoryForm: {
+      id: null,
+      name: '',
+      isEdit: false,
     },
 
     startNewEnvelope(category_id) {
@@ -277,21 +244,23 @@ function envelopeData() {
         });
     },
 
-    selectCategory(id, name, balance) {
-      this.selectedItem = {
-        id: id,
-        type: 'category',
-        name: name,
-        balance: balance,
-        categoryName: '',
-      };
+    selectCategory(categoryId) {
+      // Get the current name from the DOM
+      const categoryElement = document.querySelector(`.category-item[data-id="${categoryId}"] .font-medium`);
+      const categoryName = categoryElement ? categoryElement.textContent.trim() : '';
 
-      // Add selected class to the clicked category
-      for (const el of document.querySelectorAll('.category-item, .envelope-item')) {
-        el.classList.remove('selected-item');
-      }
-      document.querySelector(`.category-item[data-id="${id}"]`).classList.add('selected-item');
+      // Get the current balance from the DOM
+      const balanceElement = document.querySelector(`.category-item[data-id="${categoryId}"] .text-right.font-medium`);
+      const balance = balanceElement ? balanceElement.textContent.trim() : '$0.00';
+
+      this.selectedItem = {
+        id: categoryId,
+        type: 'category',
+        name: categoryName,
+        balance: balance,
+      };
     },
+
     selectEnvelope(id, name, balance, categoryName) {
       this.selectedItem = {
         id: id,
@@ -307,25 +276,121 @@ function envelopeData() {
       }
       document.querySelector(`.envelope-item[data-id="${id}"]`).classList.add('selected-item');
     },
+
+    editCategory(categoryId) {
+      this.categoryForm.isEdit = true;
+      this.categoryForm.id = categoryId;
+      this.categoryForm.name = this.selectedItem.name;
+
+      // The modal will be shown by the data-modal-toggle attribute
+    },
+
+    saveCategory() {
+      const budgetId = getCookie('budget_id');
+      console.log(`Saving category in budget id: ${budgetId}`);
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      };
+
+      if (this.categoryForm.isEdit) {
+        // Update existing category
+        const url = `/api/categories/${budgetId}/${this.categoryForm.id}`;
+
+        fetch(url, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            name: this.categoryForm.name,
+          }),
+          credentials: 'include',
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to update category');
+            }
+            return response.json();
+          })
+          .then(data => {
+            // Update the category name in the UI
+            const categoryElement = document.querySelector(
+              `.category-item[data-id="${this.categoryForm.id}"] .font-medium`
+            );
+            if (categoryElement) {
+              categoryElement.textContent = this.categoryForm.name;
+            }
+
+            // Update the selected item if it's the current category
+            if (this.selectedItem.id === this.categoryForm.id && this.selectedItem.type === 'category') {
+              this.selectedItem.name = this.categoryForm.name;
+            }
+
+            // Close the modal
+            FlowbiteInstances.getInstance('Modal', 'category-modal').hide();
+
+            // Reset the form
+            this.resetCategoryForm();
+          })
+          .catch(error => {
+            console.error('Error updating category:', error);
+            // Show error message to user
+            alert('Failed to update category. Please try again.');
+          });
+      } else {
+        const endpoint = `/api/categories/${budgetId}`;
+
+        // Prepare the request options
+        const requestOptions = {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            name: this.categoryForm.name,
+          }),
+          credentials: 'include', // necessary for cookies to be sent with the request
+        };
+
+        // Post to endpoint
+        fetch(endpoint, requestOptions)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log('Category created successfully:', data);
+            // Refresh the page to show the new category
+            window.location.reload();
+          })
+          .catch(error => {
+            console.error('Error creating category:', error);
+            // Handle the error case here
+          });
+      }
+    },
+
+    resetCategoryForm() {
+      this.categoryForm = {
+        id: null,
+        name: '',
+        isEdit: false,
+      };
+    },
+
     closeDetails() {
       this.selectedItem = {
         id: null,
-        type: null,
         name: '',
         balance: '',
+        type: null,
         categoryName: '',
+        categoryId: null,
       };
-
-      // Remove selected class from all items
-      for (const el of document.querySelectorAll('.category-item, .envelope-item')) {
-        el.classList.remove('selected-item');
+      // Remove highlight from all items
+      for (const item of document.querySelectorAll('.category-item, .envelope-item')) {
+        item.classList.remove('selected-item');
       }
     },
-    editCategory(id) {
-      // Implement category editing logic
-      console.log('Edit category:', id);
-    },
-
     editEnvelope(id) {
       // Implement envelope editing logic
       console.log('Edit envelope:', id);

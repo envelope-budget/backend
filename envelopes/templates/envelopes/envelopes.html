@@ -79,7 +79,7 @@
               {% for category in budget.categorized_envelopes %}
                 <li class="category-item mb-4" data-id="{{ category.id }}">
                   <div class="category-item border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 flex justify-between items-center px-4 py-3"
-                       @click="selectCategory('{{ category.id }}', '{{ category.name }}', '{{ category.balance | money }}')">
+                       @click="selectCategory('{{ category.id }}')">
                     <div class="flex items-center">
                       <span class="drag-handle cursor-move mr-2">
                         <svg class="w-5 h-5 text-gray-800 dark:text-white"

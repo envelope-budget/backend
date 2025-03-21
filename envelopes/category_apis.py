@@ -33,9 +33,9 @@ class UpdateCategorySchema(Schema):
         hidden (Optional[bool]): Whether the category should be hidden or not.
     """
 
-    name: str
-    sort_order: Optional[int]
-    hidden: Optional[bool]
+    name: Optional[str] = None
+    sort_order: Optional[int] = None
+    hidden: Optional[bool] = None
 
 
 class CategorySchema(Schema):
@@ -144,24 +144,30 @@ def update_category(
 ):
     """
     Update an existing category for a given budget.
-
-    Args:
-        request: The incoming request object.
-        budget_id (str): The ID of the budget to update the category for.
-        category_id (str): The ID of the category to update.
-        category (UpdateCategorySchema): The updated data for the category.
-
-    Returns:
-        CategorySchema: The updated category.
     """
     from budgets.models import Budget
 
     get_object_or_404(Budget, id=budget_id)
     category_obj = get_object_or_404(Category, id=category_id)
-    category_obj.name = category.name or category_obj.name
-    category_obj.sort_order = category.sort_order or category_obj.sort_order
-    category_obj.hidden = category.hidden or category_obj.hidden
-    category_obj.save(update_fields=["name", "sort_order", "hidden"])
+
+    # Only update fields that were provided (not None)
+    if category.name is not None:
+        category_obj.name = category.name
+    if category.sort_order is not None:
+        category_obj.sort_order = category.sort_order
+    if category.hidden is not None:
+        category_obj.hidden = category.hidden
+
+    # Determine which fields were updated
+    update_fields = []
+    if category.name is not None:
+        update_fields.append("name")
+    if category.sort_order is not None:
+        update_fields.append("sort_order")
+    if category.hidden is not None:
+        update_fields.append("hidden")
+
+    category_obj.save(update_fields=update_fields if update_fields else None)
     return category_obj
 
 
