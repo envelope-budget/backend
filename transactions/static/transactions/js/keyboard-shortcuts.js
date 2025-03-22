@@ -49,6 +49,8 @@ function initKeyboardShortcuts(context) {
       });
     } else if (event.key === 'x') {
       context.toggleCheckboxInActiveRow();
+    } else if (event.key === 'y') {
+      context.archiveCheckedRows();
     } else if (event.key === '#') {
       context.deleteCheckedRows();
     }

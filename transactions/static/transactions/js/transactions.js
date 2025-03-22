@@ -1,6 +1,6 @@
 async function get_transactions(budgetId, page = 1, pageSize = 20, accountId = null) {
   const offset = (page - 1) * pageSize;
-  let url = `/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}`;
+  let url = `/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}&in_inbox=true`;
   const csrfToken = getCookie('csrftoken');
 
   if (accountId) {
@@ -55,6 +55,33 @@ async function patchTransaction(id, data) {
   }
 }
 
+async function bulkArchiveTransactions(transaction_ids) {
+  const budgetId = getCookie('budget_id');
+  const url = `/api/transactions/${budgetId}/archive`;
+  const csrfToken = getCookie('csrftoken');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ transaction_ids }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error archiving transactions:', error);
+    showToast('Error archiving transactions');
+    throw error;
+  }
+}
+
 async function deleteTransaction(transaction_id) {
   const budgetId = getCookie('budget_id');
   const url = `/api/transactions/${budgetId}/${transaction_id}`;
@@ -74,6 +101,7 @@ async function deleteTransaction(transaction_id) {
 
     return await response.json(); // or handle the response as needed
   } catch (error) {
+    showToast('Error deleting transaction');
     console.error('Error deleting transaction:', error);
     // Handle the error appropriately in your application
   }
@@ -113,6 +141,7 @@ async function updateAccountBalances() {
       }
     }
   } catch (error) {
+    showToast('Error updating account balances');
     console.error('Error updating account balances:', error);
     throw error; // Rethrow the error to be handled by the caller.
   }
@@ -295,6 +324,31 @@ function transactionData() {
       }
     },
 
+    async archiveCheckedRows() {
+      // Gather IDs of checked transactions that have envelopes and are cleared
+      const idsToArchive = this.transactions
+        .filter(transaction => transaction.checked && transaction.envelope && transaction.cleared)
+        .map(transaction => transaction.id);
+
+      const skippedTransactions = this.transactions.filter(
+        transaction => transaction.checked && (!transaction.envelope || !transaction.cleared)
+      ).length;
+
+      if (idsToArchive.length > 0) {
+        await bulkArchiveTransactions(idsToArchive);
+        this.fetchTransactions(); // Refresh the transaction list
+        if (skippedTransactions > 0) {
+          showToast(`${skippedTransactions} transaction(s) skipped - must have envelope assigned and be cleared`);
+        }
+      } else {
+        if (skippedTransactions > 0) {
+          showToast('Selected transactions must have envelope assigned and be cleared');
+        } else {
+          showToast('No transactions selected to archive');
+        }
+      }
+    },
+
     async deleteCheckedRows() {
       // Gather IDs of checked transactions
       const idsToDelete = this.transactions
@@ -308,6 +362,8 @@ function transactionData() {
         const deletePromises = idsToDelete.map(id => deleteTransaction(id));
         await Promise.all(deletePromises);
         this.fetchTransactions(); // Refresh the transaction list
+      } else {
+        showToast('No transactions selected to delete');
       }
       updateAccountBalances();
     },

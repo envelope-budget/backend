@@ -91,6 +91,7 @@ class Transaction(models.Model):
     import_id = models.CharField(max_length=255, blank=True, null=True)
     sfin_id = models.CharField("SimpleFIN ID", max_length=255, blank=True, null=True)
     import_payee_name = models.CharField(max_length=255, blank=True, null=True)
+    in_inbox = models.BooleanField(default=True)
     deleted = models.BooleanField(default=False)
 
     objects = TransactionManager()

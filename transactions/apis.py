@@ -2,15 +2,16 @@ from datetime import date
 from typing import List, Optional
 import logging
 
+from django.db import DatabaseError
 from django.shortcuts import get_object_or_404
 from ninja import File, Router, Schema, UploadedFile
 from ninja.pagination import paginate
 from ninja.security import django_auth
 
-from .models import Payee, Transaction
 from accounts.models import Account
 from budgets.models import Budget
 from envelopes.models import Envelope
+from .models import Payee, Transaction
 
 
 logger = logging.getLogger(__name__)
@@ -97,7 +98,12 @@ class Error(Schema):
     tags=["Transactions"],
 )
 @paginate
-def list_transactions(request, budget_id: str, account_id: Optional[str] = None):
+def list_transactions(
+    request,
+    budget_id: str,
+    account_id: Optional[str] = None,
+    in_inbox: Optional[bool] = None,
+):
     """List all transactions with pagination"""
     # Ensure the budget belongs to the authenticated user
     if not Budget.objects.filter(id=budget_id, user=request.user).exists():
@@ -107,10 +113,37 @@ def list_transactions(request, budget_id: str, account_id: Optional[str] = None)
 
     transactions_query = Transaction.objects.filter(budget_id=budget_id, deleted=False)
 
+    if in_inbox is not None:
+        transactions_query = transactions_query.filter(in_inbox=in_inbox)
+
     if account_id:
         transactions_query = transactions_query.filter(account_id=account_id)
 
     return transactions_query
+
+
+@router.post(
+    "/transactions/{budget_id}/archive",
+    response={200: dict, 400: Error},
+    auth=django_auth,
+    tags=["Transactions"],
+)
+def archive_transactions(request, budget_id: str, transaction_ids: BulkDeleteSchema):
+    """Archive multiple transactions by their IDs"""
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    logger.info(f"Archiving transactions: {transaction_ids.transaction_ids}")
+
+    try:
+        # Update all matching transactions that belong to this budget
+        updated = Transaction.objects.filter(
+            id__in=transaction_ids.transaction_ids, budget_id=budget_id, deleted=False
+        ).update(in_inbox=False)
+
+        return {"archived_count": updated}
+    except (Transaction.DoesNotExist, ValueError, DatabaseError) as e:
+        return 400, {"message": f"Failed to archive transactions: {str(e)}"}
 
 
 @router.get(
@@ -266,7 +299,8 @@ def update_transaction(
     transaction_data: TransactionPostPatchSchema,
 ):
     """
-    Update a transaction with the given `transaction_id` and `budget_id`, ensuring it belongs to the user.
+    Update a transaction with the given `transaction_id` and `budget_id`, ensuring it
+    belongs to the user.
     """
     # Ensure the transaction belongs to the authenticated user
     budget = get_object_or_404(Budget, id=budget_id, user=request.user)
