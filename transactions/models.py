@@ -87,7 +87,6 @@ class Transaction(models.Model):
     cleared = models.BooleanField(default=False)
     pending = models.BooleanField(default=False)
     reconciled = models.BooleanField(default=False)
-    approved = models.BooleanField(default=False)
     import_id = models.CharField(max_length=255, blank=True, null=True)
     sfin_id = models.CharField("SimpleFIN ID", max_length=255, blank=True, null=True)
     import_payee_name = models.CharField(max_length=255, blank=True, null=True)
@@ -102,7 +101,8 @@ class Transaction(models.Model):
     # Override the save method
     def save(self, *args, **kwargs):
         if self.import_id:
-            # Check if a transaction with the same budget, account, and import_id/sfin_id already exists
+            # Check if a transaction with the same budget, account, and import_id/sfin_id already
+            # exists
             if (
                 Transaction.objects.filter(
                     budget=self.budget,
@@ -183,6 +183,14 @@ class Transaction(models.Model):
                 condition=models.Q(deleted=False),
                 name="unique_budget_account_sfin_id",
             ),
+        ]
+        indexes = [
+            models.Index(fields=["date"]),
+            models.Index(fields=["amount"]),
+            models.Index(fields=["cleared"]),
+            models.Index(fields=["in_inbox"]),
+            models.Index(fields=["pending"]),
+            models.Index(fields=["deleted"]),
         ]
 
     @classmethod
@@ -320,6 +328,7 @@ class Transaction(models.Model):
         :type ofx_data: str
         :return: Dictionary with lists of created and duplicate transaction IDs
         """
+        # pylint: disable=import-outside-toplevel
         from accounts.models import Account
 
         budget = Budget.objects.get(id=budget_id)
@@ -456,6 +465,7 @@ class TransactionMerge(models.Model):
             List of restored transaction IDs
         """
         # Get the source transactions
+        # pylint: disable=no-member
         source_transactions = self.source_transactions.all()
         restored_ids = []
 

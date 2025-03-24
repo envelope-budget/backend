@@ -12,6 +12,7 @@ from ninja.security import django_auth
 from accounts.models import Account
 from budgets.models import Budget
 from envelopes.models import Envelope
+from transactions.search import parse_search_query
 from .models import Payee, Transaction, TransactionMerge
 
 
@@ -56,7 +57,6 @@ class TransactionSchema(Schema):
     cleared: bool
     pending: bool
     reconciled: bool
-    approved: bool
     import_id: Optional[str]
     sfin_id: Optional[str]
 
@@ -106,21 +106,36 @@ def list_transactions(
     budget_id: str,
     account_id: Optional[str] = None,
     in_inbox: Optional[bool] = None,
+    search: Optional[str] = None,
 ):
-    """List all transactions with pagination"""
+    """
+    List all transactions with pagination.
+
+    Supports filtering by account, inbox status, and search query.
+    """
     # Ensure the budget belongs to the authenticated user
     if not Budget.objects.filter(id=budget_id, user=request.user).exists():
-        return (
-            []
-        )  # Return an empty list or raise an error if the budget does not belong to the user
+        return []  # Return an empty list if the budget does not belong to the user
 
+    # Start with base query
     transactions_query = Transaction.objects.filter(budget_id=budget_id, deleted=False)
 
-    if in_inbox is not None:
+    # Apply search filter if provided
+    if search:
+        from transactions.search import parse_search_query
+
+        search_filter = parse_search_query(search, budget_id)
+        transactions_query = transactions_query.filter(search_filter)
+    # Only apply in_inbox filter if search is not provided or if explicitly requested
+    elif in_inbox is not None:
         transactions_query = transactions_query.filter(in_inbox=in_inbox)
 
+    # Apply account filter if provided
     if account_id:
         transactions_query = transactions_query.filter(account_id=account_id)
+
+    # Order by date descending
+    transactions_query = transactions_query.order_by("-date")
 
     return transactions_query
 
@@ -605,7 +620,8 @@ def delete_unused_payees(request, budget_id: str):
     """
     user = request.auth
     # Ensure the budget belongs to the authenticated user
-    # get_object_or_404(Budget, id=budget_id, user=user)
+    get_object_or_404(Budget, id=budget_id, user=user)
+
     # Call the method to delete unused payees
     deleted_count = Payee.delete_unused_payees(budget_id)
 
@@ -613,3 +629,25 @@ def delete_unused_payees(request, budget_id: str):
         "detail": f"Successfully deleted {deleted_count} unused payees",
         "count": deleted_count,
     }
+
+
+def search_transactions(request, budget_id: str, query: str = ""):
+    """
+    Search transactions using a query language.
+
+    Args:
+        request: The request object
+        budget_id: The budget ID
+        query: The search query string
+
+    Returns:
+        List of transactions matching the search criteria
+    """
+    # Parse the query into a Django Q object
+    query_filter = parse_search_query(query, budget_id)
+
+    # Get transactions matching the filter
+    transactions = Transaction.objects.filter(query_filter).order_by("-date")
+
+    # Return the transactions
+    return transactions

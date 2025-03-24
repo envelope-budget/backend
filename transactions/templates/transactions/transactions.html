@@ -27,10 +27,13 @@
             </button>
           </div>
         {% endif %}
+
         <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+
+          <!-- Search box -->
           <div class="w-full md:w-1/2">
-            <form class="flex items-center">
-              <label for="simple-search" class="sr-only">Search</label>
+            <form class="flex items-center" @submit.prevent="performSearch">
+              <label for="transaction-search" class="sr-only">Search</label>
               <div class="relative w-full">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <svg aria-hidden="true"
@@ -42,13 +45,114 @@
                   </svg>
                 </div>
                 <input type="text"
-                       id="simple-search"
+                       id="transaction-search"
+                       x-model="searchQuery"
                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                       placeholder="Search"
-                       required="" />
+                       placeholder="Search (e.g. 'grocery, is:uncleared, envelope:Food')"
+                       @keydown.enter="performSearch" />
+                <button type="button"
+                        class="absolute inset-y-0 right-0 flex items-center pr-3"
+                        @click="showSearchHelp = !showSearchHelp">
+                  <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                       aria-hidden="true"
+                       xmlns="http://www.w3.org/2000/svg"
+                       fill="none"
+                       viewBox="0 0 20 20">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                </button>
               </div>
+              <button type="submit"
+                      class="p-2.5 ml-2 text-sm font-medium text-white bg-primary-700 rounded-lg border border-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                <svg class="w-5 h-5"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z">
+                  </path>
+                </svg>
+                <span class="sr-only">Search</span>
+              </button>
             </form>
           </div>
+          <!-- End Search Box -->
+
+          <!-- Search Help -->
+          <div x-show="showSearchHelp"
+               x-transition
+               @click.away="showSearchHelp = false"
+               class="absolute z-10 mt-2 bg-white rounded-lg shadow-lg p-4 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 max-w-md top-[60px] left-[20px]"
+               x-cloak>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Search Syntax Help</h3>
+            <div class="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+              <p>Separate multiple search terms with commas.</p>
+              <p>
+                Use quotes for exact phrases: <code>"grocery store"</code>
+              </p>
+              <p class="font-medium mt-2">Available filters:</p>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>
+                  <code>is:cleared</code> or <code>is:uncleared</code> - Cleared status
+                </li>
+                <li>
+                  <code>is:pending</code> - Pending transactions
+                </li>
+                <li>
+                  <code>is:archived</code> - Archived transactions
+                </li>
+                <li>
+                  <code>in:inbox</code> or <code>in:trash</code> - Location
+                </li>
+                <li>
+                  <code>envelope:Name</code> - Filter by envelope
+                </li>
+                <li>
+                  <code>account:Name</code> - Filter by account
+                </li>
+                <li>
+                  <code>after:YYYY-MM-DD</code> - Transactions after date
+                </li>
+                <li>
+                  <code>before:YYYY-MM-DD</code> - Transactions before date
+                </li>
+                <li>
+                  <code>on:YYYY-MM-DD</code> - Transactions on date
+                </li>
+                <li>
+                  <code>amount:100</code> - Exact amount (in dollars)
+                </li>
+                <li>
+                  <code>amount:>100</code> - Amount greater than
+                </li>
+                <li>
+                  <code>inflow:100</code> - Inflow amount
+                </li>
+                <li>
+                  <code>outflow:100</code> - Outflow amount
+                </li>
+              </ul>
+              <p class="mt-2">Examples:</p>
+              <p>
+                <code>grocery, is:uncleared</code> - Uncleared grocery transactions
+              </p>
+              <p>
+                <code>"whole foods", envelope:Food</code> - Whole Foods in Food envelope
+              </p>
+            </div>
+          </div>
+          <!-- End Search Help -->
+
+          <!-- Search Status -->
+          <div x-show="isSearching" class="mt-2 flex items-center">
+            <span class="text-sm text-gray-700 dark:text-gray-300">
+              Showing search results for: <span class="font-medium" x-text="searchQuery"></span>
+            </span>
+            <button @click="clearSearch"
+                    class="ml-2 text-sm text-primary-600 dark:text-primary-500 hover:underline">Clear search</button>
+          </div>
+          <!-- End Search Status -->
+
           <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
             <button type="button"
                     class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
@@ -239,6 +343,7 @@
             </div>
           </div>
         </div>
+
         <div class="overflow-x-auto">
           <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b dark:border-gray-700 border-l-4 border-l-gray-50 dark:border-l-gray-700">

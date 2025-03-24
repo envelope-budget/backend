@@ -27,6 +27,46 @@ async function get_transactions(budgetId, page = 1, pageSize = 20, accountId = n
   }
 }
 
+async function get_transactions_with_search(budgetId, page = 1, pageSize = 20, accountId = null, searchQuery = null) {
+  const offset = (page - 1) * pageSize;
+  let url = `/api/transactions/${budgetId}?offset=${offset}&limit=${pageSize}`;
+
+  // If we're not searching, show inbox transactions by default
+  if (!searchQuery) {
+    url += '&in_inbox=true';
+  }
+
+  const csrfToken = getCookie('csrftoken');
+
+  if (accountId) {
+    url += `&account_id=${accountId}`;
+  }
+
+  // Add search query if provided
+  if (searchQuery) {
+    url += `&search=${encodeURIComponent(searchQuery)}`;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
+}
+
 async function patchTransaction(id, data) {
   const budgetId = getCookie('budget_id');
   const url = `/api/transactions/${budgetId}/${id}`;
@@ -184,13 +224,30 @@ function transactionData() {
     transactionsPerPage: 20,
     showEditForm: false,
     editableTransaction: { cleared: false },
+    searchQuery: '',
+    showSearchHelp: false,
+    isSearching: false,
+
+    async performSearch() {
+      this.currentPage = 1;
+      this.isSearching = !!this.searchQuery.trim();
+      await this.fetchTransactions();
+    },
 
     async fetchTransactions() {
       const budgetId = getCookie('budget_id');
       const accountId = getCookie('account_id');
-      console.log('accountId:', accountId);
+
       try {
-        const data = await get_transactions(budgetId, this.currentPage, this.transactionsPerPage, accountId);
+        // Use the search-enabled function
+        const data = await get_transactions_with_search(
+          budgetId,
+          this.currentPage,
+          this.transactionsPerPage,
+          accountId,
+          this.searchQuery
+        );
+
         if (data?.items) {
           this.transactions = data.items.map(transaction => ({
             ...transaction,
@@ -321,6 +378,12 @@ function transactionData() {
 
     changePage(page) {
       this.currentPage = page;
+      this.fetchTransactions();
+    },
+
+    clearSearch() {
+      this.searchQuery = '';
+      this.isSearching = false;
       this.fetchTransactions();
     },
 
@@ -596,6 +659,14 @@ function transactionData() {
     init() {
       this.fetchTransactions();
       initKeyboardShortcuts(this);
+
+      // Add event listener for URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchParam = urlParams.get('search');
+      if (searchParam) {
+        this.searchQuery = searchParam;
+        this.performSearch();
+      }
     },
   };
 }
