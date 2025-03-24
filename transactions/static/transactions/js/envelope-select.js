@@ -27,6 +27,15 @@ class SearchableSelect extends HTMLElement {
       this.filteredEnvelopes = [...this.envelopes];
       this.render();
       this.setupEventListeners();
+
+      // Check if there's a value set by Alpine.js
+      // This will handle the case when editing an existing transaction
+      if (this.hasAttribute('data-selected-id')) {
+        const selectedId = this.getAttribute('data-selected-id');
+        if (selectedId) {
+          this.setValue(selectedId);
+        }
+      }
     } catch (error) {
       console.error('Error loading envelope data:', error);
     }
@@ -196,6 +205,11 @@ class SearchableSelect extends HTMLElement {
   }
 
   setValue(id) {
+    if (!id) {
+      this.reset();
+      return;
+    }
+
     const envelope = this.envelopes.find(env => env.id === id);
     if (envelope) {
       this.value = id;
@@ -203,6 +217,17 @@ class SearchableSelect extends HTMLElement {
       if (input) {
         input.value = envelope.name;
       }
+
+      // Dispatch change event to ensure Alpine.js knows the value changed
+      this.dispatchEvent(
+        new CustomEvent('change', {
+          detail: {
+            value: this.value,
+            envelope: envelope,
+          },
+          bubbles: true,
+        })
+      );
     }
   }
 

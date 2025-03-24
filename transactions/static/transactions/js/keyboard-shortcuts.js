@@ -55,6 +55,14 @@ function initKeyboardShortcuts(context) {
       context.archiveCheckedRows();
     } else if (event.key === '#') {
       context.deleteCheckedRows();
+    } else if (event.key === 'g') {
+      const keyListener = e => {
+        if (e.key === 'i') {
+          window.location.href = '/transactions';
+        }
+        document.removeEventListener('keydown', keyListener);
+      };
+      document.addEventListener('keydown', keyListener);
     }
   });
 }
