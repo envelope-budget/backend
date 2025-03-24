@@ -219,6 +219,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 # Django Compressor
 COMPRESS_ROOT = BASE_DIR / "static"
 COMPRESS_ENABLED = True
+COMPRESS_OFFLINE = True
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
