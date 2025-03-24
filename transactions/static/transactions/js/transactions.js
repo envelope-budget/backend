@@ -260,9 +260,16 @@ function transactionData() {
       }
     },
 
-    pullSimpleFINTransactions() {
+    pullSimpleFINTransactions(sfin_id) {
       const budgetId = getCookie('budget_id');
-      const endpoint = `/api/accounts/${budgetId}/simplefin/transactions`;
+
+      // Base endpoint
+      let endpoint = `/api/accounts/${budgetId}/simplefin/transactions`;
+
+      // If we're on an account view, add the account_id parameter
+      if (sfin_id) {
+        endpoint += `?account_id=${sfin_id}`;
+      }
 
       // Get button element
       const button = document.getElementById('pull-simplefin-button');
