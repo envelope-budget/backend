@@ -47,6 +47,8 @@ function initKeyboardShortcuts(context) {
           if (input) input.focus();
         }
       });
+    } else if (event.key === 'm') {
+      context.mergeSelectedTransactions();
     } else if (event.key === 'x') {
       context.toggleCheckboxInActiveRow();
     } else if (event.key === 'y') {

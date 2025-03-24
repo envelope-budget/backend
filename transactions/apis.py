@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import DatabaseError
 from django.shortcuts import get_object_or_404
 from ninja import File, Router, Schema, UploadedFile
@@ -11,7 +12,7 @@ from ninja.security import django_auth
 from accounts.models import Account
 from budgets.models import Budget
 from envelopes.models import Envelope
-from .models import Payee, Transaction
+from .models import Payee, Transaction, TransactionMerge
 
 
 logger = logging.getLogger(__name__)
@@ -53,9 +54,11 @@ class TransactionSchema(Schema):
     amount: int
     memo: Optional[str]
     cleared: bool
+    pending: bool
     reconciled: bool
     approved: bool
     import_id: Optional[str]
+    sfin_id: Optional[str]
 
 
 class TransactionPostPatchSchema(Schema):
@@ -133,8 +136,6 @@ def archive_transactions(request, budget_id: str, transaction_ids: BulkDeleteSch
     # Ensure the budget belongs to the user
     get_object_or_404(Budget, id=budget_id, user=request.user)
 
-    logger.info(f"Archiving transactions: {transaction_ids.transaction_ids}")
-
     try:
         # Update all matching transactions that belong to this budget
         updated = Transaction.objects.filter(
@@ -144,6 +145,144 @@ def archive_transactions(request, budget_id: str, transaction_ids: BulkDeleteSch
         return {"archived_count": updated}
     except (Transaction.DoesNotExist, ValueError, DatabaseError) as e:
         return 400, {"message": f"Failed to archive transactions: {str(e)}"}
+
+
+class TransactionMergeRequest(Schema):
+    transaction_ids: List[str]
+
+
+class TransactionMergeResponse(Schema):
+    merged_transaction: TransactionSchema
+    merge_id: str
+    source_transaction_ids: List[str]
+
+
+class MergeError(Schema):
+    message: str
+
+
+@router.post(
+    "/transactions/{budget_id}/merge",
+    response={200: TransactionMergeResponse, 400: MergeError},
+    auth=django_auth,
+    tags=["Transactions"],
+)
+def merge_transactions(request, budget_id: str, merge_data: TransactionMergeRequest):
+    """
+    Merge two or more transactions into a single transaction.
+
+    Transactions must have the same account and amount to be merged.
+    """
+    logger.info("Merging transactions: %s", merge_data.transaction_ids)
+
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    try:
+        # Use the model method to perform the merge
+        merged_transaction, merge = Transaction.merge_transactions(
+            budget_id=budget_id, transaction_ids=merge_data.transaction_ids
+        )
+
+        return {
+            "merged_transaction": TransactionSchema.from_orm(merged_transaction),
+            "merge_id": merge.id,
+            "source_transaction_ids": merge_data.transaction_ids,
+        }
+    except ValidationError as e:
+        return 400, {
+            "message": str(e.messages[0] if isinstance(e.messages, list) else str(e))
+        }
+
+
+class TransactionMergeSchema(Schema):
+    id: str
+    merged_transaction: TransactionSchema
+    source_transactions: List[TransactionSchema]
+    created_at: datetime
+
+
+@router.get(
+    "/transactions/{budget_id}/merges/{merge_id}",
+    response={200: TransactionMergeSchema, 404: Error},
+    auth=django_auth,
+    tags=["Transactions"],
+)
+def get_transaction_merge(request, budget_id: str, merge_id: str):
+    """
+    Get details of a transaction merge, including the source transactions.
+    """
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    # Get the merge record
+    merge = get_object_or_404(TransactionMerge, id=merge_id, budget_id=budget_id)
+
+    # Get the source transactions (including deleted ones)
+    source_transactions = merge.source_transactions.all()
+
+    return {
+        "id": merge.id,
+        "merged_transaction": TransactionSchema.from_orm(merge.merged_transaction),
+        "source_transactions": [
+            TransactionSchema.from_orm(t) for t in source_transactions
+        ],
+        "created_at": merge.created_at,
+    }
+
+
+@router.post(
+    "/transactions/{budget_id}/merges/{merge_id}/undo",
+    response={200: dict, 404: Error},
+    auth=django_auth,
+    tags=["Transactions"],
+)
+def undo_transaction_merge(request, budget_id: str, merge_id: str):
+    """
+    Undo a transaction merge, restoring the original transactions.
+    """
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    # Get the merge record
+    merge = get_object_or_404(TransactionMerge, id=merge_id, budget_id=budget_id)
+
+    # Undo the merge
+    restored_ids = merge.undo()
+
+    return {
+        "message": "Merge successfully undone",
+        "restored_transaction_ids": restored_ids,
+    }
+
+
+@router.get(
+    "/transactions/{budget_id}/merges",
+    response=List[TransactionMergeSchema],
+    auth=django_auth,
+    tags=["Transactions"],
+)
+def list_transaction_merges(request, budget_id: str):
+    """
+    List all transaction merges for a budget.
+    """
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    # Get all merge records for this budget
+    merges = TransactionMerge.objects.filter(budget_id=budget_id)
+
+    return [
+        {
+            "id": merge.id,
+            "merged_transaction": TransactionSchema.from_orm(merge.merged_transaction),
+            "source_transactions": [
+                TransactionSchema.from_orm(t) for t in merge.source_transactions.all()
+            ],
+            "created_at": merge.created_at,
+        }
+        for merge in merges
+    ]
 
 
 @router.get(

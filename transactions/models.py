@@ -179,9 +179,124 @@ class Transaction(models.Model):
         )
 
     @classmethod
+    def merge_transactions(cls, budget_id, transaction_ids):
+        """
+        Merge two or more transactions into a single transaction.
+
+        Args:
+            budget_id: The ID of the budget
+            transaction_ids: List of transaction IDs to merge
+
+        Returns:
+            A tuple of (merged_transaction, merge_record)
+
+        Raises:
+            ValidationError: If transactions cannot be merged
+        """
+
+        if len(transaction_ids) < 2:
+            raise ValidationError("At least two transactions are required for merging")
+
+        # Get the transactions to merge
+        transactions = list(
+            cls.objects.filter(
+                id__in=transaction_ids, budget_id=budget_id, deleted=False
+            )
+        )
+
+        if len(transactions) != len(transaction_ids):
+            raise ValidationError("One or more transactions not found")
+
+        # Check if all transactions have the same account and amount
+        first_transaction = transactions[0]
+        account = first_transaction.account
+        amount = first_transaction.amount
+
+        for transaction in transactions[1:]:
+            if transaction.account.id != account.id:
+                raise ValidationError(
+                    "Transactions must have the same account to merge"
+                )
+            if transaction.amount != amount:
+                raise ValidationError("Transactions must have the same amount to merge")
+
+        # Determine the earliest date
+        earliest_date = min(t.date for t in transactions)
+
+        # Determine envelope (if they have different envelopes, return error)
+        envelope = None
+        for transaction in transactions:
+            if transaction.envelope:
+                if envelope and transaction.envelope.id != envelope.id:
+                    raise ValidationError(
+                        "Transactions have different envelopes and cannot be merged"
+                    )
+                envelope = transaction.envelope
+
+        # Determine cleared status (if any is cleared, mark as cleared)
+        cleared = any(t.cleared for t in transactions)
+
+        # Determine pending status (if any is not pending, mark as not pending)
+        pending = all(t.pending for t in transactions)
+
+        # Determine reconciled status (if any is reconciled, mark as reconciled)
+        reconciled = any(t.reconciled for t in transactions)
+
+        # Determine approved status (if any is approved, mark as approved)
+        approved = any(t.approved for t in transactions)
+
+        # Determine in inbox status (if any is in inbox, mark as in inbox)
+        in_inbox = any(t.in_inbox for t in transactions)
+
+        # Determine SimpleFin ID - if one of them has a SimpleFin ID, use that
+        sfin_id = None
+        for transaction in transactions:
+            if transaction.sfin_id:
+                sfin_id = transaction.sfin_id
+                break
+
+        # Choose payee and memo from the first transaction (arbitrary choice)
+        payee = first_transaction.payee
+        memo = first_transaction.memo
+
+        # Get the budget
+        budget = Budget.objects.get(id=budget_id)
+
+        # Create the merged transaction
+        merged_transaction = cls.objects.create(
+            budget=budget,
+            account=account,
+            payee=payee,
+            envelope=envelope,
+            date=earliest_date,
+            amount=amount,
+            memo=memo,
+            cleared=cleared,
+            pending=pending,
+            reconciled=reconciled,
+            approved=approved,
+            in_inbox=in_inbox,
+            sfin_id=sfin_id,
+        )
+
+        # Create the merge record
+        merge = TransactionMerge.create_merge(
+            budget=budget,
+            merged_transaction=merged_transaction,
+            source_transaction_ids=transaction_ids,
+        )
+
+        # Soft delete the original transactions
+        for transaction in transactions:
+            transaction.soft_delete()
+
+        return merged_transaction, merge
+
+    @classmethod
     def import_ofx(cls, budget_id: str, account_id: str, ofx_data: str):
         """
-        Imports OFX data into the budget and account specified and returns the IDs of the created transactions and duplicate transactions.
+        Imports OFX data into the budget and account specified and returns the IDs of the
+        created transactions and duplicate transactions.
 
         :param budget_id: The ID of the budget.
         :type budget_id: str
@@ -272,3 +387,76 @@ class SubTransaction(models.Model):
 
     def __str__(self):
         return f"{self.transaction} | {self.envelope} | {self.amount}"
+
+
+class TransactionMerge(models.Model):
+    id = models.CharField(
+        primary_key=True,
+        default=generate_uuid_hex,
+        editable=False,
+        max_length=32,
+    )
+    budget = models.ForeignKey("budgets.Budget", on_delete=models.CASCADE)
+    merged_transaction = models.ForeignKey(
+        "transactions.Transaction",
+        on_delete=models.CASCADE,
+        related_name="resulting_merge",
+    )
+    source_transactions = models.ManyToManyField(
+        "transactions.Transaction", related_name="source_for_merges"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Merge {self.id} - Result: {self.merged_transaction.id}"
+
+    @classmethod
+    def create_merge(cls, budget, merged_transaction, source_transaction_ids):
+        """
+        Create a merge record and store the original transactions
+
+        Args:
+            budget: The budget the transactions belong to
+            merged_transaction: The new transaction created from the merge
+            source_transaction_ids: List of IDs of the original transactions
+
+        Returns:
+            The created TransactionMerge instance
+        """
+        # Create the merge record
+        merge = cls.objects.create(budget=budget, merged_transaction=merged_transaction)
+
+        # Get the source transactions and add them to the merge
+        source_transactions = Transaction.objects.include_deleted().filter(
+            id__in=source_transaction_ids
+        )
+        merge.source_transactions.add(*source_transactions)
+
+        return merge
+
+    def undo(self):
+        """
+        Undo this merge by restoring the original transactions and removing the merged one
+
+        Returns:
+            List of restored transaction IDs
+        """
+        # Get the source transactions
+        source_transactions = self.source_transactions.all()
+        restored_ids = []
+
+        # Restore each source transaction
+        for transaction in source_transactions:
+            transaction.deleted = False
+            transaction.save(
+                soft_delete=True
+            )  # Use soft_delete=True to avoid balance recalculation
+            restored_ids.append(transaction.id)
+
+        # Delete the merged transaction
+        self.merged_transaction.soft_delete()
+
+        # Delete this merge record
+        self.delete()
+
+        return restored_ids

@@ -82,6 +82,34 @@ async function bulkArchiveTransactions(transaction_ids) {
   }
 }
 
+async function mergeTransactions(transaction_ids) {
+  const budgetId = getCookie('budget_id');
+  const url = `/api/transactions/${budgetId}/merge`;
+  const csrfToken = getCookie('csrftoken');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ transaction_ids }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error merging transactions:', error);
+    showToast(error.message || 'Error merging transactions');
+    throw error;
+  }
+}
+
 async function deleteTransaction(transaction_id) {
   const budgetId = getCookie('budget_id');
   const url = `/api/transactions/${budgetId}/${transaction_id}`;
@@ -346,6 +374,27 @@ function transactionData() {
         } else {
           showToast('No transactions selected to archive');
         }
+      }
+    },
+
+    async mergeSelectedTransactions() {
+      // Get IDs of checked transactions
+      const checkedTransactions = this.transactions.filter(transaction => transaction.checked);
+
+      if (checkedTransactions.length !== 2) {
+        showToast('Please select exactly 2 transactions to merge');
+        return;
+      }
+
+      const idsToMerge = checkedTransactions.map(transaction => transaction.id);
+
+      try {
+        await mergeTransactions(idsToMerge);
+        showToast('Transactions merged successfully');
+        this.fetchTransactions(); // Refresh the transaction list
+        updateAccountBalances();
+      } catch (error) {
+        // Error is already handled in mergeTransactions function
       }
     },
 
