@@ -63,6 +63,9 @@ function initKeyboardShortcuts(context) {
         document.removeEventListener('keydown', keyListener);
       };
       document.addEventListener('keydown', keyListener);
+    } else if (event.key === '?') {
+      // Open the keyboard shortcuts modal
+      FlowbiteInstances.getInstance('Modal', 'keyboardShortcutsModal').show();
     }
   });
 }
