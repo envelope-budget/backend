@@ -11,8 +11,12 @@ class PayeeAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ("id", "date", "payee", "amount", "budget", "account")
-    list_filter = ("budget", "account")
+    list_display = ("id", "date", "payee", "amount", "budget", "account", "deleted")
+    list_filter = ("budget", "account", "deleted")
+
+    def get_queryset(self, request):
+        # Use the include_deleted method to show all transactions
+        return Transaction.objects.include_deleted()
 
 
 @admin.register(SubTransaction)

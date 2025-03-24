@@ -324,10 +324,20 @@ class SimpleFINConnection(models.Model):
                 )
 
                 if transaction_exists:
-                    # If transaction exists, add its ID to duplicate_transaction_ids
-                    duplicate_transaction_ids.append(transaction_exists.id)
-                    # Update the existing transaction if needed
-                    # You could add logic here to update fields if necessary
+                    # Update the existing transaction if it was pending and new one is not
+                    if transaction_exists.pending and not transaction.get(
+                        "pending", False
+                    ):
+                        transaction_exists.pending = False
+                        transaction_exists.cleared = True
+                        transaction_exists.save()
+                        logger.info(
+                            "Updated transaction %s from pending to cleared",
+                            transaction_exists.id,
+                        )
+                    else:
+                        # If transaction exists, add its ID to duplicate_transaction_ids
+                        duplicate_transaction_ids.append(transaction_exists.id)
                 else:
                     # Create a new Transaction for each unique transaction
                     try:

@@ -124,7 +124,7 @@ class Transaction(models.Model):
             is_new = kwargs.get("force_insert", False)
             if not is_new:
                 # Fetch the old transaction to get the old amount
-                old_transaction = Transaction.objects.get(pk=self.pk)
+                old_transaction = Transaction.objects.include_deleted().get(pk=self.pk)
 
                 if old_transaction.envelope:
                     if old_transaction.envelope == self.envelope:
@@ -172,11 +172,18 @@ class Transaction(models.Model):
         super(Transaction, self).delete(*args, **kwargs)
 
     class Meta:
-        # Define unique_together constraint
-        unique_together = (
-            ("budget", "account", "import_id"),
-            ("budget", "account", "sfin_id"),
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["budget", "account", "import_id"],
+                condition=models.Q(deleted=False),
+                name="unique_budget_account_import_id",
+            ),
+            models.UniqueConstraint(
+                fields=["budget", "account", "sfin_id"],
+                condition=models.Q(deleted=False),
+                name="unique_budget_account_sfin_id",
+            ),
+        ]
 
     @classmethod
     def merge_transactions(cls, budget_id, transaction_ids):
@@ -248,12 +255,19 @@ class Transaction(models.Model):
         # Determine in inbox status (if any is in inbox, mark as in inbox)
         in_inbox = any(t.in_inbox for t in transactions)
 
-        # Determine SimpleFin ID - if one of them has a SimpleFin ID, use that
+        # Determine sfin_id - prioritize the non-pending transaction's sfin_id
         sfin_id = None
         for transaction in transactions:
-            if transaction.sfin_id:
+            if transaction.sfin_id and not transaction.pending:
                 sfin_id = transaction.sfin_id
                 break
+
+        # If no non-pending transaction with sfin_id found, use the first available sfin_id
+        if not sfin_id:
+            for transaction in transactions:
+                if transaction.sfin_id:
+                    sfin_id = transaction.sfin_id
+                    break
 
         # Choose payee and memo from the first transaction (arbitrary choice)
         payee = first_transaction.payee
@@ -261,6 +275,10 @@ class Transaction(models.Model):
 
         # Get the budget
         budget = Budget.objects.get(id=budget_id)
+
+        # Soft delete the original transactions first to avoid unique constraint violations
+        for transaction in transactions:
+            transaction.soft_delete()
 
         # Create the merged transaction
         merged_transaction = cls.objects.create(
@@ -285,10 +303,6 @@ class Transaction(models.Model):
             merged_transaction=merged_transaction,
             source_transaction_ids=transaction_ids,
         )
-
-        # Soft delete the original transactions
-        for transaction in transactions:
-            transaction.soft_delete()
 
         return merged_transaction, merge
 
