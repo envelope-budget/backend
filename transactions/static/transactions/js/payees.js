@@ -88,11 +88,7 @@ document.addEventListener('alpine:init', () => {
         })
         .then(data => {
           this.showResult(`Successfully deleted ${data.count} unused payees`, 'success');
-
-          // Reload the page to reflect changes
-          // setTimeout(() => {
-          //   window.location.reload();
-          // }, 1500);
+          this.window.location.reload();
         })
         .catch(error => {
           console.error('Error deleting unused payees:', error);
