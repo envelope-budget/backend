@@ -14,6 +14,7 @@ class Budget(models.Model):
         editable=False,
         max_length=32,
     )
+    # pylint: disable=hard-coded-auth-user
     user = models.ForeignKey("auth.User", on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     date_format = models.CharField(

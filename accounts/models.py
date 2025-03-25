@@ -36,6 +36,7 @@ class Account(models.Model):
     last_reconciled_at = models.DateTimeField(blank=True, null=True)
     deleted = models.BooleanField(default=False)
     sfin_id = models.CharField(max_length=255, blank=True, null=True)
+    sfin_last_imported_on = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         unique_together = ["budget", "slug"]
@@ -231,12 +232,54 @@ class SimpleFINConnection(models.Model):
             dict: A JSON-decoded response containing transaction details from the SimpleFIN API.
         """
         parameters = {}
+        buffer_days = 4
+        logger.info("Retrieving transactions from SimpleFIN...")
+
+        # If account_id is provided, use the last imported date with a buffer
         if account_id:
             parameters["account"] = account_id
-        if start_date:
+
+            # If start_date is not explicitly provided, try to use the last imported date
+            if not start_date:
+                try:
+                    account = Account.objects.get(sfin_id=account_id)
+                    if account.sfin_last_imported_on:
+                        # Use the last imported date minus a 3-day buffer to ensure we don't miss
+                        # any transactions
+                        buffer_date = (
+                            account.sfin_last_imported_on
+                            - datetime.timedelta(days=buffer_days)
+                        )
+                        parameters["start-date"] = int(buffer_date.timestamp())
+                        logger.info(
+                            "Using last imported date with buffer: %s",
+                            buffer_date.strftime("%Y-%m-%d"),
+                        )
+                except Account.DoesNotExist:
+                    logger.warning("No account found with sfin_id: %s", account_id)
+        else:
+            if not start_date:
+                # Use the furthest back start date of all accounts that have sfin_last_imported_on
+                accounts = Account.objects.filter(sfin_last_imported_on__isnull=False)
+                if accounts.exists():
+                    start_date = (
+                        accounts.order_by("sfin_last_imported_on")
+                        .first()
+                        .sfin_last_imported_on
+                    )
+                    buffer_date = start_date - datetime.timedelta(days=buffer_days)
+                    parameters["start-date"] = int(buffer_date.timestamp())
+                    logger.info(
+                        "Using date: %s",
+                        buffer_date.strftime("%Y-%m-%d"),
+                    )
+
+        # If start_date is explicitly provided, use it
+        if start_date and not parameters.get("start-date"):
             parameters["start-date"] = int(
                 datetime.datetime.strptime(start_date, "%Y-%m-%d").timestamp()
             )
+
         if end_date:
             parameters["end-date"] = int(
                 datetime.datetime.strptime(end_date, "%Y-%m-%d")
@@ -374,3 +417,6 @@ class SimpleFINConnection(models.Model):
                             str(e),
                             transaction,
                         )
+            # Update the last imported date for this account
+            account.sfin_last_imported_on = datetime.datetime.now()
+            account.save(update_fields=["sfin_last_imported_on"])
