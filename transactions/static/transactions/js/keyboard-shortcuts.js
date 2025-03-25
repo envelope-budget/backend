@@ -11,6 +11,11 @@ function initKeyboardShortcuts(context) {
 
     if (event.key === 'Escape') {
       context.cancelTransaction();
+
+      // Remove focus from the active element
+      if (activeElement) {
+        activeElement.blur();
+      }
     }
 
     // Save transaction on Enter key if form is active (except when in a textarea)

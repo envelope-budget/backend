@@ -617,8 +617,11 @@
     <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
     <script src="{% static 'transactions/js/transactions.js' %}"></script>
     <script src="{% static 'transactions/js/envelope-select.js' %}"></script>
-    {% if account %}
-      <script src="{% static 'transactions/js/edit-account.js' %}"></script>
-    {% endif %}
   {% endcompress %}
+
+  {% if account %}
+    {% compress js %}
+      <script src="{% static 'transactions/js/edit-account.js' %}"></script>
+    {% endcompress %}
+  {% endif %}
 {% endblock js %}

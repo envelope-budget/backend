@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Clean the compressor cache
+rm -rf ./static/CACHE
+
 # Set variables
 DOCKER_USERNAME="xhenxhe"
 APP_NAME="envelopebudget"
@@ -17,10 +20,10 @@ docker buildx create --name multiarch-builder --use
 # Build and push for multiple architectures
 echo "🔨 Building and pushing Docker image for multiple architectures..."
 docker buildx build --platform linux/amd64,linux/arm64 \
--t $IMAGE_NAME \
--t $DATE_IMAGE_NAME \
---push \
-.
+  -t $IMAGE_NAME \
+  -t $DATE_IMAGE_NAME \
+  --push \
+  .
 
 # Check if build and push was successful
 if [ $? -ne 0 ]; then

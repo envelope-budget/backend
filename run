@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Clean the compressor cache
+rm -rf ./static/CACHE
+
 # Start the Tailwind CSS process in the background
 echo "🎨 Starting Tailwind CSS process..."
 npx @tailwindcss/cli -i ./static/src/input.css -o ./static/src/output.css --watch=always &
