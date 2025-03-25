@@ -70,7 +70,6 @@ class TransactionPostPatchSchema(Schema):
     memo: Optional[str] = None
     cleared: Optional[bool] = False
     reconciled: Optional[bool] = False
-    approved: Optional[bool] = True
     import_id: Optional[str] = None
 
 
@@ -352,7 +351,6 @@ def create_transaction(
         memo=transaction.memo,
         cleared=transaction.cleared,
         reconciled=transaction.reconciled,
-        approved=transaction.approved,
         import_id=transaction.import_id,
     )
     return TransactionSchema.from_orm(new_transaction)
@@ -476,7 +474,6 @@ def update_transaction(
     trans.memo = transaction_data.memo
     trans.cleared = transaction_data.cleared
     trans.reconciled = transaction_data.reconciled
-    trans.approved = transaction_data.approved
     trans.save()
 
     return TransactionSchema.from_orm(trans)

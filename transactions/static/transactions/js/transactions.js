@@ -540,7 +540,12 @@ function transactionData() {
         this.showEditForm = true;
         this.activeIndex = -1;
         Alpine.nextTick(() => {
-          document.getElementById('id_account').focus();
+          const $account = document.getElementById('id_account');
+          const active_account_id = document.querySelector('[x-account-id]')?.getAttribute('x-account-id') || '';
+          if (active_account_id) {
+            $account.value = active_account_id;
+          }
+          $account.focus();
 
           // Move the form to the top of the table
           const formFieldsRow = this.$refs.editForm;
