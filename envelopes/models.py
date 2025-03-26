@@ -40,7 +40,31 @@ class Category(models.Model):
 
 class EnvelopeManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().exclude(deleted=True).order_by("sort_order")
+        # Exclude deleted envelopes and the special Unallocated Funds envelope
+        return (
+            super()
+            .get_queryset()
+            .exclude(deleted=True)
+            .exclude(name="Unallocated Funds")
+            .order_by("sort_order")
+        )
+
+    def include_deleted(self):
+        """Return a queryset that includes deleted envelopes but still excludes Unallocated Funds."""
+        return super().get_queryset().exclude(name="Unallocated Funds")
+
+    def include_all(self):
+        """Return a queryset that includes all envelopes including deleted and Unallocated Funds."""
+        return super().get_queryset()
+
+    def get_unallocated_funds(self, budget):
+        """Get the Unallocated Funds envelope for a budget."""
+        return (
+            super()
+            .get_queryset()
+            .filter(budget=budget, name="Unallocated Funds")
+            .first()
+        )
 
 
 class Envelope(models.Model):
@@ -66,7 +90,24 @@ class Envelope(models.Model):
     def __str__(self):
         return str(self.name)
 
+    def delete(self, *args, **kwargs):
+        """Override delete to prevent deletion of Unallocated Funds envelope."""
+        if self.name == "Unallocated Funds":
+            # Just mark as hidden instead of deleting
+            self.hidden = True
+            self.save()
+            return
+
+        # For regular envelopes, proceed with normal deletion
+        super().delete(*args, **kwargs)
+
     def save(self, *args, **kwargs):
+        # Prevent renaming of Unallocated Funds envelope
+        if self.pk and self.name != "Unallocated Funds":
+            original = Envelope.objects.get(pk=self.pk)
+            if original.name == "Unallocated Funds":
+                self.name = "Unallocated Funds"
+
         if self.category:
             self.category.update_balance()
         super().save(*args, **kwargs)

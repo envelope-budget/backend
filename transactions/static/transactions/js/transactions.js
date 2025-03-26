@@ -527,7 +527,6 @@ function transactionData() {
         this.editableTransaction = {
           account: '',
           amount: 0,
-          approved: false,
           budget_id: getCookie('budget_id'),
           date: '',
           envelope: '',
@@ -597,7 +596,6 @@ function transactionData() {
       const postData = {
         account_id: this.editableTransaction.account,
         amount: this.editableTransaction.amount,
-        approved: this.editableTransaction.approved,
         cleared: this.editableTransaction.cleared,
         date: formattedDate,
         memo: this.editableTransaction.memo,

@@ -4,7 +4,11 @@ from .models import Category, Envelope
 
 
 class EnvelopeAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ["name"]
+    list_display = ["name", "budget", "category"]
+
+    def get_queryset(self, request):
+        return Envelope.objects.include_all()
 
 
 admin.site.register(Envelope, EnvelopeAdmin)

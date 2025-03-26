@@ -1,0 +1,20 @@
+.drag-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.category-item:hover > div .drag-handle {
+  opacity: 1;
+}
+
+.envelope-item:hover > div .drag-handle {
+  opacity: 1;
+}
+
+.selected-item {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.details-panel {
+  transition: all 0.3s ease;
+}

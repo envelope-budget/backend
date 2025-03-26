@@ -1,10 +1,13 @@
 import os
+import logging
 
 from django.db import models
 
 from budgetapp.utils import generate_uuid_hex
 from envelopes.apis import CategorySchema
 from envelopes.models import Category
+
+logger = logging.getLogger(__name__)
 
 
 class Budget(models.Model):
@@ -32,6 +35,34 @@ class Budget(models.Model):
 
     def __str__(self):
         return str(self.name)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        # Create unallocated funds envelope for new budgets
+        self.create_unallocated_funds_envelope()
+
+    def create_unallocated_funds_envelope(self):
+        """Create the special Unallocated Funds envelope for this budget."""
+        from envelopes.models import Envelope
+
+        logger.info("Creating Unallocated Funds envelope for budget %s", self.id)
+
+        # Check if it already exists
+        unallocated = (
+            Envelope.objects.include_deleted()
+            .filter(budget=self, name="Unallocated Funds")
+            .first()
+        )
+
+        if not unallocated:
+            Envelope.objects.create(
+                budget=self,
+                name="Unallocated Funds",
+                sort_order=0,  # Put it at the top
+                hidden=True,
+                note="Special envelope for unallocated funds. Do not delete.",
+            )
 
     def categorized_envelopes(self):
         categories = Category.objects.filter(budget=self)

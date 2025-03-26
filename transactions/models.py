@@ -257,9 +257,6 @@ class Transaction(models.Model):
         # Determine reconciled status (if any is reconciled, mark as reconciled)
         reconciled = any(t.reconciled for t in transactions)
 
-        # Determine approved status (if any is approved, mark as approved)
-        approved = any(t.approved for t in transactions)
-
         # Determine in inbox status (if any is in inbox, mark as in inbox)
         in_inbox = any(t.in_inbox for t in transactions)
 
@@ -300,7 +297,6 @@ class Transaction(models.Model):
             cleared=cleared,
             pending=pending,
             reconciled=reconciled,
-            approved=approved,
             in_inbox=in_inbox,
             sfin_id=sfin_id,
         )
