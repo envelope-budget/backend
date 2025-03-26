@@ -44,7 +44,7 @@
       "quoteStyle": "single",
       "jsxQuoteStyle": "double",
       "arrowParentheses": "asNeeded",
-      "trailingComma": "es5",
+      "trailingCommas": "es5",
       "quoteProperties": "asNeeded"
     }
   },
