@@ -422,11 +422,22 @@ function transactionData() {
       }
     },
 
-    async archiveCheckedRows() {
+    async archive() {
+      let idsToArchive = [];
       // Gather IDs of checked transactions that have envelopes and are cleared
-      const idsToArchive = this.transactions
+      idsToArchive = this.transactions
         .filter(transaction => transaction.checked && transaction.envelope && transaction.cleared)
         .map(transaction => transaction.id);
+
+      if (this.transactions.filter(transaction => transaction.checked).length === 0) {
+        const activeTransaction = this.transactions[this.activeIndex];
+        if (activeTransaction?.envelope && activeTransaction.cleared) {
+          idsToArchive = [activeTransaction.id];
+        } else {
+          showToast('Please select transactions with envelopes and are cleared');
+          return;
+        }
+      }
 
       const skippedTransactions = this.transactions.filter(
         transaction => transaction.checked && (!transaction.envelope || !transaction.cleared)
