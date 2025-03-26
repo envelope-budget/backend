@@ -543,6 +543,7 @@ function transactionData() {
           const $account = document.getElementById('id_account');
           const active_account_id = document.querySelector('[x-account-id]')?.getAttribute('x-account-id') || '';
           if (active_account_id) {
+            this.editableTransaction.account = active_account_id;
             $account.value = active_account_id;
           }
           $account.focus();
