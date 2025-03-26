@@ -16,6 +16,10 @@ if git show-ref --verify --quiet refs/heads/$BRANCH_NAME; then
 fi
 git checkout -b $BRANCH_NAME
 
+# Update pip itself
+echo "🔄 Updating pip..."
+python -m pip install --upgrade pip
+
 # Update npm packages
 if [ -f package.json ]; then
   echo "📦 Updating npm packages..."
@@ -33,9 +37,35 @@ if [ -f requirements.txt ]; then
   pip install -r requirements.txt
 fi
 
+# Generate a more detailed commit message
+echo "📝 Generating commit details..."
+COMMIT_MSG="chore: update dependencies\n\nUpdated packages:"
+
+# Add Python package updates to commit message if applicable
+if [ -f requirements.txt ] && git diff --name-only | grep -q "requirements.txt"; then
+  COMMIT_MSG="$COMMIT_MSG\n\nPython packages:"
+  git diff requirements.txt | grep "^+" | grep -v "^+++" | sed 's/^+/  /' >>/tmp/commit_msg_py
+  cat /tmp/commit_msg_py | head -10 >/tmp/commit_msg_py_short
+  COMMIT_MSG="$COMMIT_MSG\n$(cat /tmp/commit_msg_py_short)"
+  if [ $(wc -l </tmp/commit_msg_py) -gt 10 ]; then
+    COMMIT_MSG="$COMMIT_MSG\n  ... and $(expr $(wc -l </tmp/commit_msg_py) - 10) more"
+  fi
+fi
+
+# Add npm package updates to commit message if applicable
+if [ -f package.json ] && git diff --name-only | grep -q "package.json"; then
+  COMMIT_MSG="$COMMIT_MSG\n\nJavaScript packages:"
+  git diff package.json | grep "\".*\":.*\".*\"" | grep "^+" | sed 's/^+/  /' >>/tmp/commit_msg_js
+  cat /tmp/commit_msg_js | head -10 >/tmp/commit_msg_js_short
+  COMMIT_MSG="$COMMIT_MSG\n$(cat /tmp/commit_msg_js_short)"
+  if [ $(wc -l </tmp/commit_msg_js) -gt 10 ]; then
+    COMMIT_MSG="$COMMIT_MSG\n  ... and $(expr $(wc -l </tmp/commit_msg_js) - 10) more"
+  fi
+fi
+
 # Commit all changes
 git add .
-git commit -m "chore: update dependencies"
+git commit -m "$(echo -e "$COMMIT_MSG")"
 
 echo "✅ Updates complete. New branch '$BRANCH_NAME' created with dependency updates."
 echo "👀 Please review and merge the changes."
