@@ -10,6 +10,10 @@ git status | grep -q "nothing to commit, working tree clean" || {
 
 # Create a new branch for updates
 BRANCH_NAME="dependency-updates-$(date +%Y%m%d)"
+if git show-ref --verify --quiet refs/heads/$BRANCH_NAME; then
+  echo "⚠️ Branch $BRANCH_NAME already exists. Using a unique name."
+  BRANCH_NAME="dependency-updates-$(date +%Y%m%d-%H%M%S)"
+fi
 git checkout -b $BRANCH_NAME
 
 # Update npm packages
@@ -23,8 +27,9 @@ fi
 if [ -f requirements.txt ]; then
   echo "🐍 Updating Python packages..."
   pip install pip-tools
-  # Create a new requirements.txt with updated versions
-  pip-compile --upgrade requirements.txt
+  # Create a temporary requirements file with updated versions
+  pip-compile --upgrade --output-file requirements.txt.new requirements.txt
+  mv requirements.txt.new requirements.txt
   pip install -r requirements.txt
 fi
 
