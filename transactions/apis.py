@@ -71,6 +71,7 @@ class TransactionPostPatchSchema(Schema):
     cleared: Optional[bool] = False
     reconciled: Optional[bool] = False
     import_id: Optional[str] = None
+    in_inbox: Optional[bool] = None
 
 
 class SubTransactionSchema(Schema):

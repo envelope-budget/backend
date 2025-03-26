@@ -40,18 +40,12 @@ function initKeyboardShortcuts(context) {
       }
     } else if (event.key === 'a' && !context.showEditForm) {
       context.startNewTransaction();
+    } else if (event.key === 'b') {
+      context.toBudget();
     } else if (event.key === 'c') {
       context.toggleCleared(context.getActiveTransaction());
     } else if ((event.key === 'e' || event.key === 'Enter') && !context.showEditForm) {
-      context.editTransactionAtIndex(context.getActiveTransaction(), context.activeIndex);
-      // Focus the searchable-select component instead
-      Alpine.nextTick(() => {
-        const searchableSelect = document.getElementById('id_envelope');
-        if (searchableSelect) {
-          const input = searchableSelect.querySelector('input');
-          if (input) input.focus();
-        }
-      });
+      context.editTransactionAtIndex(context.getActiveTransaction(), context.activeIndex, 'envelope');
     } else if (event.key === 'm') {
       context.mergeSelectedTransactions();
     } else if (event.key === 'x') {

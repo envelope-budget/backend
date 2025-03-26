@@ -148,7 +148,8 @@ class Transaction(models.Model):
             if self.envelope:
                 self.envelope.balance += self.amount
                 self.envelope.save()
-                self.envelope.category.update_balance()
+                if self.envelope.category:
+                    self.envelope.category.update_balance()
 
         super(Transaction, self).save(*args, **kwargs)
 

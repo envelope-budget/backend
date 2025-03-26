@@ -516,10 +516,79 @@ function transactionData() {
         const selectFields = ['date', 'payee', 'memo', 'inflow', 'outflow'];
         if (selectFields.includes(highlightField)) {
           document.getElementById(`id_${highlightField}`).select();
+        } else if (highlightField === 'envelope') {
+          setTimeout(() => {
+            document.getElementById('id_envelope').querySelector('input').focus();
+          }, 100);
         } else {
           document.getElementById(`id_${highlightField}`).focus();
         }
       });
+    },
+
+    toBudget(transaction) {
+      const unallocatedId = document.getElementById('unallocated_funds_envelope_id').value;
+      const budgetId = getCookie('budget_id');
+
+      let transactionIds = [];
+      if (transaction) {
+        transactionIds = [transaction.id];
+      } else {
+        // Get checked transaction IDs or active transaction ID
+        transactionIds = this.transactions
+          .filter(transaction => transaction.checked)
+          .map(transaction => transaction.id);
+
+        console.log('Checked transactions:', transactionIds);
+
+        // If no transactions are checked, get the active transaction ID
+        if (transactionIds.length === 0 && this.activeIndex !== -1) {
+          console.log('Active transaction:', this.activeIndex);
+          const activeTransaction = this.transactions[this.activeIndex];
+          if (activeTransaction) {
+            transactionIds = [activeTransaction.id];
+          }
+        }
+      }
+
+      console.log('Transaction IDs:', transactionIds);
+
+      // Filter out transactions with negative amounts and show toast if any were ignored
+      const validTransactions = this.transactions.filter(t => transactionIds.includes(t.id)).filter(t => t.amount >= 0);
+
+      const ignoredCount = transactionIds.length - validTransactions.length;
+      if (ignoredCount > 0) {
+        showToast(`${ignoredCount} outflow transaction${ignoredCount === 1 ? ' was' : 's were'} ignored`);
+      }
+
+      transactionIds = validTransactions.map(t => t.id);
+
+      // Update transactions with unallocated envelope ID
+      if (transactionIds.length > 0) {
+        const updatePromises = transactionIds.map(id =>
+          fetch(`/api/transactions/${budgetId}/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+              envelope_id: unallocatedId,
+              in_inbox: false,
+            }),
+          })
+        );
+
+        Promise.all(updatePromises)
+          .then(() => {
+            this.fetchTransactions();
+            updateAccountBalances();
+          })
+          .catch(error => {
+            console.error('Error updating transactions:', error);
+            showToast('Error updating transactions');
+          });
+      }
     },
 
     startNewTransaction() {
