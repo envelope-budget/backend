@@ -19,3 +19,6 @@
 
 # Explicitly ignore pnpm-lock.yaml
 pnpm-lock.yaml
+
+# Ignore requirements.txt
+requirements.txt

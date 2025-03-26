@@ -3,7 +3,7 @@ pre-commit:
     biome:
       glob: '*'
       run:
-        npx biome check --apply --no-errors-on-unmatched --files-ignore-unknown=true {staged_files} && git update-index
+        npx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files} && git update-index
         --again
     prettier:
       run: |
