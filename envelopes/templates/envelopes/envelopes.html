@@ -17,18 +17,32 @@
       <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden w-full mb-1 p-4">
         <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4">
           <!-- Unallocated Funds Display -->
-          <div class="w-full md:w-1/2 bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+          <div class="w-full md:w-1/2 {% if budget.unallocated_envelope.balance > 0 %}bg-green-100 dark:bg-green-700{% elif budget.unallocated_envelope.balance < 0 %}bg-red-100 dark:bg-red-700{% else %}bg-gray-100 dark:bg-gray-700{% endif %} rounded-lg p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center">
-                <svg class="w-6 h-6 text-gray-800 dark:text-white"
-                     aria-hidden="true"
-                     xmlns="http://www.w3.org/2000/svg"
-                     width="24"
-                     height="24"
-                     fill="none"
-                     viewBox="0 0 24 24">
-                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9" />
-                </svg>
+                {% if budget.unallocated_envelope.balance > 0 %}
+                  <!-- full envelope icon -->
+                  <svg class="w-6 h-6 text-gray-800 dark:text-white"
+                       aria-hidden="true"
+                       xmlns="http://www.w3.org/2000/svg"
+                       width="24"
+                       height="24"
+                       fill="none"
+                       viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9M9 7h6m-7 3h8" />
+                  </svg>
+                {% else %}
+                  <!-- empty envelope icon -->
+                  <svg class="w-6 h-6 text-gray-800 dark:text-white"
+                       aria-hidden="true"
+                       xmlns="http://www.w3.org/2000/svg"
+                       width="24"
+                       height="24"
+                       fill="none"
+                       viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9" />
+                  </svg>
+                {% endif %}
                 <span class="text-gray-900 dark:text-white font-medium">Unallocated Funds</span>
               </div>
               <div class="text-gray-900 dark:text-white font-bold">{{ budget.unallocated_envelope.balance | money }}</div>
@@ -38,7 +52,7 @@
 
           <!-- Search -->
           <div class="w-full md:w-1/2">
-            <form class="flex items-center">
+            <form class="flex items-center" @submit.prevent>
               <label for="simple-search" class="sr-only">Search</label>
               <div class="relative w-full">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -53,12 +67,26 @@
                 <input type="text"
                        id="simple-search"
                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                       placeholder="Search"
-                       required="" />
+                       placeholder="Search envelopes..."
+                       x-model="searchQuery"
+                       @input="performSearch()" />
+                <button type="button"
+                        class="absolute inset-y-0 right-0 flex items-center pr-3"
+                        x-show="searchQuery"
+                        @click="searchQuery = ''; performSearch()">
+                  <svg class="w-4 h-4 text-gray-500 dark:text-gray-400"
+                       fill="none"
+                       stroke="currentColor"
+                       viewBox="0 0 24 24"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
               </div>
             </form>
           </div>
           <!-- End Search -->
+
 
           <!-- Buttons -->
           <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">

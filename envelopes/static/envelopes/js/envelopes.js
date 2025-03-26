@@ -194,6 +194,56 @@ function envelopeData() {
       isEdit: false,
     },
 
+    searchQuery: '',
+
+    // Perform search as user types
+    performSearch() {
+      const query = this.searchQuery.toLowerCase().trim();
+
+      // If search is empty, show all categories and envelopes
+      if (!query) {
+        for (const item of document.querySelectorAll('.category-item, .envelope-item')) {
+          item.style.display = '';
+        }
+        return;
+      }
+
+      // Hide all categories initially
+      for (const category of document.querySelectorAll('.category-item')) {
+        category.style.display = 'none';
+      }
+
+      // Show envelopes that match the search and their parent categories
+      for (const envelope of document.querySelectorAll('.envelope-item')) {
+        const envelopeName = envelope.querySelector('.font-medium').textContent.toLowerCase();
+        const matches = envelopeName.includes(query);
+
+        envelope.style.display = matches ? '' : 'none';
+
+        // If envelope matches, show its parent category
+        if (matches) {
+          const categoryItem = envelope.closest('.category-item');
+          if (categoryItem) {
+            categoryItem.style.display = '';
+          }
+        }
+      }
+
+      // Also check category names
+      for (const category of document.querySelectorAll('.category-item')) {
+        const categoryHeader = category.querySelector('.category-item > div');
+        if (categoryHeader) {
+          const categoryName = categoryHeader.querySelector('.font-medium').textContent.toLowerCase();
+          if (categoryName.includes(query)) {
+            category.style.display = '';
+            // Show all envelopes in this category
+            for (const envelope of category.querySelectorAll('.envelope-item')) {
+              envelope.style.display = '';
+            }
+          }
+        }
+      }
+    },
     startNewEnvelope(category_id) {
       this.envelope.id = '';
       this.envelope.name = '';
