@@ -17,8 +17,6 @@ if [ -f package.json ]; then
   echo "📦 Updating npm packages..."
   npx npm-check-updates -u
   pnpm install
-  git add package.json pnpm-lock.yaml
-  git commit -m "chore: update npm dependencies"
 fi
 
 # Update Python packages
@@ -28,9 +26,11 @@ if [ -f requirements.txt ]; then
   # Create a new requirements.txt with updated versions
   pip-compile --upgrade requirements.txt
   pip install -r requirements.txt
-  git add requirements.txt
-  git commit -m "chore: update Python dependencies"
 fi
+
+# Commit all changes
+git add .
+git commit -m "chore: update dependencies"
 
 echo "✅ Updates complete. New branch '$BRANCH_NAME' created with dependency updates."
 echo "👀 Please review and merge the changes."
