@@ -14,8 +14,29 @@
   <section class="bg-gray-50 dark:bg-gray-900" x-data="envelopeData()">
     <div class="mx-auto">
       <!-- Search and buttons section spanning both columns -->
-      <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden w-full mb-2 p-4">
+      <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden w-full mb-1 p-4">
         <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4">
+          <!-- Unallocated Funds Display -->
+          <div class="w-full md:w-1/2 bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <svg class="w-6 h-6 text-gray-800 dark:text-white"
+                     aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg"
+                     width="24"
+                     height="24"
+                     fill="none"
+                     viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9" />
+                </svg>
+                <span class="text-gray-900 dark:text-white font-medium">Unallocated Funds</span>
+              </div>
+              <div class="text-gray-900 dark:text-white font-bold">{{ budget.unallocated_envelope.balance | money }}</div>
+            </div>
+          </div>
+          <!-- End Unallocated Funds Display -->
+
+          <!-- Search -->
           <div class="w-full md:w-1/2">
             <form class="flex items-center">
               <label for="simple-search" class="sr-only">Search</label>
@@ -37,7 +58,9 @@
               </div>
             </form>
           </div>
+          <!-- End Search -->
 
+          <!-- Buttons -->
           <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
             <button type="button"
                     class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
@@ -53,9 +76,9 @@
               Add category
             </button>
           </div>
+          <!-- End Buttons -->
         </div>
       </div>
-
       <div class="flex flex-col md:flex-row gap-2">
         <!-- Main envelope list panel -->
         <div class="envelope-list-panel bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden w-full md:w-1/2 flex flex-col h-[calc(100vh-150px)]">

@@ -9,6 +9,8 @@ from envelopes.models import Category
 
 logger = logging.getLogger(__name__)
 
+UNALLOCATED_FUNDS = "Unallocated Funds"
+
 
 class Budget(models.Model):
     id = models.CharField(
@@ -50,19 +52,37 @@ class Budget(models.Model):
 
         # Check if it already exists
         unallocated = (
-            Envelope.objects.include_deleted()
-            .filter(budget=self, name="Unallocated Funds")
+            Envelope.objects.include_all()
+            .filter(budget=self, name=UNALLOCATED_FUNDS)
             .first()
         )
+        logger.debug("Unallocated envelope: %s", unallocated)
 
         if not unallocated:
-            Envelope.objects.create(
+            unallocated = Envelope.objects.create(
                 budget=self,
-                name="Unallocated Funds",
+                name=UNALLOCATED_FUNDS,
                 sort_order=0,  # Put it at the top
                 hidden=True,
                 note="Special envelope for unallocated funds. Do not delete.",
             )
+        return unallocated
+
+    def unallocated_envelope(self):
+        """Get the special Unallocated Funds envelope for this budget."""
+        from envelopes.models import Envelope
+
+        logger.info("Getting Unallocated Funds envelope for budget %s", self.id)
+        unallocated_envelope = (
+            Envelope.objects.include_all()
+            .filter(budget=self, name=UNALLOCATED_FUNDS)
+            .first()
+        )
+        if not unallocated_envelope:
+            unallocated_envelope = self.create_unallocated_funds_envelope()
+
+        logger.debug("Unallocated envelope: %s", unallocated_envelope)
+        return unallocated_envelope
 
     def categorized_envelopes(self):
         categories = Category.objects.filter(budget=self)
