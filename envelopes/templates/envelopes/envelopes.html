@@ -293,9 +293,11 @@
 {% endblock content %}
 
 {% block js %}
+
   {% compress js %}
-    <script src="{% static "vendor/emoji-mart/browser.js" %}"></script>
     <script src="{% static "vendor/sortablejs/Sortable.min.js" %}"></script>
+    <script src="{% static "vendor/emoji-mart/browser.js" %}"></script>
     <script src="{% static 'envelopes/js/envelopes.js' %}"></script>
   {% endcompress %}
+
 {% endblock js %}

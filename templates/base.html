@@ -1001,6 +1001,8 @@
 
     <script defer src="{% static "vendor/alpinejs/cdn.min.js" %}"></script>
 
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+
     {% compress js %}
       <script src="{% static "vendor/flowbite/flowbite.min.js" %}"></script>
       <script src="{% static "vendor/htmx/htmx.min.js" %}"></script>
@@ -1008,8 +1010,6 @@
       <script src="{% static 'js/sfin.js' %}"></script>
       <script src="{% static 'js/toasts.js' %}"></script>
     {% endcompress %}
-
-    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 
     {% block js %}
     {% endblock js %}
