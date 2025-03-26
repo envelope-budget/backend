@@ -102,12 +102,6 @@ class Envelope(models.Model):
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        # Prevent renaming of Unallocated Funds envelope
-        if self.pk and self.name != "Unallocated Funds":
-            original = Envelope.objects.get(pk=self.pk)
-            if original.name == "Unallocated Funds":
-                self.name = "Unallocated Funds"
-
         if self.category:
             self.category.update_balance()
         super().save(*args, **kwargs)
