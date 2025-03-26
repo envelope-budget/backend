@@ -5,21 +5,34 @@
 #    pip-compile --output-file=requirements.txt.new requirements.txt
 #
 annotated-types==0.7.0
-    # via pydantic
+    # via
+    #   -r requirements.txt
+    #   pydantic
 asgiref==3.8.1
     # via
+    #   -r requirements.txt
     #   django
     #   django-allauth
 beautifulsoup4==4.13.3
-    # via ofxparse
+    # via
+    #   -r requirements.txt
+    #   ofxparse
 certifi==2025.1.31
-    # via requests
+    # via
+    #   -r requirements.txt
+    #   requests
 cffi==1.17.1
-    # via cryptography
+    # via
+    #   -r requirements.txt
+    #   cryptography
 charset-normalizer==3.4.1
-    # via requests
+    # via
+    #   -r requirements.txt
+    #   requests
 cryptography==44.0.2
-    # via jwt
+    # via
+    #   -r requirements.txt
+    #   jwt
 django==5.1.7
     # via
     #   -r requirements.txt
@@ -30,53 +43,80 @@ django==5.1.7
 django-allauth==65.5.0
     # via -r requirements.txt
 django-appconf==1.1.0
-    # via django-compressor
+    # via
+    #   -r requirements.txt
+    #   django-compressor
 django-compressor==4.5.1
     # via -r requirements.txt
 django-ninja==1.3.0
     # via -r requirements.txt
 idna==3.10
-    # via requests
+    # via
+    #   -r requirements.txt
+    #   requests
 jwt==1.3.1
     # via -r requirements.txt
 lxml==5.3.1
-    # via ofxparse
+    # via
+    #   -r requirements.txt
+    #   ofxparse
 nulltype==2.3.1
-    # via plaid-python
+    # via
+    #   -r requirements.txt
+    #   plaid-python
 ofxparse==0.21
     # via -r requirements.txt
 plaid-python==29.1.0
     # via -r requirements.txt
 pycparser==2.22
-    # via cffi
+    # via
+    #   -r requirements.txt
+    #   cffi
 pydantic==2.10.6
-    # via django-ninja
+    # via
+    #   -r requirements.txt
+    #   django-ninja
 pydantic-core==2.27.2
-    # via pydantic
+    # via
+    #   -r requirements.txt
+    #   pydantic
 python-dateutil==2.9.0.post0
-    # via plaid-python
+    # via
+    #   -r requirements.txt
+    #   plaid-python
 python-dotenv==1.0.1
     # via -r requirements.txt
 rcssmin==1.1.2
-    # via django-compressor
+    # via
+    #   -r requirements.txt
+    #   django-compressor
 requests==2.32.3
     # via -r requirements.txt
 rjsmin==1.2.2
-    # via django-compressor
+    # via
+    #   -r requirements.txt
+    #   django-compressor
 six==1.17.0
     # via
+    #   -r requirements.txt
     #   ofxparse
     #   python-dateutil
 soupsieve==2.6
-    # via beautifulsoup4
+    # via
+    #   -r requirements.txt
+    #   beautifulsoup4
 sqlparse==0.5.3
-    # via django
+    # via
+    #   -r requirements.txt
+    #   django
 typing-extensions==4.13.0
     # via
+    #   -r requirements.txt
     #   beautifulsoup4
     #   pydantic
     #   pydantic-core
 urllib3==2.3.0
     # via
+    #   -r requirements.txt
     #   plaid-python
     #   requests
