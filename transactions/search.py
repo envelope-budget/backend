@@ -148,6 +148,8 @@ def _parse_is_filter(value):
         return Q(pending=True)
     elif value == "archived":
         return Q(in_inbox=False)
+    elif value == "unassigned":
+        return Q(envelope__isnull=True)
     return Q()
 
 
