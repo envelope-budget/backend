@@ -51,15 +51,6 @@ document.getElementById('btn-add-account').addEventListener('click', () => {
   loadOriginalModalContent();
 });
 
-// Plaid Link
-const handler = Plaid.create({
-  token: 'GENERATED_LINK_TOKEN',
-  onSuccess: (public_token, metadata) => {},
-  onLoad: () => {},
-  onExit: (err, metadata) => {},
-  onEvent: (eventName, metadata) => {},
-});
-
 window.getCookie = name => {
   let cookieValue = null;
   if (document.cookie && document.cookie !== '') {
@@ -167,4 +158,13 @@ document.addEventListener('DOMContentLoaded', event => {
         console.error('Failed to load SimpleFIN connection:', error);
       });
   }
+});
+
+// Plaid Link
+const handler = Plaid.create({
+  token: 'GENERATED_LINK_TOKEN',
+  onSuccess: (public_token, metadata) => {},
+  onLoad: () => {},
+  onExit: (err, metadata) => {},
+  onEvent: (eventName, metadata) => {},
 });

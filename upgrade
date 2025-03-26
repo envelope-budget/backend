@@ -25,6 +25,7 @@ if [ -f package.json ]; then
   echo "📦 Updating npm packages..."
   npx npm-check-updates -u
   pnpm install
+  ./vendorjs.sh
 fi
 
 # Update Python packages

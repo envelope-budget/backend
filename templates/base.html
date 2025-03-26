@@ -32,7 +32,6 @@
     </script>
 
     {% block head %}
-
     {% endblock head %}
 
   </head>
@@ -999,19 +998,18 @@
       </div>
     </div>
     <!-- End Add Account Modal -->
-    <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.9"
-            integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX"
-            crossorigin="anonymous"></script>
-    <script defer
-            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+
+    <script defer src="{% static "vendor/alpinejs/cdn.min.js" %}"></script>
 
     {% compress js %}
+      <script src="{% static "vendor/flowbite/flowbite.min.js" %}"></script>
+      <script src="{% static "vendor/htmx/htmx.min.js" %}"></script>
       <script src="{% static 'js/base.js' %}"></script>
       <script src="{% static 'js/sfin.js' %}"></script>
       <script src="{% static 'js/toasts.js' %}"></script>
     {% endcompress %}
+
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 
     {% block js %}
     {% endblock js %}

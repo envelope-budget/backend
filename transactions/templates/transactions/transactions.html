@@ -613,8 +613,9 @@
 {% endblock content %}
 
 {% block js %}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/datepicker.min.js"></script>
+  <script src="{% static 'vendor/flowbite/datepicker.min.js' %}"></script>
   {% compress js %}
+
     <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
     <script src="{% static 'transactions/js/transactions.js' %}"></script>
     <script src="{% static 'transactions/js/envelope-select.js' %}"></script>

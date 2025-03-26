@@ -22,3 +22,6 @@ pnpm-lock.yaml
 
 # Ignore requirements.txt
 requirements.txt
+
+# Ignore vendor files
+static/vendor/*
