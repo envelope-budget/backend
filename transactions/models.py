@@ -1,12 +1,17 @@
 import io
+import logging
 
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
+from django.db import transaction as db_transaction
 from django.db import models
 from ofxparse import OfxParser
 
 from budgetapp.utils import generate_uuid_hex
 from budgets.models import Budget
+
+
+logger = logging.getLogger(__name__)
 
 
 class Payee(models.Model):
@@ -157,6 +162,12 @@ class Transaction(models.Model):
         # Update the balance for deleted transactions
         self.account.balance -= self.amount
         self.account.save()
+        logger.info(
+            "Transaction Payee: %s; Account: %s Balance: %s",
+            self.payee,
+            self.account.name,
+            self.account.balance,
+        )
         if self.envelope:
             self.envelope.balance -= self.amount
             self.envelope.save()
@@ -228,12 +239,12 @@ class Transaction(models.Model):
         account = first_transaction.account
         amount = first_transaction.amount
 
-        for transaction in transactions[1:]:
-            if transaction.account.id != account.id:
+        for trans in transactions[1:]:
+            if trans.account.id != account.id:
                 raise ValidationError(
                     "Transactions must have the same account to merge"
                 )
-            if transaction.amount != amount:
+            if trans.amount != amount:
                 raise ValidationError("Transactions must have the same amount to merge")
 
         # Determine the earliest date
@@ -241,13 +252,13 @@ class Transaction(models.Model):
 
         # Determine envelope (if they have different envelopes, return error)
         envelope = None
-        for transaction in transactions:
-            if transaction.envelope:
-                if envelope and transaction.envelope.id != envelope.id:
+        for trans in transactions:
+            if trans.envelope:
+                if envelope and trans.envelope.id != envelope.id:
                     raise ValidationError(
                         "Transactions have different envelopes and cannot be merged"
                     )
-                envelope = transaction.envelope
+                envelope = trans.envelope
 
         # Determine cleared status (if any is cleared, mark as cleared)
         cleared = any(t.cleared for t in transactions)
@@ -263,16 +274,16 @@ class Transaction(models.Model):
 
         # Determine sfin_id - prioritize the non-pending transaction's sfin_id
         sfin_id = None
-        for transaction in transactions:
-            if transaction.sfin_id and not transaction.pending:
-                sfin_id = transaction.sfin_id
+        for trans in transactions:
+            if trans.sfin_id and not trans.pending:
+                sfin_id = trans.sfin_id
                 break
 
         # If no non-pending transaction with sfin_id found, use the first available sfin_id
         if not sfin_id:
-            for transaction in transactions:
-                if transaction.sfin_id:
-                    sfin_id = transaction.sfin_id
+            for trans in transactions:
+                if trans.sfin_id:
+                    sfin_id = trans.sfin_id
                     break
 
         # Choose payee and memo from the first transaction (arbitrary choice)
@@ -282,32 +293,67 @@ class Transaction(models.Model):
         # Get the budget
         budget = Budget.objects.get(id=budget_id)
 
-        # Soft delete the original transactions first to avoid unique constraint violations
-        for transaction in transactions:
-            transaction.soft_delete()
+        # Use a database transaction to ensure atomicity
+        with db_transaction.atomic():
+            # Calculate the total amount to be removed from the account balance
+            # (all transactions except one, since we'll be adding one back)
+            total_amount_to_remove = amount * (len(transactions) - 1)
 
-        # Create the merged transaction
-        merged_transaction = cls.objects.create(
-            budget=budget,
-            account=account,
-            payee=payee,
-            envelope=envelope,
-            date=earliest_date,
-            amount=amount,
-            memo=memo,
-            cleared=cleared,
-            pending=pending,
-            reconciled=reconciled,
-            in_inbox=in_inbox,
-            sfin_id=sfin_id,
-        )
+            # Update the account balance directly
+            account.balance -= total_amount_to_remove
+            account.save()
 
-        # Create the merge record
-        merge = TransactionMerge.create_merge(
-            budget=budget,
-            merged_transaction=merged_transaction,
-            source_transaction_ids=transaction_ids,
-        )
+            logger.info(
+                "Merge: Adjusted account %s balance by %s to %s",
+                account.name,
+                total_amount_to_remove,
+                account.balance,
+            )
+
+            # If there's an envelope, update its balance too
+            if envelope:
+                envelope.balance -= total_amount_to_remove
+                envelope.save()
+                logger.info(
+                    "Merge: Adjusted envelope %s balance by %s to %s",
+                    envelope.name,
+                    total_amount_to_remove,
+                    envelope.balance,
+                )
+
+            # Mark original transactions as deleted without adjusting balances
+            for trans in transactions:
+                trans.deleted = True
+                trans.save(
+                    soft_delete=True
+                )  # Use soft_delete flag to avoid balance adjustments
+                logger.info("Merge: Marked transaction %s as deleted", trans.id)
+
+            # Create the merged transaction without adjusting balances
+            merged_transaction = cls(
+                budget=budget,
+                account=account,
+                payee=payee,
+                envelope=envelope,
+                date=earliest_date,
+                amount=amount,
+                memo=memo,
+                cleared=cleared,
+                pending=pending,
+                reconciled=reconciled,
+                in_inbox=in_inbox,
+                sfin_id=sfin_id,
+            )
+            # Save without adjusting balances (we've already done that manually)
+            merged_transaction.save(soft_delete=True)
+            logger.info("Merge: Created new transaction %s", merged_transaction.id)
+
+            # Create the merge record
+            merge = TransactionMerge.create_merge(
+                budget=budget,
+                merged_transaction=merged_transaction,
+                source_transaction_ids=transaction_ids,
+            )
 
         return merged_transaction, merge
 
