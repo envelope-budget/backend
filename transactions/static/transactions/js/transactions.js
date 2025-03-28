@@ -665,7 +665,9 @@ function transactionData() {
       }
 
       this.editableTransaction[type] = Math.abs(input).toFixed(2);
-      this.editableTransaction.amount = this.editableTransaction[type] * 1000 * (type === 'outflow' ? -1 : 1);
+      this.editableTransaction.amount = Number.parseInt(
+        this.editableTransaction[type] * 1000 * (type === 'outflow' ? -1 : 1)
+      );
     },
 
     async saveTransaction() {
@@ -705,6 +707,7 @@ function transactionData() {
           this.showAllTransactions();
         } catch (error) {
           console.error('Error posting file:', error);
+          showToast(`Error updating transaction: ${error}`, 'error');
         }
       } else {
         try {
@@ -724,6 +727,7 @@ function transactionData() {
           this.activeIndex = 0;
         } catch (error) {
           console.error('Error posting file:', error);
+          showToast(`Error creating transaction: ${error}`, 'error');
         }
       }
       updateAccountBalances();
