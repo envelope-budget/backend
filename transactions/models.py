@@ -286,9 +286,25 @@ class Transaction(models.Model):
                     sfin_id = trans.sfin_id
                     break
 
-        # Choose payee and memo from the first transaction (arbitrary choice)
-        payee = first_transaction.payee
-        memo = first_transaction.memo
+        # Choose payee from user-entered transaction, fallback to first transaction
+        payee = None
+        for trans in transactions:
+            if not trans.import_id and not trans.sfin_id:  # User-entered transaction
+                payee = trans.payee
+                break
+        if (
+            payee is None
+        ):  # If no user-entered payee found, use first transaction's payee
+            payee = first_transaction.payee
+
+        # Prefer memo from user-entered (non-imported) transaction
+        memo = None
+        for trans in transactions:
+            if not trans.import_id and not trans.sfin_id:  # User-entered transaction
+                memo = trans.memo
+                break
+        if memo is None:  # If no user-entered memo found, use first transaction's memo
+            memo = first_transaction.memo
 
         # Get the budget
         budget = Budget.objects.get(id=budget_id)
