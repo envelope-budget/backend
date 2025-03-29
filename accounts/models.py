@@ -213,6 +213,7 @@ class SimpleFINConnection(models.Model):
         end_date=None,
         include_pending=True,
         import_transactions=True,
+        update_account_amounts=True,
     ):
         """
         Retrieve transactions from the SimpleFIN connection's access URL.
@@ -227,6 +228,8 @@ class SimpleFINConnection(models.Model):
                 Defaults to True.
             import_transactions (bool, optional): Whether to import the transactions to a
                 matching EB account. Defaults to True.
+            update_account_amounts (bool, optional): Whether to update the account balances
+                after importing transactions. Defaults to True.
 
         Returns:
             dict: A JSON-decoded response containing transaction details from the SimpleFIN API.
@@ -314,7 +317,11 @@ class SimpleFINConnection(models.Model):
 
             if import_transactions:
                 # Import the transactions to the budget
-                self.import_transactions(response.json())
+                self.import_sfin_transactions(response.json())
+
+            if update_account_amounts:
+                # Update the account balances
+                self.update_sfin_account_balances(response.json())
 
             return response.json()
         except requests.exceptions.JSONDecodeError as e:
@@ -337,7 +344,7 @@ class SimpleFINConnection(models.Model):
                 "details": str(e),
             }
 
-    def import_transactions(self, sfin_data):
+    def import_sfin_transactions(self, sfin_data, update_account_amounts=True):
         logger.info("Importing SimpleFIN transactions, data: %s", sfin_data)
         for sfin_account in sfin_data.get("accounts", []):
             try:
@@ -420,3 +427,30 @@ class SimpleFINConnection(models.Model):
             # Update the last imported date for this account
             account.sfin_last_imported_on = datetime.datetime.now()
             account.save(update_fields=["sfin_last_imported_on"])
+
+    def update_sfin_account_balances(self, sfin_data):
+        """
+        Update the balances of SimpleFIN accounts based on the provided data.
+
+        Args:
+            sfin_data (dict): The data received from the SimpleFIN API.
+        """
+        logger.info("⚖️ Updating SimpleFIN account balances...")
+        for sfin_account in sfin_data.get("accounts", []):
+            try:
+                account = Account.objects.get(sfin_id=sfin_account.get("id"))
+                logger.info("Found account for SimpleFIN account: %s", account)
+            except Account.DoesNotExist:
+                logger.warning(
+                    "No account found for SimpleFIN account: %s", sfin_account["id"]
+                )
+                continue
+            balance = int(float(sfin_account.get("balance")) * 1000)
+            if account:
+                account.balance = balance
+                account.save(update_fields=["balance"])
+                logger.info(
+                    "✅ Updated balance for account: %s; balance: %s",
+                    account.name,
+                    balance,
+                )

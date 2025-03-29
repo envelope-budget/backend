@@ -243,6 +243,7 @@ def get_simplefin_transactions(
     end_date: Optional[str] = None,
     include_pending: bool = True,
     import_transactions: bool = True,
+    update_account_amounts: bool = True,
 ):
     """
     Get transactions from the SimpleFIN connection for a budget.
@@ -270,6 +271,7 @@ def get_simplefin_transactions(
             end_date=end_date,
             include_pending=include_pending,
             import_transactions=import_transactions,
+            update_account_amounts=update_account_amounts,
         )
 
         # Check if there was an error in the result
