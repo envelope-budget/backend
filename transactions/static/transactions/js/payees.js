@@ -1,5 +1,5 @@
-document.addEventListener('alpine:init', () => {
-  Alpine.data('payeeData', () => ({
+function payeeData() {
+  return {
     renameRules: [],
     searchTerm: '',
     payees: [],
@@ -10,13 +10,18 @@ document.addEventListener('alpine:init', () => {
     showResultMessage: false,
     csrfToken: getCookie('csrftoken'),
     budgetId: getCookie('budget_id'),
+    currentPayee: null,
+    isEditing: false,
+    newPayeeName: '',
+    selectedCategory: '',
 
     init() {
       // Initialize with all payees
-      this.payees = Array.from(this.$el.querySelectorAll('tbody tr')).map(row => {
+      this.payees = Array.from(document.querySelectorAll('tbody tr')).map(row => {
         return {
           element: row,
           name: row.querySelector('th').textContent.trim(),
+          id: row.getAttribute('data-payee-id'),
         };
       });
       this.filteredPayees = [...this.payees];
@@ -88,7 +93,7 @@ document.addEventListener('alpine:init', () => {
         })
         .then(data => {
           this.showResult(`Successfully deleted ${data.count} unused payees`, 'success');
-          this.window.location.reload();
+          window.location.reload();
         })
         .catch(error => {
           console.error('Error deleting unused payees:', error);
@@ -115,5 +120,188 @@ document.addEventListener('alpine:init', () => {
     removeRule(index) {
       this.renameRules.splice(index, 1);
     },
-  }));
-});
+
+    // New methods for adding/editing payees
+    openAddPayeeModal() {
+      this.isEditing = false;
+      this.currentPayee = null;
+      this.newPayeeName = '';
+      this.selectedCategory = '';
+      this.renameRules = [];
+
+      // Open the modal
+      if (typeof FlowbiteInstances !== 'undefined' && FlowbiteInstances.getInstance('Modal', 'payee-modal')) {
+        FlowbiteInstances.getInstance('Modal', 'payee-modal').show();
+      }
+    },
+
+    openEditPayeeModal(payee) {
+      this.isEditing = true;
+      this.currentPayee = payee;
+      this.newPayeeName = payee.name;
+
+      // Fetch payee details including rename rules
+      this.isLoading = true;
+      fetch(`/api/payees/${this.budgetId}/${payee.id}`, {
+        headers: {
+          Accept: 'application/json',
+        },
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch payee details');
+          }
+          return response.json();
+        })
+        .then(data => {
+          this.selectedCategory = data.category || '';
+          this.renameRules = data.rename_rules || [];
+
+          // Open the modal
+          if (typeof FlowbiteInstances !== 'undefined' && FlowbiteInstances.getInstance('Modal', 'payee-modal')) {
+            FlowbiteInstances.getInstance('Modal', 'payee-modal').show();
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching payee details:', error);
+          this.showResult('Error fetching payee details', 'error');
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+
+    savePayee() {
+      if (!this.newPayeeName.trim()) {
+        this.showResult('Payee name cannot be empty', 'error');
+        return;
+      }
+
+      this.isLoading = true;
+
+      const payeeData = {
+        name: this.newPayeeName.trim(),
+        category: this.selectedCategory || null,
+        rename_rules: this.renameRules,
+      };
+
+      const url = this.isEditing
+        ? `/api/payees/${this.budgetId}/${this.currentPayee.id}`
+        : `/api/payees/${this.budgetId}`;
+
+      const method = this.isEditing ? 'PUT' : 'POST';
+
+      fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.csrfToken,
+        },
+        body: JSON.stringify(payeeData),
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to ${this.isEditing ? 'update' : 'create'} payee`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          this.showResult(`Successfully ${this.isEditing ? 'updated' : 'created'} payee: ${data.name}`, 'success');
+
+          // Close the modal
+          if (typeof FlowbiteInstances !== 'undefined' && FlowbiteInstances.getInstance('Modal', 'payee-modal')) {
+            FlowbiteInstances.getInstance('Modal', 'payee-modal').hide();
+          }
+
+          // Refresh the page to show updated data
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error(`Error ${this.isEditing ? 'updating' : 'creating'} payee:`, error);
+          this.showResult(`Error ${this.isEditing ? 'updating' : 'creating'} payee`, 'error');
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+
+    deletePayee() {
+      if (!this.isEditing || !this.currentPayee) {
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to delete payee "${this.currentPayee.name}"?`)) {
+        return;
+      }
+
+      this.isLoading = true;
+
+      fetch(`/api/payees/${this.budgetId}/${this.currentPayee.id}`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRFToken': this.csrfToken,
+        },
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to delete payee');
+          }
+          return response.json();
+        })
+        .then(data => {
+          this.showResult(`Successfully deleted payee: ${this.currentPayee.name}`, 'success');
+
+          // Close the modal
+          if (typeof FlowbiteInstances !== 'undefined' && FlowbiteInstances.getInstance('Modal', 'payee-modal')) {
+            FlowbiteInstances.getInstance('Modal', 'payee-modal').hide();
+          }
+
+          // Refresh the page to show updated data
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error deleting payee:', error);
+          this.showResult('Error deleting payee', 'error');
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+
+    cleanPayeeNames() {
+      if (this.isLoading) return;
+
+      if (!confirm('This will use AI to clean up all payee names. Continue?')) {
+        return;
+      }
+
+      this.isLoading = true;
+      const url = `/api/payees/${this.budgetId}/clean-names`;
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.csrfToken,
+        },
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to clean payee names');
+          }
+          return response.json();
+        })
+        .then(data => {
+          this.showResult(`Successfully cleaned ${data.count} payee names`, 'success');
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error cleaning payee names:', error);
+          this.showResult('Error cleaning payee names', 'error');
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+  };
+}
