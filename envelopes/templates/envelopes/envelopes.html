@@ -149,7 +149,9 @@
                         </svg>
                       </button>
                     </div>
-                    <div class="px-4 py-3 text-right font-medium">{{ category.balance | money }}</div>
+                    <div class="px-4 py-3 text-right font-medium {% if category.balance > 0 %}text-green-600 dark:text-green-400 {% elif category.balance < 0 %}text-red-600 dark:text-red-400 {% else %}text-gray-900 dark:text-white{% endif %}">
+                      {{ category.balance | money }}
+                    </div>
                   </div>
                   <ul class="envelopes-list w-full" data-category-id="{{ category.id }}">
                     {% for envelope in category.envelopes %}
@@ -170,7 +172,9 @@
                           </span>
                           {{ envelope.name }}
                         </div>
-                        <div class="px-4 py-3 text-right">{{ envelope.balance | money }}</div>
+                        <div class="px-4 py-3 text-right {% if envelope.balance > 0 %}text-green-600 dark:text-green-400 {% elif envelope.balance < 0 %}text-red-600 dark:text-red-400 {% else %}text-gray-900 dark:text-white{% endif %}">
+                          {{ envelope.balance | money }}
+                        </div>
                       </li>
                     {% endfor %}
                   </ul>
@@ -212,7 +216,8 @@
             <div x-show="selectedItem.type === 'category'">
               <div class="mb-4">
                 <p class="text-sm text-gray-500 dark:text-gray-400">Category Balance</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white"
+                <p class="text-2xl font-bold"
+                   :class="getBalanceColorClass(selectedItem.balance)"
                    x-text="selectedItem.balance"></p>
               </div>
 
@@ -256,7 +261,8 @@
             <div x-show="selectedItem.type === 'envelope'">
               <div class="mb-4">
                 <p class="text-sm text-gray-500 dark:text-gray-400">Envelope Balance</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white"
+                <p class="text-2xl font-bold"
+                   :class="getBalanceColorClass(selectedItem.balance)"
                    x-text="selectedItem.balance"></p>
               </div>
 

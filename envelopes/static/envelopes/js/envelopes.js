@@ -196,6 +196,19 @@ function envelopeData() {
 
     searchQuery: '',
 
+    getBalanceColorClass(balance) {
+      // Remove currency symbol and commas, then convert to number
+      const numericBalance = Number.parseFloat(balance.replace(/[$,]/g, ''));
+
+      if (numericBalance > 0) {
+        return 'text-green-600 dark:text-green-400';
+      }
+      if (numericBalance < 0) {
+        return 'text-red-600 dark:text-red-400';
+      }
+      return 'text-gray-900 dark:text-white';
+    },
+
     // Perform search as user types
     performSearch() {
       const query = this.searchQuery.toLowerCase().trim();
