@@ -24,7 +24,11 @@ function initKeyboardShortcuts(context) {
       if (isInputActive) {
         event.preventDefault();
       }
-      context.saveTransaction();
+      if (!activeElement.classList.contains('search-envelopes')) {
+        context.saveTransaction();
+      } else {
+        activeElement.blur();
+      }
       return;
     }
 
