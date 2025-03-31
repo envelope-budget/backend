@@ -3,6 +3,7 @@ from typing import List, Optional
 from ninja import Router, Schema
 from ninja.security import django_auth
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from .models import Envelope, Category
 
@@ -142,6 +143,74 @@ def set_categories_order(request, budget_id: str, data: CategoryOrderSchema):
         category.save()
 
     return {"success": True, "message": "Category order updated successfully"}
+
+
+class EnvelopeTransferSchema(Schema):
+    from_envelope_id: str
+    to_envelope_id: str
+    amount: int
+
+
+@router.post(
+    "/{budget_id}/transfer",
+    response=dict,
+    auth=django_auth,
+    tags=["Envelopes"],
+)
+def transfer_funds(request, budget_id: str, data: EnvelopeTransferSchema):
+    """
+    Transfer funds between envelopes.
+
+    Args:
+        budget_id: The budget ID
+        data: Transfer details including source envelope, destination envelope, and amount
+
+    Returns:
+        A dictionary with the transfer result
+    """
+    from budgets.models import Budget
+
+    # Verify the budget exists
+    budget = get_object_or_404(Budget, id=budget_id)
+
+    # Handle special case for unallocated funds
+    if data.from_envelope_id == "unallocated":
+        source_envelope = Envelope.objects.get_unallocated_funds(budget)
+    else:
+        source_envelope = get_object_or_404(
+            Envelope, id=data.from_envelope_id, budget_id=budget_id
+        )
+
+    if data.to_envelope_id == "unallocated":
+        destination_envelope = Envelope.objects.get_unallocated_funds(budget)
+    else:
+        destination_envelope = get_object_or_404(
+            Envelope, id=data.to_envelope_id, budget_id=budget_id
+        )
+
+    # Perform the transfer
+    try:
+        # Use the existing transfer method from the Envelope model
+        Envelope.transfer(data.amount, source_envelope, destination_envelope)
+
+        # Return the updated envelope balances
+        return {
+            "success": True,
+            "message": "Funds transferred successfully",
+            "source_envelope": {
+                "id": source_envelope.id,
+                "name": source_envelope.name,
+                "balance": source_envelope.balance,
+            },
+            "destination_envelope": {
+                "id": destination_envelope.id,
+                "name": destination_envelope.name,
+                "balance": destination_envelope.balance,
+            },
+            "amount": data.amount,
+        }
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 
 @router.get(

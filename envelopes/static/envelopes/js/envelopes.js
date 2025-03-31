@@ -209,6 +209,57 @@ function envelopeData() {
       return 'text-gray-900 dark:text-white';
     },
 
+    quickAllocateFunds(envelopeId, currentBalance) {
+      // Convert the balance string to a number (remove $ and commas)
+      console.log(`Current Balance: ${currentBalance}`);
+      const numericBalance = Number.parseFloat(currentBalance.replace(/[$,]/g, ''));
+
+      // Only proceed if the balance is negative
+      if (numericBalance >= 0) {
+        return;
+      }
+
+      // Calculate the amount needed to bring the balance to zero
+      const amountToAllocate = Math.abs(numericBalance);
+
+      // Get the budget ID from cookie
+      const budgetId = window.getCookie('budget_id');
+      const csrfToken = window.getCookie('csrftoken');
+
+      // Prepare the API endpoint
+      const endpoint = `/api/envelopes/${budgetId}/transfer`;
+
+      // Make the API request to transfer funds
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+          from_envelope_id: 'unallocated', // Assuming 'unallocated' is the ID or a special identifier
+          to_envelope_id: envelopeId,
+          amount: amountToAllocate,
+        }),
+        credentials: 'include',
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Funds allocated successfully:', data);
+          // Refresh the page to show updated balances
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error allocating funds:', error);
+          showToast('Failed to allocate funds. Please check if you have enough unallocated funds.');
+        });
+    },
+
     // Perform search as user types
     performSearch() {
       const query = this.searchQuery.toLowerCase().trim();

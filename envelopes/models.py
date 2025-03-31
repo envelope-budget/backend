@@ -90,6 +90,21 @@ class Envelope(models.Model):
     def __str__(self):
         return str(self.name)
 
+    @classmethod
+    def transfer(cls, amount, source, destination):
+        """
+        Transfer money between envelopes.
+        Args:
+            amount: Integer amount to transfer
+            source: Source Envelope instance
+            destination: Destination Envelope instance
+        """
+        source.balance -= amount
+        destination.balance += amount
+
+        source.save()
+        destination.save()
+
     def delete(self, *args, **kwargs):
         """Override delete to prevent deletion of Unallocated Funds envelope."""
         if self.name == "Unallocated Funds":
