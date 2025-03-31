@@ -422,20 +422,24 @@ function transactionData() {
       }
     },
 
-    async archive() {
+    async archive(transaction) {
       let idsToArchive = [];
-      // Gather IDs of checked transactions that have envelopes and are cleared
-      idsToArchive = this.transactions
-        .filter(transaction => transaction.checked && transaction.envelope && transaction.cleared)
-        .map(transaction => transaction.id);
+      if (transaction) {
+        idsToArchive = [transaction.id];
+      } else {
+        // Gather IDs of checked transactions that have envelopes and are cleared
+        idsToArchive = this.transactions
+          .filter(transaction => transaction.checked && transaction.envelope && transaction.cleared)
+          .map(transaction => transaction.id);
 
-      if (this.transactions.filter(transaction => transaction.checked).length === 0) {
-        const activeTransaction = this.transactions[this.activeIndex];
-        if (activeTransaction?.envelope && activeTransaction.cleared) {
-          idsToArchive = [activeTransaction.id];
-        } else {
-          showToast('Please select transactions with envelopes and are cleared');
-          return;
+        if (this.transactions.filter(transaction => transaction.checked).length === 0) {
+          const activeTransaction = this.transactions[this.activeIndex];
+          if (activeTransaction?.envelope && activeTransaction.cleared) {
+            idsToArchive = [activeTransaction.id];
+          } else {
+            showToast('Please select transactions with envelopes and are cleared');
+            return;
+          }
         }
       }
 

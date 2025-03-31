@@ -552,7 +552,30 @@
                     </a>
                   </td>
                   <td class="px-2 py-3 text-center">
-                    <span x-show="transaction.pending">⌛</span>
+                    <span x-show="transaction.pending">
+                      <svg class="w-4 h-4 text-gray-800 dark:text-white"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           width="24"
+                           height="24"
+                           fill="none"
+                           viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.5 4h-13m13 16h-13M8 20v-3.333a2 2 0 0 1 .4-1.2L10 12.6a1 1 0 0 0 0-1.2L8.4 8.533a2 2 0 0 1-.4-1.2V4h8v3.333a2 2 0 0 1-.4 1.2L13.957 11.4a1 1 0 0 0 0 1.2l1.643 2.867a2 2 0 0 1 .4 1.2V20H8Z" />
+                      </svg>
+                    </span>
+                    <span x-show="transaction.cleared && transaction.envelope"
+                          x-on:click="archive(transaction)"
+                          class="cursor-pointer">
+                      <svg class="w-4.5 h-4.5 text-gray-800 dark:text-white"
+                           aria-hidden="true"
+                           xmlns="http://www.w3.org/2000/svg"
+                           width="24"
+                           height="24"
+                           fill="none"
+                           viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11v5m0 0 2-2m-2 2-2-2M3 6v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1Zm2 2v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8H5Z" />
+                      </svg>
+                    </span>
                   </td>
                 </tr>
               </template>
