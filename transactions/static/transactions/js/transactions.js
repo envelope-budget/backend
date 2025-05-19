@@ -227,6 +227,7 @@ function transactionData() {
     searchQuery: '',
     showSearchHelp: false,
     isSearching: false,
+    isSaving: false,
 
     async performSearch() {
       this.currentPage = 1;
@@ -675,66 +676,82 @@ function transactionData() {
     },
 
     async saveTransaction() {
-      let url = `/api/transactions/${this.editableTransaction.budget_id}`;
-      const csrfToken = getCookie('csrftoken');
-      const date = new Date(document.querySelector('.editable-transaction-date').value);
-      const formattedDate = date.toISOString().slice(0, 10);
-      const postData = {
-        account_id: this.editableTransaction.account,
-        amount: this.editableTransaction.amount,
-        cleared: this.editableTransaction.cleared,
-        date: formattedDate,
-        memo: this.editableTransaction.memo,
-        payee: this.editableTransaction.payee,
-      };
+      // Add a guard to prevent double submission
+      if (this.isSaving) return;
+      this.isSaving = true;
 
-      if (this.editableTransaction.envelope) {
-        postData.envelope_id = this.editableTransaction.envelope;
-      }
+      try {
+        // Calculate amount from inflow/outflow before saving
+        if (this.editableTransaction.inflow) {
+          this.calculateAmount('inflow');
+        } else if (this.editableTransaction.outflow) {
+          this.calculateAmount('outflow');
+        }
 
-      if (this.editableTransaction.id) {
-        url += `/${this.editableTransaction.id}`;
-        try {
-          const response = await fetch(url, {
-            method: 'PUT',
-            headers: {
-              'X-CSRFToken': csrfToken,
-            },
-            body: JSON.stringify(postData),
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          const updatedTransaction = await response.json();
-          this.transactions[this.activeIndex] = updatedTransaction;
-          this.showEditForm = false;
-          this.showAllTransactions();
-        } catch (error) {
-          console.error('Error posting file:', error);
-          showToast(`Error updating transaction: ${error}`, 'error');
+        let url = `/api/transactions/${this.editableTransaction.budget_id}`;
+        const csrfToken = getCookie('csrftoken');
+        const date = new Date(document.querySelector('.editable-transaction-date').value);
+        const formattedDate = date.toISOString().slice(0, 10);
+        const postData = {
+          account_id: this.editableTransaction.account,
+          amount: this.editableTransaction.amount,
+          cleared: this.editableTransaction.cleared,
+          date: formattedDate,
+          memo: this.editableTransaction.memo,
+          payee: this.editableTransaction.payee,
+        };
+
+        if (this.editableTransaction.envelope) {
+          postData.envelope_id = this.editableTransaction.envelope;
         }
-      } else {
-        try {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': csrfToken,
-            },
-            body: JSON.stringify(postData),
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+
+        if (this.editableTransaction.id) {
+          url += `/${this.editableTransaction.id}`;
+          try {
+            const response = await fetch(url, {
+              method: 'PUT',
+              headers: {
+                'X-CSRFToken': csrfToken,
+              },
+              body: JSON.stringify(postData),
+            });
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const updatedTransaction = await response.json();
+            this.transactions[this.activeIndex] = updatedTransaction;
+            this.showEditForm = false;
+            this.showAllTransactions();
+          } catch (error) {
+            console.error('Error posting file:', error);
+            showToast(`Error updating transaction: ${error}`, 'error');
           }
-          const newTransaction = await response.json();
-          this.transactions.unshift(newTransaction);
-          this.showEditForm = false;
-          this.activeIndex = 0;
-        } catch (error) {
-          console.error('Error posting file:', error);
-          showToast(`Error creating transaction: ${error}`, 'error');
+        } else {
+          try {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken,
+              },
+              body: JSON.stringify(postData),
+            });
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const newTransaction = await response.json();
+            this.transactions.unshift(newTransaction);
+            this.showEditForm = false;
+            this.activeIndex = 0;
+          } catch (error) {
+            console.error('Error posting file:', error);
+            showToast(`Error creating transaction: ${error}`, 'error');
+          }
         }
+        updateAccountBalances();
+      } finally {
+        // Reset the saving flag
+        this.isSaving = false;
       }
-      updateAccountBalances();
     },
 
     showAllTransactions() {
