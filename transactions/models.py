@@ -106,22 +106,24 @@ class Transaction(models.Model):
     # Override the save method
     def save(self, *args, **kwargs):
         if self.import_id:
-            # Check if a transaction with the same budget, account, and import_id/sfin_id already
-            # exists
-            if (
-                Transaction.objects.filter(
+            # Check if a transaction with the same budget, account, and import_id already exists
+            existing_query = Transaction.objects.filter(
+                budget=self.budget,
+                account=self.account,
+                import_id=self.import_id,
+            ).exclude(id=self.id)
+
+            # Only check sfin_id if it's not None
+            if self.sfin_id:
+                existing_query = existing_query | Transaction.objects.filter(
                     budget=self.budget,
                     account=self.account,
-                )
-                .filter(
-                    models.Q(import_id=self.import_id) | models.Q(sfin_id=self.sfin_id)
-                )
-                .exclude(id=self.id)
-                .exists()
-            ):
+                    sfin_id=self.sfin_id,
+                ).exclude(id=self.id)
 
+            if existing_query.exists():
                 raise ValidationError(
-                    f"A transaction with import_id '{self.import_id}' already exists for this budget and account."
+                    f"A transaction with import_id '{self.import_id}' or sfin_id '{self.sfin_id}' already exists for this budget and account."
                 )
 
         soft_delete = kwargs.pop("soft_delete", False)
@@ -389,6 +391,13 @@ class Transaction(models.Model):
         """
         # pylint: disable=import-outside-toplevel
         from accounts.models import Account
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        logger.info(
+            "Starting OFX import for budget %s, account %s", budget_id, account_id
+        )
 
         budget = Budget.objects.get(id=budget_id)
         account = Account.objects.get(id=account_id, budget_id=budget_id)
@@ -396,13 +405,19 @@ class Transaction(models.Model):
         ofx_file = io.StringIO(ofx_data)
 
         # Parse the OFX data
+        logger.debug("Parsing OFX data")
         ofx = OfxParser.parse(ofx_file)
 
         created_transaction_ids = []  # Store the IDs of created transactions
         duplicate_transaction_ids = []  # Store the IDs of duplicate transactions
 
         # Iterate over account transactions
+        logger.info(
+            "Processing %d transactions from OFX file",
+            len(ofx.account.statement.transactions),
+        )
         for transaction in ofx.account.statement.transactions:
+            logger.debug("Processing transaction with ID: %s", transaction.id)
             # Check for existing transaction with the same import_id
             transaction_exists = (
                 Transaction.objects.include_deleted()
@@ -416,11 +431,15 @@ class Transaction(models.Model):
 
             if transaction_exists:
                 # If transaction exists, add its ID to duplicate_transaction_ids
+                logger.debug("Found duplicate transaction: %s", transaction_exists.id)
                 duplicate_transaction_ids.append(transaction_exists.id)
             else:
                 # Create a new Transaction for each unique OFX transaction
                 payee = None
                 if transaction.payee:
+                    logger.debug(
+                        "Creating/getting payee: %s", transaction.payee.title()
+                    )
                     payee = Payee.objects.get_or_create(
                         name=transaction.payee.title(), budget=budget
                     )[0]
@@ -435,14 +454,23 @@ class Transaction(models.Model):
                         import_id=transaction.id,
                         import_payee_name=transaction.payee,
                         cleared=True,
+                        sfin_id=None,
                     )
+                    logger.debug("Created new transaction: %s", new_transaction.id)
                     created_transaction_ids.append(new_transaction.id)
-                except ValidationError:
+                except ValidationError as e:
                     # Handle any validation error (e.g., from unique constraints)
+                    logger.error("Validation error creating transaction: %s", str(e))
                     continue
 
         # Close the file-like object
         ofx_file.close()
+
+        logger.info(
+            "OFX import completed. Created: %d, Duplicates: %d",
+            len(created_transaction_ids),
+            len(duplicate_transaction_ids),
+        )
 
         return {
             "created_ids": created_transaction_ids,
