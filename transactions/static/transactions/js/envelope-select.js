@@ -134,14 +134,18 @@ class SearchableSelect extends HTMLElement {
           break;
 
         case 'Enter':
-          event.preventDefault();
-          // If only one option after search, select it
-          if (this.filteredEnvelopes.length === 1) {
-            this.selectOption(0);
-          }
-          // Otherwise select the highlighted option
-          else if (this.selectedIndex >= 0) {
-            this.selectOption(this.selectedIndex);
+          if (this.isOpen) {
+            event.preventDefault();
+            event.stopPropagation(); // Only stop propagation if dropdown is open
+
+            // If only one option after search, select it
+            if (this.filteredEnvelopes.length === 1) {
+              this.selectOption(0);
+            }
+            // Otherwise select the highlighted option
+            else if (this.selectedIndex >= 0) {
+              this.selectOption(this.selectedIndex);
+            }
           }
           break;
 
