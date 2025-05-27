@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "budgets",
     "developer",
     "envelopes",
+    "reports",
     "transactions",
 ]
 if DEBUG:

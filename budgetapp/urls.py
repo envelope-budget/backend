@@ -33,12 +33,12 @@ urlpatterns = [
     path("developer/", include("developer.urls")),
     path("envelopes/", include("envelopes.urls")),
     path("transactions/", include("transactions.urls")),
+    path("reports/", include("reports.urls")),
     path(
         "favicon.ico",
         RedirectView.as_view(url=settings.STATIC_URL + "img/favicon/favicon.ico"),
     ),
 ]
-
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += [path("__debug__/", include("debug_toolbar.urls"))]

@@ -1,0 +1,10 @@
+django
+django-allauth
+django-compressor
+django-ninja
+jwt
+ofxparse
+openpyxl
+plaid-python
+python-dotenv
+requests

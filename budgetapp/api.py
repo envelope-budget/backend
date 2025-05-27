@@ -1,13 +1,14 @@
-from ninja import NinjaAPI
-from ninja.security import HttpBearer, APIKeyHeader, django_auth
 import logging
 
-from budgets.apis import router as budgets_router
+from ninja import NinjaAPI
+from ninja.security import APIKeyHeader, HttpBearer, django_auth
+
 from accounts.apis import router as accounts_router
+from authentication.api import router as authentication_router
+from budgets.apis import router as budgets_router
 from envelopes.apis import router as envelopes_router
 from envelopes.category_apis import router as category_router
 from transactions.apis import router as transactions_router
-from authentication.api import router as authentication_router
 
 from .models import APIKey
 
