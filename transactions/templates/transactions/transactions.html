@@ -392,14 +392,13 @@
                            id="id_date"
                            class="editable-transaction-date block w-24 p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                            placeholder="Select date"
-                           x-model="editableTransaction.date" />
+                           x-model="editableTransaction.date"
+                           autocomplete="off" />
                   </div>
                 </td>
                 <td class="px-1 py-3 align-text-top">
-                  <input type="text"
-                         id="id_payee"
-                         class="payee-input block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                         x-model="editableTransaction.payee" />
+                  <payee-select id="id_payee" class="block w-full" x-ref="payeeSelect" :data-selected-name="editableTransaction.payee ? editableTransaction.payee.name : ''" @change="console.log('Alpine @change triggered with:', $event.detail); editableTransaction.payee = $event.detail;" x-init="$nextTick(() => { // Wait for payees to be ready before setting initial value $refs.payeeSelect.addEventListener('payees-ready', () => { if (editableTransaction.payee) { $refs.payeeSelect.setValue(editableTransaction.payee); } }, { once: true }); })">
+                  </payee-select>
                 </td>
                 <td class="px-1 py-3 align-text-top">
                   <searchable-select id="id_envelope" class="block w-full" x-ref="envelopeSelect" :data-selected-id="editableTransaction.envelope" x-init="$nextTick(() => { $refs.envelopeSelect.addEventListener('change', (e) => { editableTransaction.envelope = e.detail.value; }); if (editableTransaction.envelope) { $refs.envelopeSelect.setValue(editableTransaction.envelope); } })">
@@ -664,6 +663,7 @@
     <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
     <script src="{% static 'transactions/js/transactions.js' %}"></script>
     <script src="{% static 'transactions/js/envelope-select.js' %}"></script>
+    <script src="{% static 'transactions/js/payee-select.js' %}"></script>
   {% endcompress %}
 
   {% if account %}

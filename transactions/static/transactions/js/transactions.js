@@ -228,6 +228,14 @@ function transactionData() {
     showSearchHelp: false,
     isSearching: false,
     isSaving: false,
+    showTransferForm: false,
+    transferData: {
+      fromAccount: '',
+      toAccount: '',
+      amount: '',
+      date: '',
+      memo: '',
+    },
 
     async performSearch() {
       this.currentPage = 1;
@@ -507,7 +515,8 @@ function transactionData() {
       this.editableTransaction = { ...transaction };
       this.editableTransaction.inflow = this.formatAmount(transaction.amount, 'inflow');
       this.editableTransaction.outflow = this.formatAmount(transaction.amount, 'outflow');
-      this.editableTransaction.payee = this.editableTransaction.payee.name;
+      // Keep the payee as an object instead of converting to string
+      // this.editableTransaction.payee = this.editableTransaction.payee.name; // Remove this line
       this.editableTransaction.account = transaction.account.id;
       if (transaction.envelope) {
         this.editableTransaction.envelope = transaction.envelope.id;
@@ -692,13 +701,24 @@ function transactionData() {
         const csrfToken = getCookie('csrftoken');
         const date = new Date(document.querySelector('.editable-transaction-date').value);
         const formattedDate = date.toISOString().slice(0, 10);
+
+        // Handle payee - extract the name from the payee object
+        let payeeName = '';
+        if (this.editableTransaction.payee) {
+          if (typeof this.editableTransaction.payee === 'string') {
+            payeeName = this.editableTransaction.payee;
+          } else if (this.editableTransaction.payee.name) {
+            payeeName = this.editableTransaction.payee.name;
+          }
+        }
+
         const postData = {
           account_id: this.editableTransaction.account,
           amount: this.editableTransaction.amount,
           cleared: this.editableTransaction.cleared,
           date: formattedDate,
           memo: this.editableTransaction.memo,
-          payee: this.editableTransaction.payee,
+          payee: payeeName,
         };
 
         if (this.editableTransaction.envelope) {
@@ -711,6 +731,7 @@ function transactionData() {
             const response = await fetch(url, {
               method: 'PUT',
               headers: {
+                'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken,
               },
               body: JSON.stringify(postData),
@@ -723,7 +744,7 @@ function transactionData() {
             this.showEditForm = false;
             this.showAllTransactions();
           } catch (error) {
-            console.error('Error posting file:', error);
+            console.error('Error updating transaction:', error);
             showToast(`Error updating transaction: ${error}`, 'error');
           }
         } else {
@@ -731,6 +752,7 @@ function transactionData() {
             const response = await fetch(url, {
               method: 'POST',
               headers: {
+                'Content-Type': 'application/json', // Add this header
                 'X-CSRFToken': csrfToken,
               },
               body: JSON.stringify(postData),
@@ -784,5 +806,136 @@ function transactionData() {
         this.performSearch();
       }
     },
+
+    startNewTransfer() {
+      this.transferData = {
+        fromAccount: '',
+        toAccount: '',
+        amount: '',
+        date: new Date().toISOString().slice(0, 10),
+        memo: '',
+      };
+      this.showTransferForm = true;
+
+      Alpine.nextTick(() => {
+        document.getElementById('transfer_from_account').focus();
+      });
+    },
+
+    async saveTransfer() {
+      if (!this.transferData.fromAccount || !this.transferData.toAccount || !this.transferData.amount) {
+        showToast('Please fill in all required fields');
+        return;
+      }
+
+      if (this.transferData.fromAccount === this.transferData.toAccount) {
+        showToast('From and To accounts must be different');
+        return;
+      }
+
+      try {
+        const amount = Number.parseFloat(this.transferData.amount) * 1000; // Convert to milliunits
+        await createTransfer(
+          this.transferData.fromAccount,
+          this.transferData.toAccount,
+          amount,
+          this.transferData.date,
+          this.transferData.memo
+        );
+
+        this.showTransferForm = false;
+        this.fetchTransactions();
+        updateAccountBalances();
+        showToast('Transfer created successfully');
+      } catch (error) {
+        console.error('Error saving transfer:', error);
+      }
+    },
+
+    cancelTransfer() {
+      this.showTransferForm = false;
+    },
+
+    async markTransactionAsTransfer(transaction) {
+      // Show account selection modal or prompt
+      const transferAccountId = prompt('Enter the account ID to transfer to/from:');
+      if (!transferAccountId) return;
+
+      try {
+        await markAsTransfer(transaction.id, transferAccountId, true);
+        this.fetchTransactions();
+        updateAccountBalances();
+        showToast('Transaction marked as transfer');
+      } catch (error) {
+        console.error('Error marking as transfer:', error);
+      }
+    },
   };
+}
+
+async function createTransfer(fromAccountId, toAccountId, amount, date, memo = '') {
+  const budgetId = getCookie('budget_id');
+  const url = `/api/transactions/${budgetId}/transfer`;
+  const csrfToken = getCookie('csrftoken');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        from_account_id: fromAccountId,
+        to_account_id: toAccountId,
+        amount: amount,
+        date: date,
+        memo: memo,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error creating transfer:', error);
+    showToast('Error creating transfer');
+    throw error;
+  }
+}
+
+async function markAsTransfer(transactionId, transferAccountId, createCounterpart = true) {
+  const budgetId = getCookie('budget_id');
+  const url = `/api/transactions/${budgetId}/${transactionId}/mark-transfer`;
+  const csrfToken = getCookie('csrftoken');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        transfer_account_id: transferAccountId,
+        create_counterpart: createCounterpart,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error marking as transfer:', error);
+    showToast('Error marking as transfer');
+    throw error;
+  }
 }

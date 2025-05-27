@@ -1,8 +1,7 @@
 import csv
-import io
 from datetime import datetime
+
 from django.http import HttpResponse
-from django.template.loader import render_to_string
 
 try:
     import openpyxl
@@ -13,7 +12,7 @@ except ImportError:
     OPENPYXL_AVAILABLE = False
 
 
-def export_transactions_csv(transactions, start_date, end_date, budget_name):
+def export_transactions_csv(transactions, start_date, end_date):
     """Export transactions to CSV format."""
     response = HttpResponse(content_type="text/csv")
     filename = f"spending_report_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
@@ -95,7 +94,7 @@ def export_transactions_xlsx(transactions, start_date, end_date, budget_name):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-            except:
+            except (TypeError, ValueError):
                 pass
         adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column_letter].width = adjusted_width

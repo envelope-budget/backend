@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.http import JsonResponse
 
 from envelopes.models import Category, Envelope
 from .models import Payee
@@ -34,3 +35,25 @@ def transactions(request):
 def payees(request):
     _payees = Payee.objects.filter(budget=request.session.get("budget"))
     return render(request, "transactions/payees.html", {"payees": _payees})
+
+
+@login_required
+def payees_json(request):
+    """
+    Return payees for the current budget as JSON.
+    Similar to category_and_envelopes_json but for payees.
+    """
+    payees = Payee.objects.filter(
+        budget=request.session.get("budget"), deleted=False
+    ).order_by("name")
+
+    payees_data = []
+    for payee in payees:
+        payees_data.append(
+            {
+                "id": payee.id,
+                "name": payee.name,
+            }
+        )
+
+    return JsonResponse({"payees": payees_data})

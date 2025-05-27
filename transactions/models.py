@@ -1,3 +1,4 @@
+from datetime import timedelta
 import io
 import logging
 
@@ -97,6 +98,21 @@ class Transaction(models.Model):
     import_payee_name = models.CharField(max_length=255, blank=True, null=True)
     in_inbox = models.BooleanField(default=True)
     deleted = models.BooleanField(default=False)
+    is_transfer = models.BooleanField(default=False)
+    transfer_account = models.ForeignKey(
+        "accounts.Account",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="transfer_transactions",
+    )
+    transfer_transaction = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="linked_transfer",
+    )
 
     objects = TransactionManager()
 
@@ -476,6 +492,138 @@ class Transaction(models.Model):
             "created_ids": created_transaction_ids,
             "duplicate_ids": duplicate_transaction_ids,
         }
+
+    @classmethod
+    def create_transfer(
+        cls,
+        budget,
+        from_account,
+        to_account,
+        amount,
+        date,
+        memo="",
+        payee_name="Transfer",
+    ):
+        """
+        Create a transfer between two accounts.
+
+        Args:
+            budget: The budget instance
+            from_account: Account to transfer from
+            to_account: Account to transfer to
+            amount: Amount to transfer (positive value)
+            date: Date of transfer
+            memo: Optional memo
+            payee_name: Payee name for the transfer
+
+        Returns:
+            Tuple of (from_transaction, to_transaction)
+        """
+        from .models import Payee
+
+        # Get or create transfer payee
+        payee, _ = Payee.objects.get_or_create(name=payee_name, budget=budget)
+
+        with db_transaction.atomic():
+            # Create outflow transaction (from account)
+            from_transaction = cls.objects.create(
+                budget=budget,
+                account=from_account,
+                payee=payee,
+                date=date,
+                amount=-abs(amount),  # Negative for outflow
+                memo=memo,
+                is_transfer=True,
+                transfer_account=to_account,
+                cleared=True,
+                in_inbox=False,
+            )
+
+            # Create inflow transaction (to account)
+            to_transaction = cls.objects.create(
+                budget=budget,
+                account=to_account,
+                payee=payee,
+                date=date,
+                amount=abs(amount),  # Positive for inflow
+                memo=memo,
+                is_transfer=True,
+                transfer_account=from_account,
+                cleared=True,
+                in_inbox=False,
+            )
+
+            # Link the transactions
+            from_transaction.transfer_transaction = to_transaction
+            to_transaction.transfer_transaction = from_transaction
+            from_transaction.save()
+            to_transaction.save()
+
+        return from_transaction, to_transaction
+
+    def mark_as_transfer(self, transfer_account, create_counterpart=True):
+        """
+        Mark this transaction as a transfer and optionally create the counterpart.
+
+        Args:
+            transfer_account: The account this transfers to/from
+            create_counterpart: Whether to create the counterpart transaction
+
+        Returns:
+            The counterpart transaction if created, None otherwise
+        """
+        with db_transaction.atomic():
+            self.is_transfer = True
+            self.transfer_account = transfer_account
+            self.in_inbox = False
+
+            counterpart = None
+            if create_counterpart:
+                # Create counterpart transaction
+                counterpart = Transaction.objects.create(
+                    budget=self.budget,
+                    account=transfer_account,
+                    payee=self.payee,
+                    date=self.date,
+                    amount=0 - self.amount,  # Opposite amount
+                    memo=self.memo,
+                    is_transfer=True,
+                    transfer_account=self.account,
+                    cleared=True,
+                    in_inbox=False,
+                )
+
+                # Link them
+                self.transfer_transaction = counterpart
+                counterpart.transfer_transaction = self
+                counterpart.save()
+
+            self.save()
+
+        return counterpart
+
+    @classmethod
+    def find_potential_transfer_matches(cls, transaction):
+        """
+        Find potential transfer matches for a transaction.
+
+        Args:
+            transaction: The transaction to find matches for
+
+        Returns:
+            QuerySet of potential matches
+        """
+        # Look for transactions with opposite amount, same date (±1 day), different account
+        date_range_start = transaction.date - timedelta(days=1)
+        date_range_end = transaction.date + timedelta(days=1)
+
+        return cls.objects.filter(
+            budget=transaction.budget,
+            amount=-transaction.amount,
+            date__range=[date_range_start, date_range_end],
+            is_transfer=False,
+            transfer_transaction__isnull=True,
+        ).exclude(account=transaction.account)
 
 
 class SubTransaction(models.Model):
