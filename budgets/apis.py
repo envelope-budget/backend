@@ -21,6 +21,26 @@ class createBudgetSchema(Schema):
     currency_display_symbol: Optional[bool] = True
 
 
+class UnallocatedEnvelopeSchema(Schema):
+    id: str
+    name: str
+    balance: int
+    sort_order: int
+    hidden: bool
+    note: Optional[str] = None
+
+    @classmethod
+    def from_django(cls, obj):
+        return cls(
+            id=obj.id,
+            name=obj.name,
+            balance=obj.balance,
+            sort_order=obj.sort_order,
+            hidden=obj.hidden,
+            note=obj.note,
+        )
+
+
 class BudgetSchema(Schema):
     id: str
     user_id: int
@@ -33,6 +53,7 @@ class BudgetSchema(Schema):
     currency_group_separator: str
     currency_symbol: str
     currency_display_symbol: bool
+    unallocated_envelope: UnallocatedEnvelopeSchema
 
     @classmethod
     def from_django(cls, obj):
@@ -48,6 +69,9 @@ class BudgetSchema(Schema):
             currency_group_separator=obj.currency_group_separator,
             currency_symbol=obj.currency_symbol,
             currency_display_symbol=obj.currency_display_symbol,
+            unallocated_envelope=UnallocatedEnvelopeSchema.from_django(
+                obj.unallocated_envelope()
+            ),
         )
 
 
