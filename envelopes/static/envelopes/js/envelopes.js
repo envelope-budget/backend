@@ -351,8 +351,23 @@ function envelopeData() {
 
         if (data.success) {
           console.log('Funds allocated successfully:', data);
-          // Reload data to show updated balances
-          await this.loadEnvelopes();
+
+          // Update the specific envelope balance locally
+          const envelope = this.findEnvelopeById(envelopeId);
+          if (envelope) {
+            envelope.balance = data.envelope_balance || 0;
+          }
+
+          // Update the unallocated envelope balance
+          if (this.budget?.unallocated_envelope) {
+            this.budget.unallocated_envelope.balance = data.unallocated_balance || 0;
+          }
+
+          // Update selected item if it's the current envelope
+          if (this.selectedItem.id === envelopeId && this.selectedItem.type === 'envelope') {
+            this.selectedItem.balance = data.envelope_balance || 0;
+          }
+
           showToast('Funds allocated successfully!');
         } else {
           throw new Error(data.message || 'Failed to allocate funds');
@@ -392,8 +407,23 @@ function envelopeData() {
 
         if (data.success) {
           console.log('Funds swept successfully:', data);
-          // Reload data to show updated balances
-          await this.loadEnvelopes();
+
+          // Update the specific envelope balance locally
+          const envelope = this.findEnvelopeById(envelopeId);
+          if (envelope) {
+            envelope.balance = data.envelope_balance || 0;
+          }
+
+          // Update the unallocated envelope balance
+          if (this.budget?.unallocated_envelope) {
+            this.budget.unallocated_envelope.balance = data.unallocated_balance || 0;
+          }
+
+          // Update selected item if it's the current envelope
+          if (this.selectedItem.id === envelopeId && this.selectedItem.type === 'envelope') {
+            this.selectedItem.balance = data.envelope_balance || 0;
+          }
+
           showToast('Funds swept to unallocated successfully!');
         } else {
           throw new Error(data.message || 'Failed to sweep funds');
