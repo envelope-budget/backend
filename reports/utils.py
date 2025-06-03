@@ -156,3 +156,98 @@ def export_transactions_markdown(transactions, start_date, end_date, budget_name
 
     response.write(content)
     return response
+
+
+def export_budget_csv(budget_data, budget_name):
+    """Export budget data as CSV"""
+    response = HttpResponse(content_type="text/csv")
+    filename = f"budget_report_{budget_name}_{datetime.now().strftime('%Y%m%d')}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow(["Category", "Envelope", "Monthly Budget Amount", "Notes"])
+
+    for item in budget_data:
+        writer.writerow(
+            [
+                item["category_name"],
+                item["envelope_name"],
+                f"${item['monthly_budget_amount']:.2f}",
+                item["note"],
+            ]
+        )
+
+    return response
+
+
+def export_budget_xlsx(budget_data, budget_name):
+    """Export budget data as Excel file"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill
+    except ImportError:
+        raise ImportError(
+            "openpyxl is required for Excel export. Install it with: pip install openpyxl"
+        )
+
+    # Create workbook and worksheet
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Budget Report"
+
+    # Add headers
+    headers = ["Category", "Envelope", "Monthly Budget Amount", "Notes"]
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(
+            start_color="CCCCCC", end_color="CCCCCC", fill_type="solid"
+        )
+
+    # Add data
+    for row, item in enumerate(budget_data, 2):
+        ws.cell(row=row, column=1, value=item["category_name"])
+        ws.cell(row=row, column=2, value=item["envelope_name"])
+        ws.cell(row=row, column=3, value=item["monthly_budget_amount"])
+        ws.cell(row=row, column=4, value=item["note"])
+
+    # Auto-adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # Create response
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    filename = f"budget_report_{budget_name}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+    return response
+
+
+def export_budget_markdown(budget_data, budget_name):
+    """Export budget data as Markdown"""
+    response = HttpResponse(content_type="text/markdown")
+    filename = f"budget_report_{budget_name}_{datetime.now().strftime('%Y%m%d')}.md"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    content = f"# Budget Report - {budget_name}\n\n"
+    content += f"Generated on: {datetime.now().strftime('%B %d, %Y')}\n\n"
+    content += "| Category | Envelope | Monthly Budget Amount | Notes |\n"
+    content += "|----------|----------|----------------------|-------|\n"
+
+    for item in budget_data:
+        content += f"| {item['category_name']} | {item['envelope_name']} | ${item['monthly_budget_amount']:.2f} | {item['note']} |\n"
+
+    response.write(content)
+    return response

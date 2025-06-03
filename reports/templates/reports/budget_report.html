@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}
+  Budget Report
+{% endblock title %}
+
+{% block content %}
+  <div class="container mx-auto px-4 py-8"
+       x-data="budgetReportData()"
+       x-init="loadBudgetData()">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Budget Report</h1>
+      <p class="text-gray-600 dark:text-gray-400">View and edit monthly budget allocations for all envelopes</p>
+    </div>
+
+    {% if current_budget %}
+      <!-- Loading State -->
+      <div x-show="loading" class="text-center py-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600 dark:text-gray-400">Loading budget data...</p>
+      </div>
+
+      <!-- Summary Card with Save Button -->
+      <div x-show="!loading"
+           class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Total Monthly Budget</h3>
+            <p class="text-3xl font-bold text-primary-600"
+               x-text="'$' + totalMonthlyBudget.toFixed(2)"></p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Budget: {{ current_budget.name }}</p>
+          </div>
+          <div class="flex gap-3">
+            <button x-show="hasChanges"
+                    @click="resetChanges()"
+                    class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors duration-200">
+              Reset Changes
+            </button>
+            <button x-show="hasChanges"
+                    @click="saveAllChanges()"
+                    :disabled="saving"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-colors duration-200 flex items-center">
+              <svg x-show="saving"
+                   class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                   fill="none"
+                   viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+              <span x-text="saving ? 'Saving...' : 'Save Changes'"></span>
+            </button>
+          </div>
+        </div>
+        <div x-show="hasChanges"
+             class="mt-3 text-sm text-amber-600 dark:text-amber-400">
+          <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd">
+            </path>
+          </svg>
+          You have unsaved changes
+        </div>
+      </div>
+
+      <!-- Budget Table -->
+      <div x-show="!loading"
+           class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Monthly Budget Allocations</h3>
+
+          <!-- Export Buttons -->
+          <div class="flex gap-2">
+            <div class="relative" x-data="{ open: false }">
+              <button @click="open = !open"
+                      class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-4 focus:ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700">
+                <svg class="w-4 h-4 mr-2"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                  </path>
+                </svg>
+                Export
+                <svg class="w-4 h-4 ml-2"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+
+              <div x-show="open"
+                   @click.away="open = false"
+                   x-transition
+                   class="absolute right-0 z-10 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                <div class="py-1">
+                  <a href="?export=csv"
+                     class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
+                    <svg class="w-4 h-4 mr-3"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                      </path>
+                    </svg>
+                    Export as CSV
+                  </a>
+                  <a href="?export=xlsx"
+                     class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
+                    <svg class="w-4 h-4 mr-3"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                      </path>
+                    </svg>
+                    Export as Excel
+                  </a>
+                  <a href="?export=markdown"
+                     class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
+                    <svg class="w-4 h-4 mr-3"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                      </path>
+                    </svg>
+                    Export as Markdown
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <template x-for="(categoryData, categoryIndex) in budgetData"
+                    :key="categoryData.category.id">
+            <div class="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+              <!-- Category Header -->
+              <div class="bg-gray-50 dark:bg-gray-700 px-6 py-3">
+                <div class="flex justify-between items-center">
+                  <h4 class="text-lg font-semibold text-gray-900 dark:text-white"
+                      x-text="categoryData.category.name"></h4>
+                  <span class="text-lg font-bold text-primary-600"
+                        x-text="'$' + getCategoryTotal(categoryIndex).toFixed(2)"></span>
+                </div>
+              </div>
+
+              <!-- Envelopes in Category -->
+              <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <tbody>
+                  <template x-for="(envelope, envelopeIndex) in categoryData.envelopes"
+                            :key="envelope.id">
+                    <tr class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600">
+                      <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"
+                          x-text="envelope.name"></td>
+                      <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end">
+                          <span class="mr-1 text-gray-600">$</span>
+                          <input type="number"
+                                 step="0.01"
+                                 min="0"
+                                 :value="envelope.monthly_budget_amount_dollars"
+                                 @input="updateEnvelopeBudget(categoryIndex, envelopeIndex, $event.target.value)"
+                                 :class="envelopeHasChanges(envelope.id) ? 'border-amber-300 bg-amber-50' : 'border-gray-300'"
+                                 class="w-24 px-2 py-1 text-right border rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 text-right text-xs text-gray-500">
+                        <span x-show="envelope.note"
+                              x-text="envelope.note.substring(0, 50) + (envelope.note.length > 50 ? '...' : '')"></span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+      </div>
+    {% else %}
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+        <p class="text-gray-500 dark:text-gray-400">No budget found. Please create a budget first.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <style>
+      .border-amber-300 {
+          border-color: #fcd34d !important;
+      }
+
+      .bg-amber-50 {
+          background-color: #fffbeb !important;
+      }
+
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+      }
+
+      input[type="number"] {
+          -moz-appearance: textfield;
+      }
+  </style>
+
+  <script>
+      // Utility functions
+      window.getCookie = function(name) {
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== '') {
+              const cookies = document.cookie.split(';');
+              for (let i = 0; i < cookies.length; i++) {
+                  const cookie = cookies[i].trim();
+                  if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                      cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                      break;
+                  }
+              }
+          }
+          return cookieValue;
+      };
+
+      window.showToast = function(message) {
+          // Simple toast implementation - replace with your preferred toast library
+          console.log('Toast:', message);
+          alert(message);
+      };
+
+      function budgetReportData() {
+          return {
+              budgetData: [],
+              originalData: {},
+              changes: {},
+              saving: false,
+              loading: true,
+              budgetId: '{{ current_budget.id }}',
+
+              get totalMonthlyBudget() {
+                  return this.budgetData.reduce((total, categoryData) => {
+                      return total + this.getCategoryTotal(this.budgetData.indexOf(categoryData));
+                  }, 0);
+              },
+
+              get hasChanges() {
+                  return Object.keys(this.changes).length > 0;
+              },
+
+              async loadBudgetData() {
+                  this.loading = true;
+                  try {
+                      const response = await fetch(`/api/reports/budget-data/${this.budgetId}`, {
+                          credentials: 'include',
+                      });
+
+                      if (!response.ok) {
+                          throw new Error(`HTTP error! status: ${response.status}`);
+                      }
+
+                      this.budgetData = await response.json();
+                      this.originalData = JSON.parse(JSON.stringify(this.budgetData));
+
+                  } catch (error) {
+                      console.error('Error loading budget data:', error);
+                      showToast('Failed to load budget data. Please refresh the page.');
+                  } finally {
+                      this.loading = false;
+                  }
+              },
+
+              getCategoryTotal(categoryIndex) {
+                  return this.budgetData[categoryIndex].envelopes.reduce((total, envelope) => {
+                      return total + parseFloat(envelope.monthly_budget_amount_dollars || 0);
+                  }, 0);
+              },
+
+              updateEnvelopeBudget(categoryIndex, envelopeIndex, value) {
+                  const envelope = this.budgetData[categoryIndex].envelopes[envelopeIndex];
+                  const numValue = parseFloat(value) || 0;
+
+                  // Update the display value
+                  envelope.monthly_budget_amount_dollars = numValue;
+
+                  // Track changes
+                  const originalValue = this.originalData[categoryIndex].envelopes[envelopeIndex].monthly_budget_amount_dollars;
+                  if (numValue !== originalValue) {
+                      this.changes[envelope.id] = {
+                          envelope_id: envelope.id,
+                          original_value: originalValue,
+                          new_value: numValue
+                      };
+                  } else {
+                      delete this.changes[envelope.id];
+                  }
+              },
+
+              envelopeHasChanges(envelopeId) {
+                  return this.changes.hasOwnProperty(envelopeId);
+              },
+
+              async saveAllChanges() {
+                  if (!this.hasChanges) return;
+
+                  this.saving = true;
+
+                  try {
+                      const response = await fetch('/api/reports/budget/bulk-update', {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': window.getCookie('csrftoken'),
+                          },
+                          body: JSON.stringify({
+                              changes: Object.values(this.changes)
+                          }),
+                          credentials: 'include',
+                      });
+
+                      if (!response.ok) {
+                          throw new Error(`HTTP error! status: ${response.status}`);
+                      }
+
+                      const data = await response.json();
+
+                      if (data.success) {
+                          // Update original data to reflect saved changes
+                          this.originalData = JSON.parse(JSON.stringify(this.budgetData));
+                          this.changes = {};
+
+                          showToast('Budget amounts saved successfully!');
+                      } else {
+                          throw new Error(data.message || 'Failed to save changes');
+                      }
+                  } catch (error) {
+                      console.error('Error saving budget changes:', error);
+                      showToast('Failed to save changes. Please try again.');
+                  } finally {
+                      this.saving = false;
+                  }
+              },
+
+              resetChanges() {
+                  this.budgetData = JSON.parse(JSON.stringify(this.originalData));
+                  this.changes = {};
+                  showToast('Changes reset');
+              }
+          };
+      }
+  </script>
+{% endblock content %}

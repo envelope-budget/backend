@@ -6,4 +6,5 @@ app_name = "reports"
 urlpatterns = [
     path("", views.ReportListView.as_view(), name="report-list"),
     path("spending/", views.spending_report, name="spending-report"),
+    path("budget/", views.budget_report, name="budget-report"),
 ]
