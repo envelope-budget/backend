@@ -76,6 +76,6 @@ def list_budgets(request):
 
 
 @router.get("/{budget_id}", response=BudgetSchema, auth=django_auth, tags=["Budgets"])
-def get_budget(request, budget_id: UUID):
+def get_budget(request, budget_id: str):
     budget = get_object_or_404(Budget, id=budget_id)
     return BudgetSchema.from_django(budget)
