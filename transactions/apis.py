@@ -315,6 +315,22 @@ def get_transaction(request, budget_id: str, transaction_id: str):
     return TransactionSchema.from_orm(transaction)
 
 
+def get_or_create_payee(name: str, budget: Budget) -> Payee:
+    """
+    Helper function to get or create a payee, handling the case where
+    multiple payees with the same name exist (including deleted ones).
+    """
+    try:
+        # First try to get an active (non-deleted) payee
+        return Payee.objects.get(name=name, budget=budget, deleted=False)
+    except Payee.DoesNotExist:
+        # If no active payee exists, create a new one
+        return Payee.objects.create(name=name, budget=budget, deleted=False)
+    except Payee.MultipleObjectsReturned:
+        # If multiple active payees exist, return the first one
+        return Payee.objects.filter(name=name, budget=budget, deleted=False).first()
+
+
 @router.post(
     "/transactions/{budget_id}",
     auth=django_auth,
@@ -329,7 +345,7 @@ def create_transaction(
     budget = get_object_or_404(Budget, id=budget_id, user=request.user)
 
     account = get_object_or_404(Account, id=transaction.account_id)
-    payee = Payee.objects.get_or_create(name=transaction.payee, budget=budget)[0]
+    payee = get_or_create_payee(transaction.payee, budget)
     if transaction.envelope_id:
         envelope = get_object_or_404(Envelope, id=transaction.envelope_id)
     else:
@@ -377,7 +393,10 @@ def create_transactions(
 
     payee_names = set(t.payee for t in transactions)
     payees = {
-        p.name: p for p in Payee.objects.filter(name__in=payee_names, budget=budget)
+        p.name: p
+        for p in Payee.objects.filter(
+            name__in=payee_names, budget=budget, deleted=False
+        )
     }
 
     envelope_ids = set(t.envelope_id for t in transactions if t.envelope_id)
@@ -389,13 +408,12 @@ def create_transactions(
         account = accounts.get(transaction.account_id)
         if not account:
             return 404, {
-                "message",
-                f"Account with id {transaction.account_id} not found",
+                "message": f"Account with id {transaction.account_id} not found",
             }
 
         payee = payees.get(transaction.payee)
         if not payee:
-            payee = Payee.objects.create(name=transaction.payee, budget=budget)
+            payee = get_or_create_payee(transaction.payee, budget)
             payees[transaction.payee] = payee
 
         envelope = None
@@ -463,9 +481,7 @@ def update_transaction(
 
     # Update transaction fields
     trans.account = get_object_or_404(Account, id=transaction_data.account_id)
-    trans.payee = Payee.objects.get_or_create(
-        name=transaction_data.payee, budget=budget
-    )[0]
+    trans.payee = get_or_create_payee(transaction_data.payee, budget)
     if transaction_data.envelope_id is not None:
         trans.envelope = get_object_or_404(Envelope, id=transaction_data.envelope_id)
     else:

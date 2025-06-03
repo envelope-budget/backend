@@ -61,6 +61,15 @@ class Payee(models.Model):
 
         return count
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["budget", "name"],
+                condition=models.Q(deleted=False),
+                name="unique_budget_payee_name",
+            )
+        ]
+
 
 class TransactionManager(models.Manager):
     def get_queryset(self):
