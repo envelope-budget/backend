@@ -635,6 +635,49 @@ function envelopeData() {
       }
     },
 
+    async confirmDeleteEnvelope() {
+      // This method is called when the user confirms deletion in the modal
+      if (!this.selectedItem.id || this.selectedItem.type !== 'envelope') {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/envelopes/${window.budgetId}/${this.selectedItem.id}`, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRFToken': window.getCookie('csrftoken'),
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Show appropriate message based on action taken
+          if (data.has_transactions) {
+            showToast(`Envelope archived (had transactions): ${data.message}`);
+          } else {
+            showToast(`Envelope deleted: ${data.message}`);
+          }
+
+          // Close details panel since the envelope was deleted/archived
+          this.closeDetails();
+
+          // Reload envelopes to reflect changes
+          await this.loadEnvelopes();
+        } else {
+          throw new Error(data.message || 'Failed to delete envelope');
+        }
+      } catch (error) {
+        console.error('Error deleting envelope:', error);
+        showToast('Failed to delete envelope. Please try again.');
+      }
+    },
+
     findEnvelopeById(envelopeId) {
       for (const category of this.categories) {
         const envelope = category.envelopes.find(env => env.id === envelopeId);

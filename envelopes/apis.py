@@ -471,14 +471,43 @@ def update_envelope(
     return envelope
 
 
+class DeleteEnvelopeResponse(Schema):
+    success: bool
+    message: str
+    has_transactions: bool
+    action_taken: str  # "deleted" or "archived"
+
+
 @router.delete(
     "/{budget_id}/{envelope_id}",
-    response=EnvelopeSchema,
+    response=DeleteEnvelopeResponse,
     auth=django_auth,
     tags=["Envelopes"],
 )
 def delete_envelope(request, budget_id: str, envelope_id: str):
+    from transactions.models import Transaction
+
     envelope = get_object_or_404(Envelope, id=envelope_id, budget_id=budget_id)
-    envelope.deleted = True
-    envelope.save()
-    return envelope
+
+    # Check if envelope has any transactions
+    has_transactions = Transaction.objects.filter(envelope=envelope).exists()
+
+    if has_transactions:
+        # Archive the envelope instead of deleting
+        envelope.deleted = True
+        envelope.save()
+        return {
+            "success": True,
+            "message": "Envelope archived successfully (had transactions)",
+            "has_transactions": True,
+            "action_taken": "archived",
+        }
+    else:
+        # Actually delete the envelope
+        envelope.delete()
+        return {
+            "success": True,
+            "message": "Envelope deleted successfully",
+            "has_transactions": False,
+            "action_taken": "deleted",
+        }

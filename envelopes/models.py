@@ -114,6 +114,10 @@ class Envelope(models.Model):
             return
 
         # For regular envelopes, proceed with normal deletion
+        # Update category balance before deletion
+        if self.category:
+            self.category.update_balance()
+
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
