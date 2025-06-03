@@ -263,7 +263,7 @@ function envelopeData() {
         });
       } catch (error) {
         console.error('Error loading envelopes:', error);
-        this.showToast('Failed to load envelopes. Please refresh the page.');
+        showToast('Failed to load envelopes. Please refresh the page.');
       } finally {
         this.loading = false;
       }
@@ -353,13 +353,13 @@ function envelopeData() {
           console.log('Funds allocated successfully:', data);
           // Reload data to show updated balances
           await this.loadEnvelopes();
-          this.showToast('Funds allocated successfully!');
+          showToast('Funds allocated successfully!');
         } else {
           throw new Error(data.message || 'Failed to allocate funds');
         }
       } catch (error) {
         console.error('Error allocating funds:', error);
-        this.showToast('Failed to allocate funds. Please check if you have enough unallocated funds.');
+        showToast('Failed to allocate funds. Please check if you have enough unallocated funds.');
       }
     },
 
@@ -394,13 +394,13 @@ function envelopeData() {
           console.log('Funds swept successfully:', data);
           // Reload data to show updated balances
           await this.loadEnvelopes();
-          this.showToast('Funds swept to unallocated successfully!');
+          showToast('Funds swept to unallocated successfully!');
         } else {
           throw new Error(data.message || 'Failed to sweep funds');
         }
       } catch (error) {
         console.error('Error sweeping funds:', error);
-        this.showToast('Failed to sweep funds. Please try again.');
+        showToast('Failed to sweep funds. Please try again.');
       }
     },
 
@@ -452,10 +452,10 @@ function envelopeData() {
         const modal = FlowbiteInstances.getInstance('Modal', 'envelope-modal');
         if (modal) modal.hide();
 
-        this.showToast('Envelope created successfully!');
+        showToast('Envelope created successfully!');
       } catch (error) {
         console.error('Error creating envelope:', error);
-        this.showToast('Failed to create envelope. Please try again.');
+        showToast('Failed to create envelope. Please try again.');
       }
     },
 
@@ -523,7 +523,7 @@ function envelopeData() {
             this.selectedItem.name = this.categoryForm.name;
           }
 
-          this.showToast('Category updated successfully!');
+          showToast('Category updated successfully!');
         } else {
           // Create new category
           const response = await fetch(`/api/categories/${window.budgetId}`, {
@@ -542,7 +542,7 @@ function envelopeData() {
           console.log('Category created successfully');
           // Reload envelopes to show the new category
           await this.loadEnvelopes();
-          this.showToast('Category created successfully!');
+          showToast('Category created successfully!');
         }
 
         // Close the modal
@@ -553,7 +553,7 @@ function envelopeData() {
         this.resetCategoryForm();
       } catch (error) {
         console.error('Error saving category:', error);
-        this.showToast('Failed to save category. Please try again.');
+        showToast('Failed to save category. Please try again.');
       }
     },
 
@@ -596,13 +596,6 @@ function envelopeData() {
         }
       }
       return null;
-    },
-
-    showToast(message) {
-      // Simple toast implementation - you can replace with your preferred toast library
-      console.log('Toast:', message);
-      // You could implement a proper toast notification here
-      alert(message); // Temporary - replace with proper toast
     },
   };
 }
