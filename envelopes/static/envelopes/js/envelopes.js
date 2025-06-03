@@ -368,6 +368,22 @@ function envelopeData() {
             this.selectedItem.balance = data.envelope_balance || 0;
           }
 
+          // Update the balance of affected categories
+          for (const category of data.affected_categories) {
+            const categoryIndex = this.categories.findIndex(cat => cat.id === category.id);
+            if (categoryIndex !== -1) {
+              // Update the category's envelope that was affected
+              const envelopeIndex = this.categories[categoryIndex].envelopes.findIndex(
+                env => env.id === category.envelope_id
+              );
+              if (envelopeIndex !== -1) {
+                this.categories[categoryIndex].envelopes[envelopeIndex].balance = category.envelope_balance;
+              }
+              // Update the category's total balance
+              this.categories[categoryIndex].balance = category.balance;
+            }
+          }
+
           showToast('Funds allocated successfully!');
         } else {
           throw new Error(data.message || 'Failed to allocate funds');
@@ -424,6 +440,22 @@ function envelopeData() {
             this.selectedItem.balance = data.envelope_balance || 0;
           }
 
+          // Update the balance of affected categories
+          for (const category of data.affected_categories) {
+            const categoryIndex = this.categories.findIndex(cat => cat.id === category.id);
+            if (categoryIndex !== -1) {
+              // Update the category's envelope that was affected
+              const envelopeIndex = this.categories[categoryIndex].envelopes.findIndex(
+                env => env.id === category.envelope_id
+              );
+              if (envelopeIndex !== -1) {
+                this.categories[categoryIndex].envelopes[envelopeIndex].balance = category.envelope_balance;
+              }
+              // Update the category's total balance
+              this.categories[categoryIndex].balance = category.balance;
+            }
+          }
+
           showToast('Funds swept to unallocated successfully!');
         } else {
           throw new Error(data.message || 'Failed to sweep funds');
@@ -433,7 +465,6 @@ function envelopeData() {
         showToast('Failed to sweep funds. Please try again.');
       }
     },
-
     performSearch() {
       // The search is now handled by the filteredCategories computed property
       // This method can be used for additional search logic if needed

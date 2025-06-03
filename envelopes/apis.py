@@ -339,7 +339,54 @@ def transfer_funds(request, budget_id: str, data: EnvelopeTransferSchema):
         # Use the existing transfer method from the Envelope model
         Envelope.transfer(data.amount, source_envelope, destination_envelope)
 
-        # Return the updated envelope balances
+        # Get the affected categories to return updated balances
+        affected_categories = []
+
+        # Add source envelope's category if it has one and isn't unallocated
+        if hasattr(source_envelope, "category") and source_envelope.category:
+            source_category = source_envelope.category
+            source_category_balance = sum(
+                env.balance
+                for env in Envelope.objects.filter(
+                    category=source_category, deleted=False
+                )
+            )
+            source_category.balance -= data.amount
+            source_category.save()
+            affected_categories.append(
+                {
+                    "id": source_category.id,
+                    "name": source_category.name,
+                    "balance": source_category_balance,
+                }
+            )
+
+        # Add destination envelope's category if it has one, isn't unallocated,
+        # and is different from source category
+        if (
+            hasattr(destination_envelope, "category")
+            and destination_envelope.category
+            and destination_envelope.category
+            != getattr(source_envelope, "category", None)
+        ):
+            dest_category = destination_envelope.category
+            dest_category_balance = sum(
+                env.balance
+                for env in Envelope.objects.filter(
+                    category=dest_category, deleted=False
+                )
+            )
+            dest_category.balance += data.amount
+            dest_category.save()
+            affected_categories.append(
+                {
+                    "id": dest_category.id,
+                    "name": dest_category.name,
+                    "balance": dest_category_balance,
+                }
+            )
+
+        # Return the updated envelope balances and affected categories
         return {
             "success": True,
             "message": "Funds transferred successfully",
@@ -353,6 +400,7 @@ def transfer_funds(request, budget_id: str, data: EnvelopeTransferSchema):
                 "name": destination_envelope.name,
                 "balance": destination_envelope.balance,
             },
+            "affected_categories": affected_categories,
             "amount": data.amount,
         }
     except Exception as e:
