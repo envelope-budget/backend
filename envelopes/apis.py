@@ -15,6 +15,7 @@ class createEnvelopeSchema(Schema):
     category_id: str
     balance: int
     note: str
+    monthly_budget_amount: int = 0
 
 
 class EnvelopeSchema(Schema):
@@ -24,6 +25,7 @@ class EnvelopeSchema(Schema):
     name: str
     sort_order: int = 99
     balance: int
+    monthly_budget_amount: int = 0
     hidden: bool = False
     deleted: bool = False
 
@@ -93,6 +95,7 @@ class UpdateEnvelopeSchema(Schema):
     note: Optional[str] = None
     sort_order: Optional[int] = None
     hidden: Optional[bool] = None
+    monthly_budget_amount: Optional[int] = None
 
 
 class CreateCategorySchema(Schema):
@@ -438,6 +441,7 @@ def create_envelope(request, budget_id: str, envelope: createEnvelopeSchema):
         category_id=envelope.category_id,
         balance=envelope.balance,
         note=envelope.note,
+        monthly_budget_amount=envelope.monthly_budget_amount,
     )
     return envelope
 
@@ -466,6 +470,8 @@ def update_envelope(
         envelope.sort_order = data.sort_order
     if data.hidden is not None:
         envelope.hidden = data.hidden
+    if data.monthly_budget_amount is not None:
+        envelope.monthly_budget_amount = data.monthly_budget_amount
 
     envelope.save()
     return envelope

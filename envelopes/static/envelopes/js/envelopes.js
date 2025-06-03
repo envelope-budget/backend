@@ -189,6 +189,7 @@ function envelopeData() {
       balance: 0,
       category_id: '',
       note: '',
+      monthly_budget_amount: 0,
     },
 
     category: {
@@ -462,6 +463,7 @@ function envelopeData() {
       this.envelope.balance = 0;
       this.envelope.category_id = category_id;
       this.envelope.note = '';
+      this.monthly_budget_amount = 0;
 
       // Clear the name input field
       const nameInput = document.getElementById('envelope-name');
@@ -487,6 +489,7 @@ function envelopeData() {
             balance: this.envelope.balance,
             category_id: this.envelope.category_id,
             note: this.envelope.note,
+            monthly_budget_amount: Number.parseInt(this.envelope.monthly_budget_amount * 1000),
           }),
           credentials: 'include',
         });
@@ -637,6 +640,7 @@ function envelopeData() {
           balance: envelope.balance,
           category_id: envelope.category_id,
           note: envelope.note || '',
+          monthly_budget_amount: envelope.monthly_budget_amount / 1000 || 0,
         };
 
         // Update the emoji picker input field
@@ -660,6 +664,7 @@ function envelopeData() {
             balance: this.envelope.balance,
             category_id: this.envelope.category_id,
             note: this.envelope.note,
+            monthly_budget_amount: Number.parseInt(this.envelope.monthly_budget_amount * 1000),
           }),
           credentials: 'include',
         });
@@ -678,6 +683,7 @@ function envelopeData() {
           envelope.balance = data.balance;
           envelope.category_id = data.category_id;
           envelope.note = data.note;
+          envelope.monthly_budget_amount = data.monthly_budget_amount;
         }
 
         // Update selected item if it's the current envelope

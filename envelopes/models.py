@@ -83,6 +83,9 @@ class Envelope(models.Model):
     balance = models.IntegerField(default=0)
     note = models.TextField(blank=True, null=True)
     hidden = models.BooleanField(default=False)
+    monthly_budget_amount = models.IntegerField(
+        default=0, help_text="Planned monthly allocation amount"
+    )
     deleted = models.BooleanField(default=False)
 
     objects = EnvelopeManager()
