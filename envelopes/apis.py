@@ -386,7 +386,9 @@ def transfer_funds(request, budget_id: str, data: EnvelopeTransferSchema):
                 }
             )
 
-        # Return the updated envelope balances and affected categories
+        # Get the current unallocated envelope balance
+        unallocated_envelope = Envelope.objects.get_unallocated_funds(budget)
+
         return {
             "success": True,
             "message": "Funds transferred successfully",
@@ -399,6 +401,11 @@ def transfer_funds(request, budget_id: str, data: EnvelopeTransferSchema):
                 "id": destination_envelope.id,
                 "name": destination_envelope.name,
                 "balance": destination_envelope.balance,
+            },
+            "unallocated_envelope": {
+                "id": unallocated_envelope.id,
+                "name": unallocated_envelope.name,
+                "balance": unallocated_envelope.balance,
             },
             "affected_categories": affected_categories,
             "amount": data.amount,

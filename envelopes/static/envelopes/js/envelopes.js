@@ -287,7 +287,7 @@ function envelopeData() {
 
     formatMoney(amount) {
       // Convert cents to dollars and format
-      const dollars = amount / 100;
+      const dollars = amount / 1000;
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -355,30 +355,23 @@ function envelopeData() {
           // Update the specific envelope balance locally
           const envelope = this.findEnvelopeById(envelopeId);
           if (envelope) {
-            envelope.balance = data.envelope_balance || 0;
+            envelope.balance = data.destination_envelope.balance;
           }
 
-          // Update the unallocated envelope balance
-          if (this.budget?.unallocated_envelope) {
-            this.budget.unallocated_envelope.balance = data.unallocated_balance || 0;
+          // Update the unallocated envelope balance using the new API response
+          if (this.budget?.unallocated_envelope && data.unallocated_envelope) {
+            this.budget.unallocated_envelope.balance = data.unallocated_envelope.balance;
           }
 
           // Update selected item if it's the current envelope
           if (this.selectedItem.id === envelopeId && this.selectedItem.type === 'envelope') {
-            this.selectedItem.balance = data.envelope_balance || 0;
+            this.selectedItem.balance = data.destination_envelope.balance;
           }
 
           // Update the balance of affected categories
           for (const category of data.affected_categories) {
             const categoryIndex = this.categories.findIndex(cat => cat.id === category.id);
             if (categoryIndex !== -1) {
-              // Update the category's envelope that was affected
-              const envelopeIndex = this.categories[categoryIndex].envelopes.findIndex(
-                env => env.id === category.envelope_id
-              );
-              if (envelopeIndex !== -1) {
-                this.categories[categoryIndex].envelopes[envelopeIndex].balance = category.envelope_balance;
-              }
               // Update the category's total balance
               this.categories[categoryIndex].balance = category.balance;
             }
@@ -427,30 +420,23 @@ function envelopeData() {
           // Update the specific envelope balance locally
           const envelope = this.findEnvelopeById(envelopeId);
           if (envelope) {
-            envelope.balance = data.envelope_balance || 0;
+            envelope.balance = data.source_envelope.balance;
           }
 
-          // Update the unallocated envelope balance
-          if (this.budget?.unallocated_envelope) {
-            this.budget.unallocated_envelope.balance = data.unallocated_balance || 0;
+          // Update the unallocated envelope balance using the new API response
+          if (this.budget?.unallocated_envelope && data.unallocated_envelope) {
+            this.budget.unallocated_envelope.balance = data.unallocated_envelope.balance;
           }
 
           // Update selected item if it's the current envelope
           if (this.selectedItem.id === envelopeId && this.selectedItem.type === 'envelope') {
-            this.selectedItem.balance = data.envelope_balance || 0;
+            this.selectedItem.balance = data.source_envelope.balance;
           }
 
           // Update the balance of affected categories
           for (const category of data.affected_categories) {
             const categoryIndex = this.categories.findIndex(cat => cat.id === category.id);
             if (categoryIndex !== -1) {
-              // Update the category's envelope that was affected
-              const envelopeIndex = this.categories[categoryIndex].envelopes.findIndex(
-                env => env.id === category.envelope_id
-              );
-              if (envelopeIndex !== -1) {
-                this.categories[categoryIndex].envelopes[envelopeIndex].balance = category.envelope_balance;
-              }
               // Update the category's total balance
               this.categories[categoryIndex].balance = category.balance;
             }
