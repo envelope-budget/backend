@@ -462,6 +462,12 @@ function envelopeData() {
       this.envelope.balance = 0;
       this.envelope.category_id = category_id;
       this.envelope.note = '';
+
+      // Clear the name input field
+      const nameInput = document.getElementById('envelope-name');
+      if (nameInput) {
+        nameInput.value = '';
+      }
     },
 
     startNewCategory() {
@@ -632,6 +638,67 @@ function envelopeData() {
           category_id: envelope.category_id,
           note: envelope.note || '',
         };
+
+        // Update the emoji picker input field
+        const nameInput = document.getElementById('envelope-name');
+        if (nameInput) {
+          nameInput.value = envelope.name;
+        }
+      }
+    },
+
+    async updateEnvelope() {
+      try {
+        const response = await fetch(`/api/envelopes/${window.budgetId}/${this.envelope.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.getCookie('csrftoken'),
+          },
+          body: JSON.stringify({
+            name: this.envelope.name,
+            balance: this.envelope.balance,
+            category_id: this.envelope.category_id,
+            note: this.envelope.note,
+          }),
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Envelope updated successfully:', data);
+
+        // Update the envelope in local data
+        const envelope = this.findEnvelopeById(this.envelope.id);
+        if (envelope) {
+          envelope.name = data.name;
+          envelope.balance = data.balance;
+          envelope.category_id = data.category_id;
+          envelope.note = data.note;
+        }
+
+        // Update selected item if it's the current envelope
+        if (this.selectedItem.id === this.envelope.id && this.selectedItem.type === 'envelope') {
+          this.selectedItem.name = data.name;
+          this.selectedItem.balance = data.balance;
+        }
+
+        // If category changed, reload envelopes to reflect the change
+        if (envelope && envelope.category_id !== data.category_id) {
+          await this.loadEnvelopes();
+        }
+
+        // Close the modal
+        const modal = FlowbiteInstances.getInstance('Modal', 'envelope-modal');
+        if (modal) modal.hide();
+
+        showToast('Envelope updated successfully!');
+      } catch (error) {
+        console.error('Error updating envelope:', error);
+        showToast('Failed to update envelope. Please try again.');
       }
     },
 
