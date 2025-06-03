@@ -38,6 +38,18 @@ class CategorySchema(Schema):
     envelopes: List[EnvelopeSchema]
 
 
+class UnallocatedEnvelopeSchema(Schema):
+    id: str
+    name: str
+    balance: int
+
+
+class BudgetDataSchema(Schema):
+    id: str
+    name: str
+    unallocated_envelope: UnallocatedEnvelopeSchema
+
+
 class EnvelopeGoalSchema(Schema):
     id: str
     envelope_id: str
@@ -83,9 +95,19 @@ class UpdateEnvelopeSchema(Schema):
     hidden: Optional[bool] = None
 
 
+class CreateCategorySchema(Schema):
+    name: str
+
+
+class UpdateCategorySchema(Schema):
+    name: Optional[str] = None
+    sort_order: Optional[int] = None
+    hidden: Optional[bool] = None
+
+
 @router.get(
     "/{budget_id}",
-    response=List[CategorySchema],  # Specify the response type
+    response=List[CategorySchema],
     auth=django_auth,
     tags=["Envelopes"],
 )
@@ -94,6 +116,130 @@ def list_envelopes(request, budget_id: str):
 
     budget = get_object_or_404(Budget, id=budget_id)
     return budget.categorized_envelopes()
+
+
+@router.get(
+    "/budgets/{budget_id}",
+    response=BudgetDataSchema,
+    auth=django_auth,
+    tags=["Budgets"],
+)
+def get_budget_data(request, budget_id: str):
+    from budgets.models import Budget
+
+    budget = get_object_or_404(Budget, id=budget_id)
+    unallocated = Envelope.objects.get_unallocated_funds(budget)
+
+    return {
+        "id": budget.id,
+        "name": budget.name,
+        "unallocated_envelope": {
+            "id": unallocated.id,
+            "name": unallocated.name,
+            "balance": unallocated.balance,
+        },
+    }
+
+
+@router.post(
+    "/categories/{budget_id}",
+    response=CategorySchema,
+    auth=django_auth,
+    tags=["Categories"],
+)
+def create_category(request, budget_id: str, data: CreateCategorySchema):
+    from budgets.models import Budget
+
+    budget = get_object_or_404(Budget, id=budget_id)
+    category = Category.objects.create(
+        budget=budget,
+        name=data.name,
+    )
+
+    # Return the category with empty envelopes list
+    return {
+        "id": category.id,
+        "name": category.name,
+        "balance": 0,
+        "sort_order": category.sort_order,
+        "hidden": category.hidden,
+        "deleted": category.deleted,
+        "envelopes": [],
+    }
+
+
+@router.patch(
+    "/categories/{budget_id}/{category_id}",
+    response=CategorySchema,
+    auth=django_auth,
+    tags=["Categories"],
+)
+def update_category(
+    request, budget_id: str, category_id: str, data: UpdateCategorySchema
+):
+    from budgets.models import Budget
+
+    budget = get_object_or_404(Budget, id=budget_id)
+    category = get_object_or_404(Category, id=category_id, budget=budget)
+
+    # Update only the fields that are provided
+    if data.name is not None:
+        category.name = data.name
+    if data.sort_order is not None:
+        category.sort_order = data.sort_order
+    if data.hidden is not None:
+        category.hidden = data.hidden
+
+    category.save()
+
+    # Return the updated category with its envelopes
+    envelopes = Envelope.objects.filter(category=category, deleted=False).order_by(
+        "sort_order", "name"
+    )
+
+    return {
+        "id": category.id,
+        "name": category.name,
+        "balance": sum(env.balance for env in envelopes),
+        "sort_order": category.sort_order,
+        "hidden": category.hidden,
+        "deleted": category.deleted,
+        "envelopes": [
+            {
+                "id": env.id,
+                "budget_id": env.budget_id,
+                "category_id": env.category_id,
+                "name": env.name,
+                "sort_order": env.sort_order,
+                "balance": env.balance,
+                "hidden": env.hidden,
+                "deleted": env.deleted,
+            }
+            for env in envelopes
+        ],
+    }
+
+
+@router.delete(
+    "/categories/{budget_id}/{category_id}",
+    response=dict,
+    auth=django_auth,
+    tags=["Categories"],
+)
+def delete_category(request, budget_id: str, category_id: str):
+    from budgets.models import Budget
+
+    budget = get_object_or_404(Budget, id=budget_id)
+    category = get_object_or_404(Category, id=category_id, budget=budget)
+
+    # Soft delete the category
+    category.deleted = True
+    category.save()
+
+    # Also soft delete all envelopes in this category
+    Envelope.objects.filter(category=category).update(deleted=True)
+
+    return {"success": True, "message": "Category deleted successfully"}
 
 
 @router.post(

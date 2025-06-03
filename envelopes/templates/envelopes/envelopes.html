@@ -11,41 +11,35 @@
 {% endblock head %}
 
 {% block content %}
-  <section class="bg-gray-50 dark:bg-gray-900" x-data="envelopeData()">
+  <section class="bg-gray-50 dark:bg-gray-900"
+           x-data="envelopeData()"
+           x-init="loadEnvelopes()">
     <div class="mx-auto">
       <!-- Search and buttons section spanning both columns -->
       <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden w-full mb-1 p-4">
         <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4">
           <!-- Unallocated Funds Display -->
-          <div class="w-full md:w-1/2 {% if budget.unallocated_envelope.balance > 0 %}bg-green-100 dark:bg-green-700{% elif budget.unallocated_envelope.balance < 0 %}bg-red-100 dark:bg-red-700{% else %}bg-gray-100 dark:bg-gray-700{% endif %} rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                {% if budget.unallocated_envelope.balance > 0 %}
-                  <!-- full envelope icon -->
-                  <svg class="w-6 h-6 text-gray-800 dark:text-white"
+          <div class="w-full md:w-1/2"
+               :class="getUnallocatedBackgroundClass()"
+               x-show="budget">
+            <div class="rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <svg class="w-6 h-6 text-gray-800 dark:text-white mr-2"
                        aria-hidden="true"
                        xmlns="http://www.w3.org/2000/svg"
                        width="24"
                        height="24"
                        fill="none"
                        viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9M9 7h6m-7 3h8" />
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="budget && budget.unallocated_envelope && budget.unallocated_envelope.balance > 0 ? 'M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9M9 7h6m-7 3h8' : 'M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9'" />
                   </svg>
-                {% else %}
-                  <!-- empty envelope icon -->
-                  <svg class="w-6 h-6 text-gray-800 dark:text-white"
-                       aria-hidden="true"
-                       xmlns="http://www.w3.org/2000/svg"
-                       width="24"
-                       height="24"
-                       fill="none"
-                       viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13h3.439a.991.991 0 0 1 .908.6 3.978 3.978 0 0 0 7.306 0 .99.99 0 0 1 .908-.6H20M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M4 13l2-9h12l2 9" />
-                  </svg>
-                {% endif %}
-                <span class="text-gray-900 dark:text-white font-medium">Unallocated Funds</span>
+                  <span class="text-gray-900 dark:text-white font-medium">Unallocated Funds</span>
+                </div>
+                <div class="text-gray-900 dark:text-white font-bold"
+                     x-text="budget && budget.unallocated_envelope ? formatMoney(budget.unallocated_envelope.balance) : '$0.00'">
+                </div>
               </div>
-              <div class="text-gray-900 dark:text-white font-bold">{{ budget.unallocated_envelope.balance | money }}</div>
             </div>
           </div>
           <!-- End Unallocated Funds Display -->
@@ -87,13 +81,13 @@
           </div>
           <!-- End Search -->
 
-
           <!-- Buttons -->
           <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
             <button type="button"
                     class="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
                     data-modal-target="category-modal"
-                    data-modal-toggle="category-modal">
+                    data-modal-toggle="category-modal"
+                    @click="startNewCategory()">
               <svg class="h-3.5 w-3.5 mr-2"
                    fill="currentColor"
                    viewbox="0 0 20 20"
@@ -107,15 +101,23 @@
           <!-- End Buttons -->
         </div>
       </div>
+
       <div class="flex flex-col md:flex-row gap-2">
         <!-- Main envelope list panel -->
         <div class="envelope-list-panel bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden w-full md:w-1/2 flex flex-col h-[calc(100vh-150px)]">
           <div class="overflow-y-auto flex-grow">
-            <ul id="categories-list" class="w-full">
-              {% for category in budget.categorized_envelopes %}
-                <li class="category-item mb-4" data-id="{{ category.id }}">
+            <!-- Loading state -->
+            <div x-show="loading" class="p-4 text-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+              <p class="mt-2 text-gray-600 dark:text-gray-400">Loading envelopes...</p>
+            </div>
+
+            <!-- Categories and Envelopes List -->
+            <ul id="categories-list" class="w-full" x-show="!loading">
+              <template x-for="category in filteredCategories" :key="category.id">
+                <li class="category-item mb-4" :data-id="category.id">
                   <div class="category-item border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 flex justify-between items-center px-4 py-3"
-                       @click="selectCategory('{{ category.id }}')">
+                       @click="selectCategory(category.id)">
                     <div class="flex items-center">
                       <span class="drag-handle cursor-move mr-2">
                         <svg class="w-5 h-5 text-gray-800 dark:text-white"
@@ -128,11 +130,12 @@
                           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 20V10m0 10-3-3m3 3 3-3m5-13v10m0-10 3 3m-3-3-3 3" />
                         </svg>
                       </span>
-                      <span class="text-lg font-medium text-gray-900 dark:text-white">{{ category.name }}</span>
+                      <span class="text-lg font-medium text-gray-900 dark:text-white"
+                            x-text="category.name"></span>
                       <button class="flex ml-4 px-3 py-1 items-center justify-center rounded-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700"
                               data-modal-target="envelope-modal"
                               data-modal-toggle="envelope-modal"
-                              @click="startNewEnvelope('{{ category.id }}')">
+                              @click.stop="startNewEnvelope(category.id)">
                         <svg class="w-[8px] h-[8px] text-white dark:text-white mr-1"
                              aria-hidden="true"
                              xmlns="http://www.w3.org/2000/svg"
@@ -149,15 +152,15 @@
                         </svg>
                       </button>
                     </div>
-                    <div class="px-4 py-3 text-right font-medium {% if category.balance > 0 %}text-green-600 dark:text-green-400 {% elif category.balance < 0 %}text-red-600 dark:text-red-400 {% else %}text-gray-900 dark:text-white{% endif %}">
-                      {{ category.balance | money }}
-                    </div>
+                    <div class="px-4 py-3 text-right font-medium"
+                         :class="getBalanceColorClass(category.balance)"
+                         x-text="formatMoney(category.balance)"></div>
                   </div>
-                  <ul class="envelopes-list w-full" data-category-id="{{ category.id }}">
-                    {% for envelope in category.envelopes %}
+                  <ul class="envelopes-list w-full" :data-category-id="category.id">
+                    <template x-for="envelope in category.envelopes" :key="envelope.id">
                       <li class="envelope-item border-b dark:border-gray-700 flex justify-between items-center"
-                          data-id="{{ envelope.id }}"
-                          @click="selectEnvelope('{{ envelope.id }}', '{{ envelope.name }}', '{{ envelope.balance | money }}', '{{ category.name }}')">
+                          :data-id="envelope.id"
+                          @click="selectEnvelope(envelope.id, envelope.name, envelope.balance, category.name)">
                         <div class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white flex items-center">
                           <span class="drag-handle cursor-move mr-2">
                             <svg class="w-4 h-4 text-gray-800 dark:text-white"
@@ -170,11 +173,12 @@
                               <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 20V10m0 10-3-3m3 3 3-3m5-13v10m0-10 3 3m-3-3-3 3" />
                             </svg>
                           </span>
-                          {{ envelope.name }}
+                          <span x-text="envelope.name"></span>
                         </div>
-                        <div class="px-4 py-3 text-right flex items-center {% if envelope.balance > 0 %}text-green-600 dark:text-green-400 {% elif envelope.balance < 0 %}text-red-600 dark:text-red-400 {% else %}text-gray-900 dark:text-white{% endif %}">
-                          {% if envelope.balance < 0 %}
-                            <button @click.stop="quickAllocateFunds('{{ envelope.id }}', '{{ envelope.balance }}')"
+                        <div class="px-4 py-3 text-right flex items-center"
+                             :class="getBalanceColorClass(envelope.balance)">
+                          <template x-if="envelope.balance < 0">
+                            <button @click.stop="quickAllocateFunds(envelope.id, envelope.balance)"
                                     class="mr-2 text-xs bg-primary-700 hover:bg-primary-800 text-white py-1 px-2 rounded-lg"
                                     title="Allocate funds to balance to zero">
                               <svg class="w-3.5 h-3.5 text-white"
@@ -187,11 +191,11 @@
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.5 21h13M12 21V7m0 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm2-1.8c3.073.661 2.467 2.8 5 2.8M5 8c3.359 0 2.192-2.115 5.012-2.793M7 9.556V7.75m0 1.806-1.95 4.393a.773.773 0 0 0 .37.962.785.785 0 0 0 .362.089h2.436a.785.785 0 0 0 .643-.335.776.776 0 0 0 .09-.716L7 9.556Zm10 0V7.313m0 2.243-1.95 4.393a.773.773 0 0 0 .37.962.786.786 0 0 0 .362.089h2.436a.785.785 0 0 0 .643-.335.775.775 0 0 0 .09-.716L17 9.556Z" />
                               </svg>
                             </button>
-                          {% endif %}
-                          {% if envelope.balance > 0 %}
-                            <button @click.stop="sweepFunds('{{ envelope.id }}', '{{ envelope.balance }}')"
+                          </template>
+                          <template x-if="envelope.balance > 0">
+                            <button @click.stop="sweepFunds(envelope.id, envelope.balance)"
                                     class="mr-2 text-xs bg-primary-700 hover:bg-primary-800 text-white py-1 px-2 rounded-lg"
-                                    title="Allocate funds to balance to zero">
+                                    title="Sweep funds to unallocated">
                               <svg class="w-3.5 h-3.5 text-white"
                                    aria-hidden="true"
                                    xmlns="http://www.w3.org/2000/svg"
@@ -202,15 +206,14 @@
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v16m0 0l-4 2m4-2l4 2m-6-2.5l-4 2m8-2l-4 2" />
                               </svg>
                             </button>
-                          {% endif %}
-                          {{ envelope.balance | money }}
+                          </template>
+                          <span x-text="formatMoney(envelope.balance)"></span>
                         </div>
                       </li>
-
-                    {% endfor %}
+                    </template>
                   </ul>
                 </li>
-              {% endfor %}
+              </template>
             </ul>
           </div>
         </div>
@@ -249,7 +252,7 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">Category Balance</p>
                 <p class="text-2xl font-bold"
                    :class="getBalanceColorClass(selectedItem.balance)"
-                   x-text="selectedItem.balance"></p>
+                   x-text="formatMoney(selectedItem.balance)"></p>
               </div>
 
               <div class="mb-4">
@@ -294,7 +297,7 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">Envelope Balance</p>
                 <p class="text-2xl font-bold"
                    :class="getBalanceColorClass(selectedItem.balance)"
-                   x-text="selectedItem.balance"></p>
+                   x-text="formatMoney(selectedItem.balance)"></p>
               </div>
 
               <div class="mb-2">
@@ -306,6 +309,8 @@
               <div class="mb-4 mt-6">
                 <button type="button"
                         class="w-full flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800"
+                        data-modal-target="envelope-modal"
+                        data-modal-toggle="envelope-modal"
                         @click="editEnvelope(selectedItem.id)">
                   <svg class="h-3.5 w-3.5 mr-2"
                        fill="currentColor"
@@ -330,11 +335,9 @@
 {% endblock content %}
 
 {% block js %}
-
   {% compress js %}
     <script src="{% static "vendor/sortablejs/Sortable.min.js" %}"></script>
     <script src="{% static "vendor/emoji-mart/browser.js" %}"></script>
     <script src="{% static 'envelopes/js/envelopes.js' %}"></script>
   {% endcompress %}
-
 {% endblock js %}

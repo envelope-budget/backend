@@ -3,6 +3,9 @@ const picker = new EmojiMart.Picker(pickerOptions);
 
 document.getElementById('emoji-picker').appendChild(picker);
 
+// Set budgetId from cookie
+window.budgetId = window.getCookie('budget_id');
+
 function addEmojiToName(emoji) {
   console.log('Emoji selected:', emoji.native);
   const $name = document.getElementById('envelope-name');
@@ -28,6 +31,13 @@ function addEmojiToName(emoji) {
 
 // Initialize drag and drop functionality
 document.addEventListener('DOMContentLoaded', () => {
+  // Delay initialization to ensure Alpine.js has rendered the DOM
+  setTimeout(() => {
+    initializeSortable();
+  }, 100);
+});
+
+function initializeSortable() {
   // Make categories sortable
   const categoriesList = document.getElementById('categories-list');
   if (categoriesList) {
@@ -58,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
     });
   }
-});
+}
 
 // Save the order of categories
 function saveCategoriesOrder() {
@@ -70,7 +80,7 @@ function saveCategoriesOrder() {
     };
   });
 
-  const endpoint = `/api/categories/${window.getCookie('budget_id')}/order`;
+  const endpoint = `/api/categories/${window.budgetId}/order`;
   const csrfToken = window.getCookie('csrftoken');
 
   fetch(endpoint, {
@@ -107,7 +117,7 @@ function saveEnvelopesOrder(categoryList) {
     };
   });
 
-  const endpoint = `/api/envelopes/${window.getCookie('budget_id')}/order`;
+  const endpoint = `/api/envelopes/${window.budgetId}/order`;
   const csrfToken = window.getCookie('csrftoken');
 
   fetch(endpoint, {
@@ -138,7 +148,7 @@ function saveEnvelopesOrder(categoryList) {
 
 // Update an envelope's category
 function updateEnvelopeCategory(envelopeId, newCategoryId) {
-  const endpoint = `/api/envelopes/${window.getCookie('budget_id')}/${envelopeId}`;
+  const endpoint = `/api/envelopes/${window.budgetId}/${envelopeId}`;
   const csrfToken = window.getCookie('csrftoken');
 
   fetch(endpoint, {
@@ -168,12 +178,17 @@ function updateEnvelopeCategory(envelopeId, newCategoryId) {
 
 function envelopeData() {
   return {
+    // Data properties
+    budget: null,
+    categories: [],
+    loading: true,
+
     envelope: {
       id: '',
-      name: 'Test',
+      name: '',
       balance: 0,
       category_id: '',
-      note: 'Test Note',
+      note: '',
     },
 
     category: {
@@ -184,7 +199,7 @@ function envelopeData() {
       id: null,
       type: null,
       name: '',
-      balance: '',
+      balance: 0,
       categoryName: '',
     },
 
@@ -196,118 +211,204 @@ function envelopeData() {
 
     searchQuery: '',
 
-    getBalanceColorClass(balance) {
-      // Remove currency symbol and commas, then convert to number
-      const numericBalance = Number.parseFloat(balance.replace(/[$,]/g, ''));
+    // Computed properties
+    get filteredCategories() {
+      if (!this.searchQuery.trim()) {
+        return this.categories;
+      }
 
-      if (numericBalance > 0) {
+      const query = this.searchQuery.toLowerCase();
+      return this.categories
+        .map(category => {
+          // Check if category name matches
+          const categoryMatches = category.name.toLowerCase().includes(query);
+
+          // Filter envelopes that match the search
+          const filteredEnvelopes = category.envelopes.filter(envelope => envelope.name.toLowerCase().includes(query));
+
+          // Show category if it matches or has matching envelopes
+          if (categoryMatches || filteredEnvelopes.length > 0) {
+            return {
+              ...category,
+              envelopes: categoryMatches ? category.envelopes : filteredEnvelopes,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+    },
+
+    // Methods
+    async loadEnvelopes() {
+      this.loading = true;
+      try {
+        console.log(`Budget ID: ${window.budgetId}`);
+        const response = await fetch(`/api/envelopes/${window.budgetId}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        this.categories = data;
+
+        // Load budget data including unallocated envelope
+        await this.loadBudgetData();
+
+        // Re-initialize sortable after data loads
+        this.$nextTick(() => {
+          initializeSortable();
+        });
+      } catch (error) {
+        console.error('Error loading envelopes:', error);
+        this.showToast('Failed to load envelopes. Please refresh the page.');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async loadBudgetData() {
+      try {
+        const response = await fetch(`/api/budgets/${window.budgetId}`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        this.budget = await response.json();
+      } catch (error) {
+        console.error('Error loading budget data:', error);
+      }
+    },
+
+    formatMoney(amount) {
+      // Convert cents to dollars and format
+      const dollars = amount / 100;
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      }).format(dollars);
+    },
+
+    getBalanceColorClass(balance) {
+      if (balance > 0) {
         return 'text-green-600 dark:text-green-400';
       }
-      if (numericBalance < 0) {
+      if (balance < 0) {
         return 'text-red-600 dark:text-red-400';
       }
       return 'text-gray-900 dark:text-white';
     },
 
-    quickAllocateFunds(envelopeId, currentBalance) {
-      // Convert the balance string to a number (remove $ and commas)
-      console.log(`Current Balance: ${currentBalance}`);
-      const numericBalance = Number.parseFloat(currentBalance.replace(/[$,]/g, ''));
+    getUnallocatedBackgroundClass() {
+      if (!this.budget || !this.budget.unallocated_envelope) {
+        return 'bg-gray-100 dark:bg-gray-700';
+      }
 
+      const balance = this.budget.unallocated_envelope.balance;
+      if (balance > 0) {
+        return 'bg-green-100 dark:bg-green-700';
+      }
+      if (balance < 0) {
+        return 'bg-red-100 dark:bg-red-700';
+      }
+      return 'bg-gray-100 dark:bg-gray-700';
+    },
+
+    async quickAllocateFunds(envelopeId, currentBalance) {
       // Only proceed if the balance is negative
-      if (numericBalance >= 0) {
+      if (currentBalance >= 0) {
         return;
       }
 
       // Calculate the amount needed to bring the balance to zero
-      const amountToAllocate = Math.abs(numericBalance);
+      const amountToAllocate = Math.abs(currentBalance);
 
-      // Get the budget ID from cookie
-      const budgetId = window.getCookie('budget_id');
-      const csrfToken = window.getCookie('csrftoken');
-
-      // Prepare the API endpoint
-      const endpoint = `/api/envelopes/${budgetId}/transfer`;
-
-      // Make the API request to transfer funds
-      fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
-        body: JSON.stringify({
-          from_envelope_id: 'unallocated', // Assuming 'unallocated' is the ID or a special identifier
-          to_envelope_id: envelopeId,
-          amount: amountToAllocate,
-        }),
-        credentials: 'include',
-      })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('Funds allocated successfully:', data);
-          // Refresh the page to show updated balances
-          window.location.reload();
-        })
-        .catch(error => {
-          console.error('Error allocating funds:', error);
-          showToast('Failed to allocate funds. Please check if you have enough unallocated funds.');
+      try {
+        const response = await fetch(`/api/envelopes/${window.budgetId}/transfer`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.getCookie('csrftoken'),
+          },
+          body: JSON.stringify({
+            from_envelope_id: 'unallocated',
+            to_envelope_id: envelopeId,
+            amount: amountToAllocate,
+          }),
+          credentials: 'include',
         });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          console.log('Funds allocated successfully:', data);
+          // Reload data to show updated balances
+          await this.loadEnvelopes();
+          this.showToast('Funds allocated successfully!');
+        } else {
+          throw new Error(data.message || 'Failed to allocate funds');
+        }
+      } catch (error) {
+        console.error('Error allocating funds:', error);
+        this.showToast('Failed to allocate funds. Please check if you have enough unallocated funds.');
+      }
     },
 
-    // Perform search as user types
-    performSearch() {
-      const query = this.searchQuery.toLowerCase().trim();
-
-      // If search is empty, show all categories and envelopes
-      if (!query) {
-        for (const item of document.querySelectorAll('.category-item, .envelope-item')) {
-          item.style.display = '';
-        }
+    async sweepFunds(envelopeId, currentBalance) {
+      // Only proceed if the balance is positive
+      if (currentBalance <= 0) {
         return;
       }
 
-      // Hide all categories initially
-      for (const category of document.querySelectorAll('.category-item')) {
-        category.style.display = 'none';
-      }
+      try {
+        const response = await fetch(`/api/envelopes/${window.budgetId}/transfer`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.getCookie('csrftoken'),
+          },
+          body: JSON.stringify({
+            from_envelope_id: envelopeId,
+            to_envelope_id: 'unallocated',
+            amount: currentBalance,
+          }),
+          credentials: 'include',
+        });
 
-      // Show envelopes that match the search and their parent categories
-      for (const envelope of document.querySelectorAll('.envelope-item')) {
-        const envelopeName = envelope.querySelector('.font-medium').textContent.toLowerCase();
-        const matches = envelopeName.includes(query);
-
-        envelope.style.display = matches ? '' : 'none';
-
-        // If envelope matches, show its parent category
-        if (matches) {
-          const categoryItem = envelope.closest('.category-item');
-          if (categoryItem) {
-            categoryItem.style.display = '';
-          }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      }
 
-      // Also check category names
-      for (const category of document.querySelectorAll('.category-item')) {
-        const categoryHeader = category.querySelector('.category-item > div');
-        if (categoryHeader) {
-          const categoryName = categoryHeader.querySelector('.font-medium').textContent.toLowerCase();
-          if (categoryName.includes(query)) {
-            category.style.display = '';
-            // Show all envelopes in this category
-            for (const envelope of category.querySelectorAll('.envelope-item')) {
-              envelope.style.display = '';
-            }
-          }
+        const data = await response.json();
+
+        if (data.success) {
+          console.log('Funds swept successfully:', data);
+          // Reload data to show updated balances
+          await this.loadEnvelopes();
+          this.showToast('Funds swept to unallocated successfully!');
+        } else {
+          throw new Error(data.message || 'Failed to sweep funds');
         }
+      } catch (error) {
+        console.error('Error sweeping funds:', error);
+        this.showToast('Failed to sweep funds. Please try again.');
       }
     },
+
+    performSearch() {
+      // The search is now handled by the filteredCategories computed property
+      // This method can be used for additional search logic if needed
+    },
+
     startNewEnvelope(category_id) {
       this.envelope.id = '';
       this.envelope.name = '';
@@ -316,63 +417,58 @@ function envelopeData() {
       this.envelope.note = '';
     },
 
-    createEnvelope() {
-      const endpoint = `/api/envelopes/${window.getCookie('budget_id')}`;
-      const csrfToken = window.getCookie('csrftoken');
+    startNewCategory() {
+      this.resetCategoryForm();
+    },
 
-      // Prepare the headers
-      const headers = new Headers({
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken,
-      });
-
-      // Prepare the request options
-      const requestOptions = {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({
-          name: this.envelope.name,
-          balance: this.envelope.balance,
-          category_id: this.envelope.category_id,
-          note: this.envelope.note,
-        }),
-        credentials: 'include', // necessary for cookies to be sent with the request
-      };
-
-      // Post to endpoint
-      fetch(endpoint, requestOptions)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('Envelope created successfully:', data);
-          // Refresh the envelope data
-          window.location.reload();
-        })
-        .catch(error => {
-          console.error('Error creating envelope:', error);
-          // Handle the error case here
+    async createEnvelope() {
+      try {
+        const response = await fetch(`/api/envelopes/${window.budgetId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.getCookie('csrftoken'),
+          },
+          body: JSON.stringify({
+            name: this.envelope.name,
+            balance: this.envelope.balance,
+            category_id: this.envelope.category_id,
+            note: this.envelope.note,
+          }),
+          credentials: 'include',
         });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Envelope created successfully:', data);
+
+        // Reload envelopes to show the new one
+        await this.loadEnvelopes();
+
+        // Close the modal
+        const modal = FlowbiteInstances.getInstance('Modal', 'envelope-modal');
+        if (modal) modal.hide();
+
+        this.showToast('Envelope created successfully!');
+      } catch (error) {
+        console.error('Error creating envelope:', error);
+        this.showToast('Failed to create envelope. Please try again.');
+      }
     },
 
     selectCategory(categoryId) {
-      // Get the current name from the DOM
-      const categoryElement = document.querySelector(`.category-item[data-id="${categoryId}"] .font-medium`);
-      const categoryName = categoryElement ? categoryElement.textContent.trim() : '';
-
-      // Get the current balance from the DOM
-      const balanceElement = document.querySelector(`.category-item[data-id="${categoryId}"] .text-right.font-medium`);
-      const balance = balanceElement ? balanceElement.textContent.trim() : '$0.00';
-
-      this.selectedItem = {
-        id: categoryId,
-        type: 'category',
-        name: categoryName,
-        balance: balance,
-      };
+      const category = this.categories.find(cat => cat.id === categoryId);
+      if (category) {
+        this.selectedItem = {
+          id: categoryId,
+          type: 'category',
+          name: category.name,
+          balance: category.balance,
+        };
+      }
     },
 
     selectEnvelope(id, name, balance, categoryName) {
@@ -383,103 +479,81 @@ function envelopeData() {
         balance: balance,
         categoryName: categoryName,
       };
-
-      // Add selected class to the clicked envelope
-      for (const el of document.querySelectorAll('.category-item, .envelope-item')) {
-        el.classList.remove('selected-item');
-      }
-      document.querySelector(`.envelope-item[data-id="${id}"]`).classList.add('selected-item');
     },
 
     editCategory(categoryId) {
-      this.categoryForm.isEdit = true;
-      this.categoryForm.id = categoryId;
-      this.categoryForm.name = this.selectedItem.name;
-
-      // The modal will be shown by the data-modal-toggle attribute
+      const category = this.categories.find(cat => cat.id === categoryId);
+      if (category) {
+        this.categoryForm.isEdit = true;
+        this.categoryForm.id = categoryId;
+        this.categoryForm.name = category.name;
+      }
     },
 
-    saveCategory() {
-      const budgetId = getCookie('budget_id');
-      console.log(`Saving category in budget id: ${budgetId}`);
+    async saveCategory() {
       const headers = {
         'Content-Type': 'application/json',
         'X-CSRFToken': getCookie('csrftoken'),
       };
 
-      if (this.categoryForm.isEdit) {
-        // Update existing category
-        const url = `/api/categories/${budgetId}/${this.categoryForm.id}`;
-
-        fetch(url, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({
-            name: this.categoryForm.name,
-          }),
-          credentials: 'include',
-        })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error('Failed to update category');
-            }
-            return response.json();
-          })
-          .then(data => {
-            // Update the category name in the UI
-            const categoryElement = document.querySelector(
-              `.category-item[data-id="${this.categoryForm.id}"] .font-medium`
-            );
-            if (categoryElement) {
-              categoryElement.textContent = this.categoryForm.name;
-            }
-
-            // Update the selected item if it's the current category
-            if (this.selectedItem.id === this.categoryForm.id && this.selectedItem.type === 'category') {
-              this.selectedItem.name = this.categoryForm.name;
-            }
-
-            // Close the modal
-            FlowbiteInstances.getInstance('Modal', 'category-modal').hide();
-
-            // Reset the form
-            this.resetCategoryForm();
-          })
-          .catch(error => {
-            console.error('Error updating category:', error);
-            // Show error message to user
-            alert('Failed to update category. Please try again.');
+      try {
+        if (this.categoryForm.isEdit) {
+          // Update existing category
+          const response = await fetch(`/api/categories/${window.budgetId}/${this.categoryForm.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({
+              name: this.categoryForm.name,
+            }),
+            credentials: 'include',
           });
-      } else {
-        const endpoint = `/api/categories/${budgetId}`;
 
-        // Prepare the request options
-        const requestOptions = {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            name: this.categoryForm.name,
-          }),
-          credentials: 'include', // necessary for cookies to be sent with the request
-        };
+          if (!response.ok) {
+            throw new Error('Failed to update category');
+          }
 
-        // Post to endpoint
-        fetch(endpoint, requestOptions)
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then(data => {
-            console.log('Category created successfully:', data);
-            // Refresh the page to show the new category
-            window.location.reload();
-          })
-          .catch(error => {
-            console.error('Error creating category:', error);
-            // Handle the error case here
+          // Update the category in our local data
+          const categoryIndex = this.categories.findIndex(cat => cat.id === this.categoryForm.id);
+          if (categoryIndex !== -1) {
+            this.categories[categoryIndex].name = this.categoryForm.name;
+          }
+
+          // Update the selected item if it's the current category
+          if (this.selectedItem.id === this.categoryForm.id && this.selectedItem.type === 'category') {
+            this.selectedItem.name = this.categoryForm.name;
+          }
+
+          this.showToast('Category updated successfully!');
+        } else {
+          // Create new category
+          const response = await fetch(`/api/categories/${window.budgetId}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              name: this.categoryForm.name,
+            }),
+            credentials: 'include',
           });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          console.log('Category created successfully');
+          // Reload envelopes to show the new category
+          await this.loadEnvelopes();
+          this.showToast('Category created successfully!');
+        }
+
+        // Close the modal
+        const modal = FlowbiteInstances.getInstance('Modal', 'category-modal');
+        if (modal) modal.hide();
+
+        // Reset the form
+        this.resetCategoryForm();
+      } catch (error) {
+        console.error('Error saving category:', error);
+        this.showToast('Failed to save category. Please try again.');
       }
     },
 
@@ -495,19 +569,40 @@ function envelopeData() {
       this.selectedItem = {
         id: null,
         name: '',
-        balance: '',
+        balance: 0,
         type: null,
         categoryName: '',
-        categoryId: null,
       };
-      // Remove highlight from all items
-      for (const item of document.querySelectorAll('.category-item, .envelope-item')) {
-        item.classList.remove('selected-item');
+    },
+
+    editEnvelope(id) {
+      const envelope = this.findEnvelopeById(id);
+      if (envelope) {
+        this.envelope = {
+          id: envelope.id,
+          name: envelope.name,
+          balance: envelope.balance,
+          category_id: envelope.category_id,
+          note: envelope.note || '',
+        };
       }
     },
-    editEnvelope(id) {
-      // Implement envelope editing logic
-      console.log('Edit envelope:', id);
+
+    findEnvelopeById(envelopeId) {
+      for (const category of this.categories) {
+        const envelope = category.envelopes.find(env => env.id === envelopeId);
+        if (envelope) {
+          return envelope;
+        }
+      }
+      return null;
+    },
+
+    showToast(message) {
+      // Simple toast implementation - you can replace with your preferred toast library
+      console.log('Toast:', message);
+      // You could implement a proper toast notification here
+      alert(message); // Temporary - replace with proper toast
     },
   };
 }
