@@ -7,6 +7,7 @@ class PayeeSelect extends HTMLElement {
     this.isOpen = false;
     this.selectedPayeeId = null;
     this.selectedPayeeName = '';
+    this.isCommitted = false;
   }
 
   connectedCallback() {
@@ -99,6 +100,7 @@ class PayeeSelect extends HTMLElement {
   handleInput(value) {
     this.selectedPayeeId = null;
     this.selectedPayeeName = value;
+    this.isCommitted = false;
 
     if (value.trim()) {
       this.filterPayees(value);
@@ -154,7 +156,10 @@ class PayeeSelect extends HTMLElement {
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        this.selectCurrentValue();
+        const hadChange = this.selectCurrentValue();
+        if (hadChange) {
+          e.stopPropagation();
+        }
         return;
       }
       if (e.key === 'Tab') {
@@ -175,14 +180,19 @@ class PayeeSelect extends HTMLElement {
         this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
         this.updateSelection();
         break;
-      case 'Enter':
+      case 'Enter': {
         e.preventDefault();
+        let hadChange = false;
         if (this.selectedIndex >= 0) {
-          this.selectPayee(this.selectedIndex);
+          hadChange = this.selectPayee(this.selectedIndex);
         } else {
-          this.selectCurrentValue();
+          hadChange = this.selectCurrentValue();
+        }
+        if (hadChange) {
+          e.stopPropagation();
         }
         break;
+      }
       case 'Tab':
         if (this.selectedIndex >= 0) {
           this.selectPayee(this.selectedIndex);
@@ -211,18 +221,35 @@ class PayeeSelect extends HTMLElement {
 
   selectPayee(index) {
     const payee = this.filteredPayees[index];
+    const hadChange = this.selectedPayeeId !== payee.id || this.selectedPayeeName !== payee.name || !this.isCommitted;
+
     this.selectedPayeeId = payee.id;
     this.selectedPayeeName = payee.name;
     this.input.value = payee.name;
+    this.isCommitted = true;
     this.hideDropdown();
-    this.dispatchChangeEvent();
+
+    if (hadChange) {
+      this.dispatchChangeEvent();
+    }
+
+    return hadChange;
   }
 
   selectCurrentValue() {
+    const currentValue = this.input.value.trim();
+    const hadChange = !this.isCommitted;
+
     this.selectedPayeeId = null;
-    this.selectedPayeeName = this.input.value.trim();
+    this.selectedPayeeName = currentValue;
+    this.isCommitted = true;
     this.hideDropdown();
-    this.dispatchChangeEvent();
+
+    if (hadChange) {
+      this.dispatchChangeEvent();
+    }
+
+    return hadChange;
   }
 
   showDropdown() {

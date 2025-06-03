@@ -540,7 +540,18 @@ function transactionData() {
 
         const selectFields = ['date', 'payee', 'memo', 'inflow', 'outflow'];
         if (selectFields.includes(highlightField)) {
-          document.getElementById(`id_${highlightField}`).select();
+          if (highlightField === 'payee') {
+            // Handle payee field specially since it's a custom element
+            setTimeout(() => {
+              const payeeSelect = document.getElementById('id_payee');
+              if (payeeSelect?.input) {
+                payeeSelect.input.focus();
+                payeeSelect.input.select();
+              }
+            }, 100);
+          } else {
+            document.getElementById(`id_${highlightField}`).select();
+          }
         } else if (highlightField === 'envelope') {
           setTimeout(() => {
             document.getElementById('id_envelope').querySelector('input').focus();
