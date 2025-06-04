@@ -300,16 +300,94 @@
                    x-text="formatMoney(selectedItem.balance)"></p>
               </div>
 
-              <div class="mb-2">
-                <p class="text-sm text-gray-500 dark:text-gray-400">Category</p>
-                <p class="text-md text-gray-900 dark:text-white"
-                   x-text="selectedItem.categoryName"></p>
-              </div>
-
               <div class="mb-2" x-show="selectedItem.type === 'envelope'">
                 <p class="text-sm text-gray-500 dark:text-gray-400">Monthly Budget</p>
                 <p class="text-md text-gray-900 dark:text-white"
                    x-text="formatMoney(findEnvelopeById(selectedItem.id)?.monthly_budget_amount || 0)"></p>
+              </div>
+
+              <!-- Add this section to the envelope detail view, after existing envelope details -->
+              <div x-show="selectedItem.type === 'envelope'" class="mt-6 border-t pt-6">
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">💰 Allocate Funds</h4>
+
+                <!-- Allocation Input -->
+                <div class="mb-4">
+                  <label for="allocation-amount"
+                         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Allocation Amount
+                  </label>
+                  <div class="relative">
+                    <input type="number"
+                           id="allocation-amount"
+                           x-model="allocation.amount"
+                           step="0.01"
+                           placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span class="text-gray-500 text-sm">USD</span>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">Positive: Unallocated → Envelope | Negative: Envelope → Unallocated</p>
+                </div>
+
+                <!-- Allocation Shortcuts -->
+                <div class="mb-4">
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quick Fill:</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button @click="fillAllocationShortcut('budget')"
+                            class="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200"
+                            x-show="findEnvelopeById(selectedItem.id)?.monthly_budget_amount > 0">
+                      📌 Budget Amount
+                    </button>
+                    <button @click="fillAllocationShortcut('overspent')"
+                            class="px-3 py-1 text-xs bg-red-100 text-red-800 rounded-full hover:bg-red-200 dark:bg-red-900 dark:text-red-200"
+                            x-show="selectedItem.balance < 0">📉 Cover Overspent</button>
+                    <button @click="fillAllocationShortcut('zero')"
+                            class="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-200"
+                            x-show="selectedItem.balance > 0">🧹 Zero Out</button>
+                    <button @click="fillAllocationShortcut('fill')"
+                            class="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 dark:bg-green-900 dark:text-green-200"
+                            x-show="findEnvelopeById(selectedItem.id)?.monthly_budget_amount > 0 && selectedItem.balance < findEnvelopeById(selectedItem.id)?.monthly_budget_amount">
+                      🧯 Fill to Budget
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Preview -->
+                <div x-show="allocation.amount != 0"
+                     class="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview:</p>
+                  <div class="space-y-1 text-sm">
+                    <div class="flex justify-between">
+                      <span>Unallocated Funds:</span>
+                      <span class="flex items-center gap-1">
+                        <span x-text="formatMoney(allocationPreview.newUnallocatedBalance)"></span>
+                        <span x-show="allocationPreview.isOverdrawn" class="text-yellow-500">⚠️</span>
+                      </span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span x-text="selectedItem.name + ':'"></span>
+                      <span x-text="formatMoney(allocationPreview.newEnvelopeBalance)"></span>
+                    </div>
+                  </div>
+                  <div x-show="allocationPreview.isOverdrawn"
+                       class="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+                    ⚠️ This will overdraw your unallocated funds
+                  </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex gap-2">
+                  <button @click="submitAllocation()"
+                          :disabled="!allocation.amount"
+                          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Allocate Funds
+                  </button>
+                  <button @click="resetAllocation()"
+                          class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 dark:bg-gray-600 dark:text-gray-300">
+                    Reset
+                  </button>
+                </div>
               </div>
 
               <div class="mb-4 mt-6">

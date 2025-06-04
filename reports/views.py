@@ -43,7 +43,7 @@ class ReportListView(LoginRequiredMixin, TemplateView):
             },
             {
                 "name": "Spending by Category",
-                "description": "View spending by envelope over multiple months with budget comparison",
+                "description": "View spending by envelope with monthly breakdown and budget comparison",
                 "url_name": "reports:spending-by-category-report",
             },
         ]

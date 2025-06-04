@@ -760,5 +760,123 @@ function envelopeData() {
       }
       return null;
     },
+
+    allocation: {
+      amount: 0,
+    },
+
+    get allocationPreview() {
+      if (!this.allocation.amount || !this.budget?.unallocated_envelope) {
+        return {
+          newUnallocatedBalance: this.budget?.unallocated_envelope?.balance || 0,
+          newEnvelopeBalance: this.selectedItem.balance || 0,
+          isOverdrawn: false,
+        };
+      }
+
+      const amount = Number.parseFloat(this.allocation.amount) * 1000; // Convert to cents
+      const newUnallocatedBalance = (this.budget.unallocated_envelope.balance || 0) - amount;
+      const newEnvelopeBalance = (this.selectedItem.balance || 0) + amount;
+
+      return {
+        newUnallocatedBalance,
+        newEnvelopeBalance,
+        isOverdrawn: newUnallocatedBalance < 0,
+      };
+    },
+
+    fillAllocationShortcut(type) {
+      const envelope = this.findEnvelopeById(this.selectedItem.id);
+      if (!envelope) return;
+
+      switch (type) {
+        case 'budget':
+          this.allocation.amount = envelope.monthly_budget_amount / 1000 || 0;
+          break;
+        case 'overspent':
+          if (envelope.balance < 0) {
+            this.allocation.amount = Math.abs(envelope.balance / 1000);
+          }
+          break;
+        case 'zero':
+          if (envelope.balance > 0) {
+            this.allocation.amount = -(envelope.balance / 1000);
+          }
+          break;
+        case 'fill':
+          if (envelope.monthly_budget_amount > 0 && envelope.balance < envelope.monthly_budget_amount) {
+            this.allocation.amount = (envelope.monthly_budget_amount - envelope.balance) / 1000;
+          }
+          break;
+      }
+    },
+
+    async submitAllocation() {
+      if (!this.allocation.amount || this.selectedItem.type !== 'envelope') {
+        return;
+      }
+
+      const amount = Math.round(Number.parseFloat(this.allocation.amount) * 1000); // Convert to cents
+
+      try {
+        const response = await fetch(`/api/envelopes/${window.budgetId}/transfer`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': window.getCookie('csrftoken'),
+          },
+          body: JSON.stringify({
+            from_envelope_id: 'unallocated',
+            to_envelope_id: this.selectedItem.id,
+            amount: amount,
+          }),
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Update the specific envelope balance locally
+          const envelope = this.findEnvelopeById(this.selectedItem.id);
+          if (envelope) {
+            envelope.balance = data.destination_envelope.balance;
+          }
+
+          // Update the unallocated envelope balance
+          if (this.budget?.unallocated_envelope && data.unallocated_envelope) {
+            this.budget.unallocated_envelope.balance = data.unallocated_envelope.balance;
+          }
+
+          // Update selected item balance
+          this.selectedItem.balance = data.destination_envelope.balance;
+
+          // Update affected categories
+          for (const category of data.affected_categories) {
+            const categoryIndex = this.categories.findIndex(cat => cat.id === category.id);
+            if (categoryIndex !== -1) {
+              this.categories[categoryIndex].balance = category.balance;
+            }
+          }
+
+          // Reset allocation form
+          this.allocation.amount = 0;
+
+          showToast('Allocation completed successfully!');
+        } else {
+          throw new Error(data.message || 'Failed to allocate funds');
+        }
+      } catch (error) {
+        console.error('Error allocating funds:', error);
+        showToast('Failed to allocate funds. Please try again.');
+      }
+    },
+
+    resetAllocation() {
+      this.allocation.amount = 0;
+    },
   };
 }
