@@ -416,11 +416,28 @@ def get_spending_by_category_data_for_export(budget, start_date, end_date):
     from envelopes.models import Category, Envelope
     from django.db.models import Sum
     from collections import defaultdict
+    from datetime import datetime
 
     # Calculate number of months for average
     months_diff = (
         (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
     )
+
+    # Generate list of months in the range
+    months_list = []
+    current_date = start_date.replace(day=1)
+    while current_date <= end_date:
+        months_list.append(
+            {
+                "year": current_date.year,
+                "month": current_date.month,
+                "name": current_date.strftime("%B %Y"),
+            }
+        )
+        if current_date.month == 12:
+            current_date = current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            current_date = current_date.replace(month=current_date.month + 1)
 
     # Get all transactions in date range
     transactions = Transaction.objects.filter(
@@ -431,15 +448,22 @@ def get_spending_by_category_data_for_export(budget, start_date, end_date):
         amount__lt=0,  # Only expenses
     ).select_related("envelope", "envelope__category")
 
-    # Group spending by envelope
+    # Group spending by envelope and month
+    envelope_monthly_spending = defaultdict(lambda: defaultdict(int))
     envelope_spending = defaultdict(int)
+    unassigned_monthly_spending = defaultdict(int)
     unassigned_spending = 0
 
     for transaction in transactions:
+        month_key = f"{transaction.date.year}-{transaction.date.month:02d}"
+        amount = abs(transaction.amount)
+
         if transaction.envelope:
-            envelope_spending[transaction.envelope.id] += abs(transaction.amount)
+            envelope_monthly_spending[transaction.envelope.id][month_key] += amount
+            envelope_spending[transaction.envelope.id] += amount
         else:
-            unassigned_spending += abs(transaction.amount)
+            unassigned_monthly_spending[month_key] += amount
+            unassigned_spending += amount
 
     # Get all categories and envelopes
     categories = Category.objects.filter(budget=budget).order_by("sort_order", "name")
@@ -456,6 +480,15 @@ def get_spending_by_category_data_for_export(budget, start_date, end_date):
             average_spent = total_spent / months_diff if months_diff > 0 else 0
             budget_amount = envelope.monthly_budget_amount / 1000
 
+            # Add monthly spending data
+            monthly_data = {}
+            for month in months_list:
+                month_key = f"{month['year']}-{month['month']:02d}"
+                monthly_spending = (
+                    envelope_monthly_spending[envelope.id].get(month_key, 0) / 1000
+                )
+                monthly_data[month["name"]] = monthly_spending
+
             export_data.append(
                 {
                     "category_name": category.name,
@@ -464,11 +497,19 @@ def get_spending_by_category_data_for_export(budget, start_date, end_date):
                     "average_spent": average_spent,
                     "budget_amount": budget_amount,
                     "note": envelope.note or "",
+                    "monthly_spending": monthly_data,
+                    "months_list": months_list,  # Include for export functions
                 }
             )
 
     # Add unassigned if there's spending
     if unassigned_spending > 0:
+        monthly_data = {}
+        for month in months_list:
+            month_key = f"{month['year']}-{month['month']:02d}"
+            monthly_spending = unassigned_monthly_spending.get(month_key, 0) / 1000
+            monthly_data[month["name"]] = monthly_spending
+
         export_data.append(
             {
                 "category_name": "Unassigned",
@@ -479,6 +520,8 @@ def get_spending_by_category_data_for_export(budget, start_date, end_date):
                 ),
                 "budget_amount": 0,
                 "note": "Transactions not assigned to any envelope",
+                "monthly_spending": monthly_data,
+                "months_list": months_list,
             }
         )
 

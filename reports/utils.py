@@ -260,28 +260,43 @@ def export_spending_by_category_csv(spending_data, budget_name, start_date, end_
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response)
-    writer.writerow(
-        [
-            "Category",
-            "Envelope",
-            "Total Spent",
-            "Average Spent",
-            "Budget Amount",
-            "Notes",
-        ]
-    )
+
+    # Get months list from first item (if exists)
+    months_list = spending_data[0].get("months_list", []) if spending_data else []
+
+    # Create header row with monthly columns FIRST
+    header = ["Category", "Envelope"]
+
+    # Add monthly columns first
+    for month in months_list:
+        header.append(month["name"])
+
+    # Then add the summary columns
+    header.extend(["Total Spent", "Average Spent", "Budget Amount", "Notes"])
+    writer.writerow(header)
 
     for item in spending_data:
-        writer.writerow(
+        row = [
+            item["category_name"],
+            item["envelope_name"],
+        ]
+
+        # Add monthly spending data first
+        monthly_spending = item.get("monthly_spending", {})
+        for month in months_list:
+            amount = monthly_spending.get(month["name"], 0)
+            row.append(f"${amount:.2f}")
+
+        # Then add summary data
+        row.extend(
             [
-                item["category_name"],
-                item["envelope_name"],
                 f"${item['total_spent']:.2f}",
                 f"${item['average_spent']:.2f}",
                 f"${item['budget_amount']:.2f}",
                 item["note"],
             ]
         )
+        writer.writerow(row)
 
     return response
 
@@ -307,15 +322,19 @@ def export_spending_by_category_xlsx(spending_data, budget_name, start_date, end
     title_font = Font(size=16, bold=True)
     ws["A1"].font = title_font
 
-    # Add headers starting at row 5
-    headers = [
-        "Category",
-        "Envelope",
-        "Total Spent",
-        "Average Spent",
-        "Budget Amount",
-        "Notes",
-    ]
+    # Get months list from first item (if exists)
+    months_list = spending_data[0].get("months_list", []) if spending_data else []
+
+    # Add headers starting at row 5 with monthly columns FIRST
+    headers = ["Category", "Envelope"]
+
+    # Add monthly columns first
+    for month in months_list:
+        headers.append(month["name"])
+
+    # Then add summary columns
+    headers.extend(["Total Spent", "Average Spent", "Budget Amount", "Notes"])
+
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=5, column=col, value=header)
         cell.font = Font(bold=True)
@@ -325,12 +344,27 @@ def export_spending_by_category_xlsx(spending_data, budget_name, start_date, end
 
     # Add data
     for row, item in enumerate(spending_data, 6):
-        ws.cell(row=row, column=1, value=item["category_name"])
-        ws.cell(row=row, column=2, value=item["envelope_name"])
-        ws.cell(row=row, column=3, value=item["total_spent"])
-        ws.cell(row=row, column=4, value=item["average_spent"])
-        ws.cell(row=row, column=5, value=item["budget_amount"])
-        ws.cell(row=row, column=6, value=item["note"])
+        col = 1
+        ws.cell(row=row, column=col, value=item["category_name"])
+        col += 1
+        ws.cell(row=row, column=col, value=item["envelope_name"])
+        col += 1
+
+        # Add monthly spending data first
+        monthly_spending = item.get("monthly_spending", {})
+        for month in months_list:
+            amount = monthly_spending.get(month["name"], 0)
+            ws.cell(row=row, column=col, value=amount)
+            col += 1
+
+        # Then add summary data
+        ws.cell(row=row, column=col, value=item["total_spent"])
+        col += 1
+        ws.cell(row=row, column=col, value=item["average_spent"])
+        col += 1
+        ws.cell(row=row, column=col, value=item["budget_amount"])
+        col += 1
+        ws.cell(row=row, column=col, value=item["note"])
 
     # Auto-adjust column widths
     for column in ws.columns:
@@ -368,6 +402,9 @@ def export_spending_by_category_markdown(
     total_spent = sum(item["total_spent"] for item in spending_data)
     total_budget = sum(item["budget_amount"] for item in spending_data)
 
+    # Get months list from first item (if exists)
+    months_list = spending_data[0].get("months_list", []) if spending_data else []
+
     content = f"""# Spending by Category Report - {budget_name}
 
 **Period:** {start_date.strftime('%B %Y')} - {end_date.strftime('%B %Y')}
@@ -383,9 +420,22 @@ def export_spending_by_category_markdown(
 
 ## Spending by Category ({len(spending_data)} envelopes)
 
-| Category | Envelope | Total Spent | Average Spent | Budget Amount | Notes |
-|----------|----------|-------------|---------------|---------------|-------|
-"""
+| Category | Envelope |"""
+
+    # Add monthly column headers first
+    for month in months_list:
+        content += f" {month['name']} |"
+
+    # Then add summary column headers
+    content += " Total Spent | Average Spent | Budget Amount | Notes |\n"
+    content += "|----------|----------|"
+
+    # Add monthly column separators first
+    for month in months_list:
+        content += "---------------|"
+
+    # Then add summary column separators
+    content += "-------------|---------------|---------------|-------|\n"
 
     for item in spending_data:
         # Escape pipe characters in content
@@ -393,7 +443,16 @@ def export_spending_by_category_markdown(
         envelope = item["envelope_name"].replace("|", "\\|")
         note = item["note"].replace("|", "\\|") if item["note"] else "—"
 
-        content += f"| {category} | {envelope} | ${item['total_spent']:.2f} | ${item['average_spent']:.2f} | ${item['budget_amount']:.2f} | {note} |\n"
+        content += f"| {category} | {envelope} |"
+
+        # Add monthly spending data first
+        monthly_spending = item.get("monthly_spending", {})
+        for month in months_list:
+            amount = monthly_spending.get(month["name"], 0)
+            content += f" ${amount:.2f} |"
+
+        # Then add summary data
+        content += f" ${item['total_spent']:.2f} | ${item['average_spent']:.2f} | ${item['budget_amount']:.2f} | {note} |\n"
 
     response.write(content)
     return response

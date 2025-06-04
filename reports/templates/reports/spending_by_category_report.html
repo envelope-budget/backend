@@ -240,6 +240,9 @@
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                   <tr>
                     <th scope="col" class="px-6 py-3">Envelope</th>
+                    <template x-for="month in monthsList" :key="month.name">
+                      <th scope="col" class="px-6 py-3 text-right" x-text="month.name"></th>
+                    </template>
                     <th scope="col" class="px-6 py-3 text-right">Total Spent</th>
                     <th scope="col" class="px-6 py-3 text-right">Avg/Month</th>
                     <th scope="col" class="px-6 py-3 text-right">Budget Amount</th>
@@ -253,6 +256,10 @@
                     <tr class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600">
                       <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"
                           x-text="envelope.name"></td>
+                      <template x-for="month in monthsList" :key="month.name">
+                        <td class="px-6 py-4 text-right text-gray-600"
+                            x-text="'$' + (envelope.monthly_spending[month.name] || 0).toFixed(2)"></td>
+                      </template>
                       <td class="px-6 py-4 text-right font-medium text-red-600"
                           x-text="'$' + envelope.total_spent.toFixed(2)"></td>
                       <td class="px-6 py-4 text-right text-gray-600"
@@ -325,6 +332,7 @@
               startDate: '{{ start_date|date:"Y-m-d" }}',
               endDate: '{{ end_date|date:"Y-m-d" }}',
               monthsCount: 0,
+              monthsList: [],
 
               get totalSpent() {
                   return this.spendingData.reduce((total, categoryData) => {
@@ -362,6 +370,7 @@
                       const data = await response.json();
                       this.spendingData = data.spending_data;
                       this.monthsCount = data.months_count;
+                      this.monthsList = data.months_list;
                       this.originalData = JSON.parse(JSON.stringify(this.spendingData));
 
                   } catch (error) {

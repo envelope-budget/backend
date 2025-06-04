@@ -159,6 +159,22 @@ def get_spending_by_category_data(
         (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month) + 1
     )
 
+    # Generate list of months in the range
+    months_list = []
+    current_date = start_dt.replace(day=1)
+    while current_date <= end_dt:
+        months_list.append(
+            {
+                "year": current_date.year,
+                "month": current_date.month,
+                "name": current_date.strftime("%B %Y"),
+            }
+        )
+        if current_date.month == 12:
+            current_date = current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            current_date = current_date.replace(month=current_date.month + 1)
+
     # Get all transactions in date range (only expenses)
     transactions = Transaction.objects.filter(
         budget=budget,
@@ -168,15 +184,22 @@ def get_spending_by_category_data(
         amount__lt=0,  # Only expenses
     ).select_related("envelope", "envelope__category")
 
-    # Group spending by envelope
+    # Group spending by envelope and month
+    envelope_monthly_spending = defaultdict(lambda: defaultdict(int))
     envelope_spending = defaultdict(int)
+    unassigned_monthly_spending = defaultdict(int)
     unassigned_spending = 0
 
     for transaction in transactions:
+        month_key = f"{transaction.date.year}-{transaction.date.month:02d}"
+        amount = abs(transaction.amount)
+
         if transaction.envelope:
-            envelope_spending[transaction.envelope.id] += abs(transaction.amount)
+            envelope_monthly_spending[transaction.envelope.id][month_key] += amount
+            envelope_spending[transaction.envelope.id] += amount
         else:
-            unassigned_spending += abs(transaction.amount)
+            unassigned_monthly_spending[month_key] += amount
+            unassigned_spending += amount
 
     # Get all categories with their envelopes
     categories = Category.objects.filter(budget=budget).order_by("sort_order", "name")
@@ -201,6 +224,15 @@ def get_spending_by_category_data(
 
             category_total += total_spent_dollars
 
+            # Add monthly spending data
+            monthly_spending = {}
+            for month in months_list:
+                month_key = f"{month['year']}-{month['month']:02d}"
+                monthly_amount = (
+                    envelope_monthly_spending[envelope.id].get(month_key, 0) / 1000
+                )
+                monthly_spending[month["name"]] = monthly_amount
+
             envelope_data.append(
                 {
                     "id": envelope.id,
@@ -209,6 +241,7 @@ def get_spending_by_category_data(
                     "average_spent": average_spent_dollars,
                     "monthly_budget_amount_dollars": budget_amount_dollars,
                     "note": envelope.note or "",
+                    "monthly_spending": monthly_spending,
                 }
             )
 
@@ -227,6 +260,13 @@ def get_spending_by_category_data(
     # Add unassigned transactions if any
     if unassigned_spending > 0:
         unassigned_total = unassigned_spending / 1000
+
+        monthly_spending = {}
+        for month in months_list:
+            month_key = f"{month['year']}-{month['month']:02d}"
+            monthly_amount = unassigned_monthly_spending.get(month_key, 0) / 1000
+            monthly_spending[month["name"]] = monthly_amount
+
         spending_data.append(
             {
                 "category": {
@@ -243,6 +283,7 @@ def get_spending_by_category_data(
                         ),
                         "monthly_budget_amount_dollars": 0,
                         "note": "Transactions not assigned to any envelope",
+                        "monthly_spending": monthly_spending,
                     }
                 ],
                 "category_total": unassigned_total,
@@ -252,6 +293,7 @@ def get_spending_by_category_data(
     return {
         "spending_data": spending_data,
         "months_count": months_diff,
+        "months_list": months_list,
         "date_range": {
             "start": start_date,
             "end": end_date,
