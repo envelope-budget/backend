@@ -1,6 +1,5 @@
-import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -15,6 +14,9 @@ from .utils import (
     export_budget_csv,
     export_budget_markdown,
     export_budget_xlsx,
+    export_spending_by_category_csv,
+    export_spending_by_category_markdown,
+    export_spending_by_category_xlsx,
     export_transactions_csv,
     export_transactions_markdown,
     export_transactions_xlsx,
@@ -38,6 +40,11 @@ class ReportListView(LoginRequiredMixin, TemplateView):
                 "name": "Budget Report",
                 "description": "View monthly budget allocations for all envelopes",
                 "url_name": "reports:budget-report",
+            },
+            {
+                "name": "Spending by Category",
+                "description": "View spending by envelope over multiple months with budget comparison",
+                "url_name": "reports:spending-by-category-report",
             },
         ]
         return context
@@ -251,3 +258,228 @@ def get_budget_data_for_export(budget):
             )
 
     return budget_data
+
+
+@login_required
+def spending_by_category_report(request):
+    """
+    Display spending by category report with monthly breakdown and budget comparison.
+    """
+    # Get the current budget using the same logic as other reports
+    current_budget = None
+    user_budgets = Budget.objects.filter(user=request.user)
+    active_budget_id = request.session.get("budget")
+
+    if (
+        not active_budget_id
+        and hasattr(request.user, "profile")
+        and request.user.profile.active_budget
+    ):
+        active_budget_id = request.user.profile.active_budget.id
+        request.session["budget"] = active_budget_id
+
+    for b in user_budgets:
+        if str(b.id) == str(active_budget_id):
+            current_budget = b
+            break
+
+    if not current_budget:
+        budget_count = len(user_budgets)
+        if budget_count == 0:
+            current_budget = Budget.objects.create(user=request.user, name="My Budget")
+        elif budget_count == 1:
+            current_budget = user_budgets.first()
+        else:
+            current_budget = (
+                Budget.objects.filter(user=request.user).order_by("-created_at").first()
+            )
+        request.session["budget"] = current_budget.id
+
+    if not current_budget:
+        return render(
+            request,
+            "reports/spending_by_category_report.html",
+            {
+                "current_budget": None,
+            },
+        )
+
+    # Get the earliest and most recent transaction dates for this budget to determine year range
+    transactions_queryset = Transaction.objects.filter(
+        budget=current_budget, deleted=False
+    )
+
+    earliest_transaction = transactions_queryset.order_by("date").first()
+    latest_transaction = transactions_queryset.order_by("-date").first()
+
+    # Determine the year range for dropdown
+    current_year = datetime.now().year
+
+    if earliest_transaction and latest_transaction:
+        earliest_year = earliest_transaction.date.year
+        latest_year = latest_transaction.date.year
+        # Extend range slightly beyond actual data
+        min_year = max(earliest_year, 2015)  # Don't go before 2015
+        max_year = max(latest_year, current_year) + 1  # At least current year + 1
+    else:
+        # If no transactions, default to reasonable range
+        min_year = current_year - 3
+        max_year = current_year + 1
+
+    # Get date range from request or default to 3 months ago to current month
+    today = datetime.now().date()
+    current_month_start = today.replace(day=1)
+    three_months_ago = current_month_start - timedelta(days=90)
+    three_months_ago_start = three_months_ago.replace(day=1)
+
+    start_month = request.GET.get("start_month", str(three_months_ago_start.month))
+    start_year = request.GET.get("start_year", str(three_months_ago_start.year))
+    end_month = request.GET.get("end_month", str(current_month_start.month))
+    end_year = request.GET.get("end_year", str(current_month_start.year))
+
+    try:
+        start_date = datetime(int(start_year), int(start_month), 1).date()
+        # Get last day of end month
+        if int(end_month) == 12:
+            end_date = datetime(int(end_year) + 1, 1, 1).date() - timedelta(days=1)
+        else:
+            end_date = datetime(
+                int(end_year), int(end_month) + 1, 1
+            ).date() - timedelta(days=1)
+    except (ValueError, TypeError):
+        start_date = three_months_ago_start
+        end_date = current_month_start
+
+    # Handle export requests
+    export_format = request.GET.get("export")
+    if export_format in ["csv", "xlsx", "markdown"]:
+        try:
+            spending_data = get_spending_by_category_data_for_export(
+                current_budget, start_date, end_date
+            )
+
+            if export_format == "csv":
+                return export_spending_by_category_csv(
+                    spending_data, current_budget.name, start_date, end_date
+                )
+            elif export_format == "xlsx":
+                return export_spending_by_category_xlsx(
+                    spending_data, current_budget.name, start_date, end_date
+                )
+            elif export_format == "markdown":
+                return export_spending_by_category_markdown(
+                    spending_data, current_budget.name, start_date, end_date
+                )
+        except ImportError as e:
+            context = {
+                "error": str(e),
+                "current_budget": current_budget,
+                "start_month": int(start_month),
+                "start_year": int(start_year),
+                "end_month": int(end_month),
+                "end_year": int(end_year),
+            }
+            return render(request, "reports/spending_by_category_report.html", context)
+
+    context = {
+        "current_budget": current_budget,
+        "start_month": int(start_month),
+        "start_year": int(start_year),
+        "end_month": int(end_month),
+        "end_year": int(end_year),
+        "start_date": start_date,
+        "end_date": end_date,
+        "year_choices": range(
+            min_year, max_year + 1
+        ),  # Dynamic range based on transaction data
+        "month_choices": [  # Added month choices for cleaner template
+            (1, "January"),
+            (2, "February"),
+            (3, "March"),
+            (4, "April"),
+            (5, "May"),
+            (6, "June"),
+            (7, "July"),
+            (8, "August"),
+            (9, "September"),
+            (10, "October"),
+            (11, "November"),
+            (12, "December"),
+        ],
+    }
+
+    return render(request, "reports/spending_by_category_report.html", context)
+
+
+def get_spending_by_category_data_for_export(budget, start_date, end_date):
+    """Helper function to get spending by category data for export"""
+    from envelopes.models import Category, Envelope
+    from django.db.models import Sum
+    from collections import defaultdict
+
+    # Calculate number of months for average
+    months_diff = (
+        (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+    )
+
+    # Get all transactions in date range
+    transactions = Transaction.objects.filter(
+        budget=budget,
+        date__gte=start_date,
+        date__lte=end_date,
+        deleted=False,
+        amount__lt=0,  # Only expenses
+    ).select_related("envelope", "envelope__category")
+
+    # Group spending by envelope
+    envelope_spending = defaultdict(int)
+    unassigned_spending = 0
+
+    for transaction in transactions:
+        if transaction.envelope:
+            envelope_spending[transaction.envelope.id] += abs(transaction.amount)
+        else:
+            unassigned_spending += abs(transaction.amount)
+
+    # Get all categories and envelopes
+    categories = Category.objects.filter(budget=budget).order_by("sort_order", "name")
+
+    export_data = []
+
+    for category in categories:
+        envelopes = Envelope.objects.filter(
+            category=category, budget=budget, deleted=False
+        ).order_by("sort_order", "name")
+
+        for envelope in envelopes:
+            total_spent = envelope_spending.get(envelope.id, 0) / 1000
+            average_spent = total_spent / months_diff if months_diff > 0 else 0
+            budget_amount = envelope.monthly_budget_amount / 1000
+
+            export_data.append(
+                {
+                    "category_name": category.name,
+                    "envelope_name": envelope.name,
+                    "total_spent": total_spent,
+                    "average_spent": average_spent,
+                    "budget_amount": budget_amount,
+                    "note": envelope.note or "",
+                }
+            )
+
+    # Add unassigned if there's spending
+    if unassigned_spending > 0:
+        export_data.append(
+            {
+                "category_name": "Unassigned",
+                "envelope_name": "Unassigned Transactions",
+                "total_spent": unassigned_spending / 1000,
+                "average_spent": (
+                    (unassigned_spending / 1000) / months_diff if months_diff > 0 else 0
+                ),
+                "budget_amount": 0,
+                "note": "Transactions not assigned to any envelope",
+            }
+        )
+
+    return export_data

@@ -251,3 +251,149 @@ def export_budget_markdown(budget_data, budget_name):
 
     response.write(content)
     return response
+
+
+def export_spending_by_category_csv(spending_data, budget_name, start_date, end_date):
+    """Export spending by category data as CSV"""
+    response = HttpResponse(content_type="text/csv")
+    filename = f"spending_by_category_{budget_name}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "Category",
+            "Envelope",
+            "Total Spent",
+            "Average Spent",
+            "Budget Amount",
+            "Notes",
+        ]
+    )
+
+    for item in spending_data:
+        writer.writerow(
+            [
+                item["category_name"],
+                item["envelope_name"],
+                f"${item['total_spent']:.2f}",
+                f"${item['average_spent']:.2f}",
+                f"${item['budget_amount']:.2f}",
+                item["note"],
+            ]
+        )
+
+    return response
+
+
+def export_spending_by_category_xlsx(spending_data, budget_name, start_date, end_date):
+    """Export spending by category data as Excel file"""
+    if not OPENPYXL_AVAILABLE:
+        raise ImportError(
+            "openpyxl is required for Excel export. Install it with: pip install openpyxl"
+        )
+
+    # Create workbook and worksheet
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Spending by Category"
+
+    # Add title and metadata
+    ws["A1"] = f"Spending by Category Report - {budget_name}"
+    ws["A2"] = f"Period: {start_date.strftime('%B %Y')} - {end_date.strftime('%B %Y')}"
+    ws["A3"] = f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}"
+
+    # Style the title
+    title_font = Font(size=16, bold=True)
+    ws["A1"].font = title_font
+
+    # Add headers starting at row 5
+    headers = [
+        "Category",
+        "Envelope",
+        "Total Spent",
+        "Average Spent",
+        "Budget Amount",
+        "Notes",
+    ]
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=5, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(
+            start_color="CCCCCC", end_color="CCCCCC", fill_type="solid"
+        )
+
+    # Add data
+    for row, item in enumerate(spending_data, 6):
+        ws.cell(row=row, column=1, value=item["category_name"])
+        ws.cell(row=row, column=2, value=item["envelope_name"])
+        ws.cell(row=row, column=3, value=item["total_spent"])
+        ws.cell(row=row, column=4, value=item["average_spent"])
+        ws.cell(row=row, column=5, value=item["budget_amount"])
+        ws.cell(row=row, column=6, value=item["note"])
+
+    # Auto-adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # Create response
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    filename = f"spending_by_category_{budget_name}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+    return response
+
+
+def export_spending_by_category_markdown(
+    spending_data, budget_name, start_date, end_date
+):
+    """Export spending by category data as Markdown"""
+    response = HttpResponse(content_type="text/markdown")
+    filename = f"spending_by_category_{budget_name}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.md"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    # Calculate totals
+    total_spent = sum(item["total_spent"] for item in spending_data)
+    total_budget = sum(item["budget_amount"] for item in spending_data)
+
+    content = f"""# Spending by Category Report - {budget_name}
+
+**Period:** {start_date.strftime('%B %Y')} - {end_date.strftime('%B %Y')}
+**Generated:** {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+
+## Summary
+
+| Metric | Amount |
+|--------|--------|
+| Total Spent | ${total_spent:,.2f} |
+| Total Budget | ${total_budget:,.2f} |
+| Budget Variance | ${total_budget - total_spent:,.2f} |
+
+## Spending by Category ({len(spending_data)} envelopes)
+
+| Category | Envelope | Total Spent | Average Spent | Budget Amount | Notes |
+|----------|----------|-------------|---------------|---------------|-------|
+"""
+
+    for item in spending_data:
+        # Escape pipe characters in content
+        category = item["category_name"].replace("|", "\\|")
+        envelope = item["envelope_name"].replace("|", "\\|")
+        note = item["note"].replace("|", "\\|") if item["note"] else "—"
+
+        content += f"| {category} | {envelope} | ${item['total_spent']:.2f} | ${item['average_spent']:.2f} | ${item['budget_amount']:.2f} | {note} |\n"
+
+    response.write(content)
+    return response

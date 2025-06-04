@@ -4,6 +4,9 @@ from django.shortcuts import get_object_or_404
 from typing import List, Optional
 from budgets.models import Budget
 from envelopes.models import Envelope, Category
+from datetime import timedelta
+from collections import defaultdict
+from django.db.models import Sum
 
 router = Router()
 
@@ -124,3 +127,133 @@ def bulk_update_budget_amounts(request, data: BulkBudgetUpdateSchema):
 
     except Exception as e:
         return {"success": False, "message": str(e)}
+
+
+@router.get(
+    "/spending-by-category-data/{budget_id}",
+    response=dict,
+    auth=django_auth,
+    tags=["Reports"],
+)
+def get_spending_by_category_data(
+    request, budget_id: str, start_date: str, end_date: str
+):
+    """
+    Get spending by category data for a specific budget and date range.
+    """
+    from transactions.models import Transaction
+    from datetime import datetime
+    from collections import defaultdict
+
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    # Parse dates
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+    except ValueError:
+        return {"error": "Invalid date format"}
+
+    # Calculate number of months for average
+    months_diff = (
+        (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month) + 1
+    )
+
+    # Get all transactions in date range (only expenses)
+    transactions = Transaction.objects.filter(
+        budget=budget,
+        date__gte=start_dt,
+        date__lte=end_dt,
+        deleted=False,
+        amount__lt=0,  # Only expenses
+    ).select_related("envelope", "envelope__category")
+
+    # Group spending by envelope
+    envelope_spending = defaultdict(int)
+    unassigned_spending = 0
+
+    for transaction in transactions:
+        if transaction.envelope:
+            envelope_spending[transaction.envelope.id] += abs(transaction.amount)
+        else:
+            unassigned_spending += abs(transaction.amount)
+
+    # Get all categories with their envelopes
+    categories = Category.objects.filter(budget=budget).order_by("sort_order", "name")
+
+    spending_data = []
+
+    for category in categories:
+        envelopes = Envelope.objects.filter(
+            category=category, budget=budget, deleted=False
+        ).order_by("sort_order", "name")
+
+        envelope_data = []
+        category_total = 0
+
+        for envelope in envelopes:
+            total_spent = envelope_spending.get(envelope.id, 0)
+            total_spent_dollars = total_spent / 1000
+            average_spent_dollars = (
+                total_spent_dollars / months_diff if months_diff > 0 else 0
+            )
+            budget_amount_dollars = envelope.monthly_budget_amount / 1000
+
+            category_total += total_spent_dollars
+
+            envelope_data.append(
+                {
+                    "id": envelope.id,
+                    "name": envelope.name,
+                    "total_spent": total_spent_dollars,
+                    "average_spent": average_spent_dollars,
+                    "monthly_budget_amount_dollars": budget_amount_dollars,
+                    "note": envelope.note or "",
+                }
+            )
+
+        if envelope_data:  # Only include categories that have envelopes
+            spending_data.append(
+                {
+                    "category": {
+                        "id": category.id,
+                        "name": category.name,
+                    },
+                    "envelopes": envelope_data,
+                    "category_total": category_total,
+                }
+            )
+
+    # Add unassigned transactions if any
+    if unassigned_spending > 0:
+        unassigned_total = unassigned_spending / 1000
+        spending_data.append(
+            {
+                "category": {
+                    "id": "unassigned",
+                    "name": "Unassigned",
+                },
+                "envelopes": [
+                    {
+                        "id": "unassigned",
+                        "name": "Unassigned Transactions",
+                        "total_spent": unassigned_total,
+                        "average_spent": (
+                            unassigned_total / months_diff if months_diff > 0 else 0
+                        ),
+                        "monthly_budget_amount_dollars": 0,
+                        "note": "Transactions not assigned to any envelope",
+                    }
+                ],
+                "category_total": unassigned_total,
+            }
+        )
+
+    return {
+        "spending_data": spending_data,
+        "months_count": months_diff,
+        "date_range": {
+            "start": start_date,
+            "end": end_date,
+        },
+    }
