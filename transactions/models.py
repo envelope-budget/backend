@@ -3,6 +3,7 @@ import io
 import logging
 
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.db import transaction as db_transaction
 from django.db import models
@@ -728,3 +729,178 @@ class TransactionMerge(models.Model):
         self.delete()
 
         return restored_ids
+
+
+@receiver(post_save, sender=Transaction)
+def handle_credit_card_transaction(sender, instance, created, **kwargs):
+    """
+    When a credit card transaction is assigned to an envelope,
+    add funds to the credit card payment envelope to cover the new debt.
+    The spending envelope is already reduced by the transaction itself.
+    """
+    # Only process NEW transactions (not updates)
+    if not created:
+        return
+
+    # Only process if this is a credit card transaction with an envelope
+    if (
+        not instance.account
+        or not instance.account.is_debt_account
+        or not instance.envelope
+    ):
+        return
+
+    # Skip if this is a payment TO the credit card (positive amount)
+    if instance.amount > 0:
+        return
+
+    # Skip if this transaction is assigned to the debt payment envelope itself
+    if (
+        hasattr(instance.account, "linked_envelope")
+        and instance.envelope == instance.account.linked_envelope
+    ):
+        return
+
+    # Get the linked debt payment envelope
+    try:
+        debt_envelope = instance.account.linked_envelope
+        if not debt_envelope:
+            logger.warning(
+                "No linked envelope found for debt account %s", instance.account.name
+            )
+            return
+    except Exception as e:
+        logger.error("Error getting linked envelope: %s", e)
+        return
+
+    # Add funds to debt payment envelope to cover the new debt
+    # The spending envelope was already reduced by the transaction
+    transaction_amount = abs(instance.amount)  # Make positive
+
+    try:
+        # Simply add to the debt envelope balance
+        debt_envelope.balance += transaction_amount
+        debt_envelope.save()
+
+        logger.info(
+            "Added $%.2f to '%s' for credit card transaction",
+            transaction_amount / 1000,
+            debt_envelope.name,
+        )
+
+    except Exception as e:
+        logger.error("Error updating debt envelope for credit card transaction: %s", e)
+
+
+@receiver(pre_save, sender=Transaction)
+def handle_credit_card_transaction_changes(sender, instance, **kwargs):
+    """
+    Handle changes to existing credit card transactions.
+    """
+    if not instance.pk:  # Skip for new transactions
+        return
+
+    try:
+        old_transaction = sender.objects.get(pk=instance.pk)
+
+        # Only process credit card transactions
+        if not instance.account or not instance.account.is_debt_account:
+            return
+
+        # Skip positive amounts (payments to credit card)
+        if instance.amount > 0:
+            return
+
+        # Get the debt payment envelope
+        debt_envelope = instance.account.linked_envelope
+        if not debt_envelope:
+            return
+
+        old_envelope = old_transaction.envelope
+        new_envelope = instance.envelope
+        old_amount = abs(old_transaction.amount)
+        new_amount = abs(instance.amount)
+
+        # Case 1: Envelope changed but amount stayed the same
+        if old_envelope != new_envelope and old_amount == new_amount:
+            # Don't adjust debt envelope - the debt amount hasn't changed
+            # The transaction save() will handle moving money between spending envelopes
+            logger.info(
+                "Envelope changed from '%s' to '%s' but amount unchanged - no debt envelope adjustment needed",
+                old_envelope.name if old_envelope else "None",
+                new_envelope.name if new_envelope else "None",
+            )
+            return
+
+        # Case 2: Amount changed (regardless of envelope change)
+        if old_amount != new_amount:
+            # Only adjust debt envelope if both old and new envelopes are spending envelopes
+            old_was_spending = old_envelope and old_envelope != debt_envelope
+            new_is_spending = new_envelope and new_envelope != debt_envelope
+
+            if old_was_spending and new_is_spending:
+                # Both are spending envelopes - adjust debt envelope by amount difference
+                amount_difference = new_amount - old_amount
+                debt_envelope.balance += amount_difference
+                debt_envelope.save()
+
+                logger.info(
+                    "Adjusted debt envelope by $%.2f due to amount change",
+                    amount_difference / 1000,
+                )
+            elif old_was_spending and not new_is_spending:
+                # Changed from spending envelope to debt envelope - remove from debt envelope
+                debt_envelope.balance -= old_amount
+                debt_envelope.save()
+                logger.info("Removed $%.2f from debt envelope", old_amount / 1000)
+            elif not old_was_spending and new_is_spending:
+                # Changed from debt envelope to spending envelope - add to debt envelope
+                debt_envelope.balance += new_amount
+                debt_envelope.save()
+                logger.info("Added $%.2f to debt envelope", new_amount / 1000)
+
+        # Case 3: Envelope changed from/to debt envelope (but we handled this in Case 2)
+        # This is already covered above
+
+    except sender.DoesNotExist:
+        pass
+    except Exception as e:
+        logger.error("Error handling credit card transaction change: %s", e)
+
+
+@receiver(pre_save, sender=Transaction)
+def handle_credit_card_transaction_deletion(sender, instance, **kwargs):
+    """
+    When a credit card transaction is soft-deleted, reduce the debt envelope balance.
+    """
+    if not instance.pk:
+        return
+
+    try:
+        old_transaction = sender.objects.get(pk=instance.pk)
+
+        # Check if transaction is being soft-deleted
+        if not old_transaction.deleted and instance.deleted:
+            # Only process credit card transactions with envelopes
+            if (
+                old_transaction.account
+                and old_transaction.account.is_debt_account
+                and old_transaction.envelope
+                and old_transaction.amount < 0  # Negative amount (spending)
+            ):
+
+                debt_envelope = old_transaction.account.linked_envelope
+                if debt_envelope and old_transaction.envelope != debt_envelope:
+                    # Reduce the debt envelope balance
+                    debt_envelope.balance -= abs(old_transaction.amount)
+                    debt_envelope.save()
+
+                    logger.info(
+                        "Reduced debt envelope by $%.2f for deleted transaction",
+                        abs(old_transaction.amount) / 1000,
+                    )
+
+    except sender.DoesNotExist:
+        pass
+    except Exception as e:
+        logger.error("Error handling credit card transaction deletion: %s", e)

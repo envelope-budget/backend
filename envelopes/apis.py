@@ -27,6 +27,8 @@ class EnvelopeSchema(Schema):
     monthly_budget_amount: int = 0
     hidden: bool = False
     deleted: bool = False
+    linked_account_id: Optional[str] = None
+    linked_account_name: Optional[str] = None
 
 
 class CategorySchema(Schema):
@@ -214,8 +216,15 @@ def update_category(
                 "name": env.name,
                 "sort_order": env.sort_order,
                 "balance": env.balance,
+                "monthly_budget_amount": env.monthly_budget_amount,
                 "hidden": env.hidden,
                 "deleted": env.deleted,
+                "linked_account_id": (
+                    env.linked_account.id if env.linked_account else None
+                ),
+                "linked_account_name": (
+                    env.linked_account.name if env.linked_account else None
+                ),
             }
             for env in envelopes
         ],
@@ -233,6 +242,13 @@ def delete_category(request, budget_id: str, category_id: str):
 
     budget = get_object_or_404(Budget, id=budget_id)
     category = get_object_or_404(Category, id=category_id, budget=budget)
+
+    # Check if category has any non-deleted envelopes
+    if category.envelopes.filter(deleted=False).exists():
+        return {
+            "success": False,
+            "message": f"Cannot delete category '{category.name}' because it contains envelopes. Please move or delete the envelopes first.",
+        }
 
     # Soft delete the category
     category.deleted = True

@@ -37,6 +37,19 @@ class Category(models.Model):
         self.balance = sum([envelope.balance for envelope in self.envelopes()])
         self.save()
 
+    def delete(self, using=None, keep_parents=False):
+        """
+        Override delete to prevent deletion if category contains envelopes.
+        """
+        if self.envelopes().filter(deleted=False).exists():
+            from django.core.exceptions import ValidationError
+
+            raise ValidationError(
+                f"Cannot delete category '{self.name}' because it contains envelopes. "
+                "Please move or delete the envelopes first."
+            )
+        return super().delete(using=using, keep_parents=keep_parents)
+
 
 class EnvelopeManager(models.Manager):
     def get_queryset(self):
@@ -87,6 +100,13 @@ class Envelope(models.Model):
         default=0, help_text="Planned monthly allocation amount"
     )
     deleted = models.BooleanField(default=False)
+    linked_account = models.OneToOneField(
+        "accounts.Account",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linked_envelope",
+    )
 
     objects = EnvelopeManager()
 

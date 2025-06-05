@@ -6,7 +6,7 @@ import urllib
 import requests
 
 from django.db import models
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils.text import slugify
 
@@ -40,6 +40,14 @@ class Account(models.Model):
 
     class Meta:
         unique_together = ["budget", "slug"]
+
+    @property
+    def is_debt_account(self):
+        """
+        Check if this account is a debt account (credit card or loan).
+        """
+        debt_types = ["credit_card", "loan", "credit", "line_of_credit"]
+        return self.type in debt_types
 
     def __str__(self):
         return str(self.name)
@@ -454,3 +462,67 @@ class SimpleFINConnection(models.Model):
                     account.name,
                     balance,
                 )
+
+
+@receiver(post_save, sender=Account)
+def create_linked_envelope_for_debt_account(sender, instance, created, **kwargs):
+    """
+    Create a linked envelope for credit card and loan accounts.
+    """
+    # Import here to avoid circular imports
+    from envelopes.models import Category, Envelope
+
+    debt_account_types = ["credit_card", "loan", "credit", "line_of_credit"]
+
+    if instance.type.lower() in debt_account_types and not instance.deleted:
+        # Check if envelope already exists
+        existing_envelope = Envelope.objects.filter(linked_account=instance).first()
+        if existing_envelope:
+            return
+
+        # Get or create "Debt" category
+        debt_category, _ = Category.objects.get_or_create(
+            budget=instance.budget,
+            name="Debt",
+            deleted=False,
+            defaults={"sort_order": 999},
+        )
+
+        # Create the linked envelope
+        envelope_name = f"{instance.name} Payments"
+        Envelope.objects.create(
+            budget=instance.budget,
+            category=debt_category,
+            name=envelope_name,
+            balance=0,
+            linked_account=instance,
+        )
+
+        logger.info(
+            "Created linked envelope '%s' for account '%s'",
+            envelope_name,
+            instance.name,
+        )
+
+
+@receiver(pre_save, sender=Account)
+def update_linked_envelope_name(sender, instance, **kwargs):
+    """
+    Update the linked envelope name when account name changes.
+    """
+    if instance.pk:  # Only for existing accounts
+        try:
+            from envelopes.models import Envelope
+
+            old_instance = sender.objects.get(pk=instance.pk)
+            if old_instance.name != instance.name:
+                envelope = Envelope.objects.filter(linked_account=instance).first()
+                if envelope:
+                    envelope.name = f"{instance.name} Payments"
+                    envelope.save(update_fields=["name"])
+                    logger.info(
+                        "Updated linked envelope name to '%s'",
+                        envelope.name,
+                    )
+        except sender.DoesNotExist:
+            pass

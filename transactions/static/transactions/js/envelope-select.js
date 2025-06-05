@@ -56,20 +56,31 @@ class SearchableSelect extends HTMLElement {
 
   renderOptions() {
     if (this.filteredEnvelopes.length === 0) {
-      return '<div class="p-2 text-sm text-gray-500 dark:text-gray-400 italic">No matching envelopes found</div>';
+      return '<div class="p-2 text-gray-500 dark:text-gray-400">No envelopes found</div>';
     }
 
     return this.filteredEnvelopes
-      .map(
-        (envelope, index) => `
-      <div class="envelope-option p-2 cursor-pointer text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 ${index === this.selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
-           data-index="${index}"
-           data-id="${envelope.id}">
-        ${envelope.name}
-        <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">${envelope.categoryName}</span>
-      </div>
-    `
-      )
+      .map(envelope => {
+        const linkedIndicator = envelope.linked_account_name
+          ? `<span class="text-xs text-blue-600 dark:text-blue-400">🔗 ${envelope.linked_account_name}</span>`
+          : '';
+
+        return `
+            <div class="envelope-option p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                 data-envelope-id="${envelope.id}">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="font-medium">${envelope.name}</span>
+                        <div class="text-xs text-gray-500">${envelope.categoryName}</div>
+                        ${linkedIndicator}
+                    </div>
+                    <span class="text-sm ${envelope.balance >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        $${(envelope.balance / 1000).toFixed(2)}
+                    </span>
+                </div>
+            </div>
+        `;
+      })
       .join('');
   }
 
