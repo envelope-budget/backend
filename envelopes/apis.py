@@ -3,7 +3,6 @@ from typing import List, Optional
 from ninja import Router, Schema
 from ninja.security import django_auth
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 
 from .models import Envelope, Category
 
