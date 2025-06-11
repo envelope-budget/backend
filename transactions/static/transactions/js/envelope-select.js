@@ -6,6 +6,7 @@ class SearchableSelect extends HTMLElement {
     this.selectedIndex = -1;
     this.value = null;
     this.isOpen = false;
+    this.isClickingDropdown = false;
   }
 
   async connectedCallback() {
@@ -60,14 +61,20 @@ class SearchableSelect extends HTMLElement {
     }
 
     return this.filteredEnvelopes
-      .map(envelope => {
+      .map((envelope, index) => {
         const linkedIndicator = envelope.linked_account_name
           ? `<span class="text-xs text-blue-600 dark:text-blue-400">🔗 ${envelope.linked_account_name}</span>`
           : '';
 
+        const isHighlighted = index === this.selectedIndex;
+        const highlightClass = isHighlighted
+          ? 'bg-blue-100 dark:bg-blue-900'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-700';
+
         return `
-            <div class="envelope-option p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                 data-envelope-id="${envelope.id}">
+            <div class="envelope-option p-2 ${highlightClass} cursor-pointer"
+                 data-envelope-id="${envelope.id}"
+                 data-index="${index}">
                 <div class="flex justify-between items-center">
                     <div>
                         <span class="font-medium">${envelope.name}</span>
@@ -75,7 +82,7 @@ class SearchableSelect extends HTMLElement {
                         ${linkedIndicator}
                     </div>
                     <span class="text-sm ${envelope.balance >= 0 ? 'text-green-600' : 'text-red-600'}">
-                        $${(envelope.balance / 1000).toFixed(2)}
+                        ${(envelope.balance / 1000).toFixed(2)}
                     </span>
                 </div>
             </div>
@@ -88,6 +95,9 @@ class SearchableSelect extends HTMLElement {
     const dropdown = this.querySelector('.envelope-dropdown');
     dropdown.innerHTML = this.renderOptions();
 
+    // Don't re-setup listeners, just use event delegation
+    // The click listener on the dropdown container will handle clicks on new options
+
     // Ensure the highlighted option is visible in the dropdown
     if (this.selectedIndex >= 0) {
       const highlighted = dropdown.querySelector(`[data-index="${this.selectedIndex}"]`);
@@ -99,21 +109,21 @@ class SearchableSelect extends HTMLElement {
 
   setupEventListeners() {
     const input = this.querySelector('input');
-    const dropdown = this.querySelector('.envelope-dropdown');
 
     // Input focus events
     input.addEventListener('focus', () => {
       this.isOpen = true;
+      const dropdown = this.querySelector('.envelope-dropdown');
       dropdown.classList.remove('hidden');
     });
 
-    // Input blur events - delayed to allow click events on options
+    // Input blur events - increase delay significantly
     input.addEventListener('blur', event => {
-      // Small delay to allow click events on dropdown options
       setTimeout(() => {
-        this.isOpen = false;
-        dropdown.classList.add('hidden');
-      }, 150);
+        if (this.isOpen) {
+          this.closeDropdown();
+        }
+      }, 300); // Increased delay
     });
 
     // Input text change event
@@ -147,14 +157,11 @@ class SearchableSelect extends HTMLElement {
         case 'Enter':
           if (this.isOpen) {
             event.preventDefault();
-            event.stopPropagation(); // Only stop propagation if dropdown is open
+            event.stopPropagation();
 
-            // If only one option after search, select it
             if (this.filteredEnvelopes.length === 1) {
               this.selectOption(0);
-            }
-            // Otherwise select the highlighted option
-            else if (this.selectedIndex >= 0) {
+            } else if (this.selectedIndex >= 0) {
               this.selectOption(this.selectedIndex);
             }
           }
@@ -162,30 +169,54 @@ class SearchableSelect extends HTMLElement {
 
         case 'Escape':
           event.preventDefault();
-          this.isOpen = false;
-          dropdown.classList.add('hidden');
+          this.closeDropdown();
           break;
       }
     });
 
-    // Click event for options
-    this.addEventListener('click', event => {
-      const option = event.target.closest('.envelope-option');
-      if (option) {
-        const index = Number.parseInt(option.dataset.index, 10);
-        this.selectOption(index);
-      }
-    });
+    // Set up initial dropdown listeners
+    this.setupDropdownListeners();
+  }
 
-    // Mouse events for options
-    this.addEventListener('mouseover', event => {
+  setupDropdownListeners() {
+    const dropdown = this.querySelector('.envelope-dropdown');
+
+    if (!dropdown) {
+      return;
+    }
+
+    // Use event delegation - listen on the dropdown container
+    dropdown.addEventListener('click', event => {
+      // Find the option element
       const option = event.target.closest('.envelope-option');
+
       if (option) {
-        const index = Number.parseInt(option.dataset.index, 10);
-        this.selectedIndex = index;
-        this.updateDropdown();
+        // Prevent the blur event from firing
+        event.preventDefault();
+        event.stopPropagation();
+
+        const envelopeId = option.getAttribute('data-envelope-id');
+        const index = option.getAttribute('data-index');
+
+        if (index !== null) {
+          const parsedIndex = Number.parseInt(index, 10);
+
+          // Add a small delay to ensure the click is processed before blur
+          setTimeout(() => {
+            this.selectOption(parsedIndex);
+          }, 10);
+        }
+      } else {
       }
     });
+  }
+
+  closeDropdown() {
+    this.isOpen = false;
+    const dropdown = this.querySelector('.envelope-dropdown');
+    if (dropdown) {
+      dropdown.classList.add('hidden');
+    }
   }
 
   selectOption(index) {
