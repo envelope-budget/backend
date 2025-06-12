@@ -32,8 +32,8 @@ function initKeyboardShortcuts(context) {
       return;
     }
 
-    // If user is typing in an input field, don't trigger other keyboard shortcuts
-    if (isInputActive) {
+    // If user is typing in an input field (except checkboxes), don't trigger other keyboard shortcuts
+    if (isInputActive && activeElement.type !== 'checkbox') {
       return;
     }
 
