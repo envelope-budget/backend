@@ -486,7 +486,7 @@ function envelopeData() {
           },
           body: JSON.stringify({
             name: this.envelope.name,
-            balance: this.envelope.balance,
+            balance: Number.parseInt(this.envelope.balance * 1000), // Convert dollars to thousandths
             category_id: this.envelope.category_id,
             note: this.envelope.note,
             monthly_budget_amount: Number.parseInt(this.envelope.monthly_budget_amount * 1000),
@@ -637,7 +637,7 @@ function envelopeData() {
         this.envelope = {
           id: envelope.id,
           name: envelope.name,
-          balance: envelope.balance,
+          balance: envelope.balance / 1000, // Convert from thousandths to dollars
           category_id: envelope.category_id,
           note: envelope.note || '',
           monthly_budget_amount: envelope.monthly_budget_amount / 1000 || 0,
@@ -661,7 +661,7 @@ function envelopeData() {
           },
           body: JSON.stringify({
             name: this.envelope.name,
-            balance: this.envelope.balance,
+            balance: Number.parseInt(this.envelope.balance * 1000), // Convert dollars to thousandths
             category_id: this.envelope.category_id,
             note: this.envelope.note,
             monthly_budget_amount: Number.parseInt(this.envelope.monthly_budget_amount * 1000),
