@@ -116,7 +116,7 @@
             <ul id="categories-list" class="w-full" x-show="!loading">
               <template x-for="category in filteredCategories" :key="category.id">
                 <li class="category-item mb-4" :data-id="category.id">
-                  <div class="category-item border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 flex justify-between items-center px-4 py-3"
+                  <div class="border-b dark:border-gray-700 text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 flex justify-between items-center px-4 py-3"
                        @click="selectCategory(category.id)">
                     <div class="flex items-center">
                       <span class="drag-handle cursor-move mr-2">

@@ -146,6 +146,55 @@ def get_budget_data(request, budget_id: str):
 
 
 @router.post(
+    "/{budget_id}/order",
+    response=dict,
+    auth=django_auth,
+    tags=["Envelopes"],
+)
+def set_envelopes_order(request, budget_id: str, data: EnvelopeOrderSchema):
+    """Set the order of envelopes within a category"""
+    from budgets.models import Budget
+
+    # Verify the budget exists
+    get_object_or_404(Budget, id=budget_id)
+
+    # Verify the category exists
+    get_object_or_404(Category, id=data.category_id, budget_id=budget_id)
+
+    # Update the sort order for each envelope
+    for item in data.envelopes:
+        envelope = get_object_or_404(
+            Envelope, id=item.id, budget_id=budget_id, category_id=data.category_id
+        )
+        envelope.sort_order = item.order
+        envelope.save()
+
+    return {"success": True, "message": "Envelope order updated successfully"}
+
+
+@router.post(
+    "/categories/{budget_id}/order",
+    response=dict,
+    auth=django_auth,
+    tags=["Categories"],
+)
+def set_categories_order(request, budget_id: str, data: CategoryOrderSchema):
+    """Set the order of categories"""
+    from budgets.models import Budget
+
+    # Verify the budget exists
+    get_object_or_404(Budget, id=budget_id)
+
+    # Update the sort order for each category
+    for item in data.categories:
+        category = get_object_or_404(Category, id=item.id, budget_id=budget_id)
+        category.sort_order = item.order
+        category.save()
+
+    return {"success": True, "message": "Category order updated successfully"}
+
+
+@router.post(
     "/categories/{budget_id}",
     response=CategorySchema,
     auth=django_auth,
@@ -258,55 +307,6 @@ def delete_category(request, budget_id: str, category_id: str):
     Envelope.objects.filter(category=category).update(deleted=True)
 
     return {"success": True, "message": "Category deleted successfully"}
-
-
-@router.post(
-    "/{budget_id}/order",
-    response=dict,
-    auth=django_auth,
-    tags=["Envelopes"],
-)
-def set_envelopes_order(request, budget_id: str, data: EnvelopeOrderSchema):
-    """Set the order of envelopes within a category"""
-    from budgets.models import Budget
-
-    # Verify the budget exists
-    get_object_or_404(Budget, id=budget_id)
-
-    # Verify the category exists
-    get_object_or_404(Category, id=data.category_id, budget_id=budget_id)
-
-    # Update the sort order for each envelope
-    for item in data.envelopes:
-        envelope = get_object_or_404(
-            Envelope, id=item.id, budget_id=budget_id, category_id=data.category_id
-        )
-        envelope.sort_order = item.order
-        envelope.save()
-
-    return {"success": True, "message": "Envelope order updated successfully"}
-
-
-@router.post(
-    "/categories/{budget_id}/order",
-    response=dict,
-    auth=django_auth,
-    tags=["Categories"],
-)
-def set_categories_order(request, budget_id: str, data: CategoryOrderSchema):
-    """Set the order of categories"""
-    from budgets.models import Budget
-
-    # Verify the budget exists
-    get_object_or_404(Budget, id=budget_id)
-
-    # Update the sort order for each category
-    for item in data.categories:
-        category = get_object_or_404(Category, id=item.id, budget_id=budget_id)
-        category.sort_order = item.order
-        category.save()
-
-    return {"success": True, "message": "Category order updated successfully"}
 
 
 class EnvelopeTransferSchema(Schema):

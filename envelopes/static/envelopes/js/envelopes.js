@@ -80,7 +80,7 @@ function saveCategoriesOrder() {
     };
   });
 
-  const endpoint = `/api/categories/${window.budgetId}/order`;
+  const endpoint = `/api/envelopes/categories/${window.budgetId}/order`;
   const csrfToken = window.getCookie('csrftoken');
 
   fetch(endpoint, {
