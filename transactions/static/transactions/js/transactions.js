@@ -629,11 +629,15 @@ function transactionData() {
 
     startNewTransaction() {
       if (!this.showEditForm) {
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+
         this.editableTransaction = {
           account: '',
           amount: 0,
           budget_id: getCookie('budget_id'),
-          date: '',
+          date: todayString, // Prepopulate with today's date
           envelope: '',
           payee: '',
           memo: '',
@@ -650,7 +654,6 @@ function transactionData() {
             this.editableTransaction.account = active_account_id;
             $account.value = active_account_id;
           }
-          $account.focus();
 
           // Move the form to the top of the table
           const formFieldsRow = this.$refs.editForm;
@@ -658,6 +661,18 @@ function transactionData() {
           const allRows = document.querySelectorAll('.transaction-row');
           allRows[0].before(formFieldsRow);
           formFieldsRow.after(formButtonsRow);
+
+          // Focus on payee field if account is pre-populated, otherwise focus on account field
+          if (active_account_id) {
+            setTimeout(() => {
+              const payeeSelect = document.getElementById('id_payee');
+              if (payeeSelect?.input) {
+                payeeSelect.input.focus();
+              }
+            }, 100);
+          } else {
+            $account.focus();
+          }
         });
       }
     },
