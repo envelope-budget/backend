@@ -774,7 +774,7 @@ function envelopeData() {
         };
       }
 
-      const dollarAmount = Number.parseFloat(this.allocation.amount);
+      const dollarAmount = Number.parseFloat(this.allocation.amount) || 0;
       const amountStr = dollarAmount.toFixed(2);
       const [dollars, cents] = amountStr.split('.');
       const amount = Number.parseInt(dollars) * 1000 + Number.parseInt(cents) * 10;
@@ -820,10 +820,10 @@ function envelopeData() {
         return;
       }
 
-      const dollarString = this.allocation.amount.toString();
-      const [dollars, cents = '00'] = dollarString.split('.');
-      const paddedCents = cents.padEnd(2, '0').substring(0, 2); // Ensure exactly 2 decimal places
-      const amount = Number.parseInt(dollars) * 1000 + Number.parseInt(paddedCents) * 10;
+      const dollarAmount = Number.parseFloat(this.allocation.amount) || 0;
+      const amountStr = dollarAmount.toFixed(2);
+      const [dollars, cents] = amountStr.split('.');
+      const amount = Number.parseInt(dollars) * 1000 + Number.parseInt(cents) * 10;
 
       try {
         const response = await fetch(`/api/envelopes/${window.budgetId}/transfer`, {
