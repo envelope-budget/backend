@@ -775,12 +775,24 @@ function envelopeData() {
       }
 
       const dollarAmount = Number.parseFloat(this.allocation.amount) || 0;
-      const amountStr = dollarAmount.toFixed(2);
+      const amountStr = Math.abs(dollarAmount).toFixed(2);
       const [dollars, cents] = amountStr.split('.');
       const amount = Number.parseInt(dollars) * 1000 + Number.parseInt(cents) * 10;
 
-      const newUnallocatedBalance = (this.budget.unallocated_envelope.balance || 0) - amount;
-      const newEnvelopeBalance = (this.selectedItem.balance || 0) + amount;
+      // For negative amounts, we're pulling money FROM the envelope TO unallocated
+      // For positive amounts, we're moving money FROM unallocated TO the envelope
+      let newUnallocatedBalance;
+      let newEnvelopeBalance;
+
+      if (dollarAmount < 0) {
+        // Negative allocation: move money from envelope to unallocated
+        newUnallocatedBalance = (this.budget.unallocated_envelope.balance || 0) + amount;
+        newEnvelopeBalance = (this.selectedItem.balance || 0) - amount;
+      } else {
+        // Positive allocation: move money from unallocated to envelope
+        newUnallocatedBalance = (this.budget.unallocated_envelope.balance || 0) - amount;
+        newEnvelopeBalance = (this.selectedItem.balance || 0) + amount;
+      }
 
       return {
         newUnallocatedBalance,
@@ -821,11 +833,24 @@ function envelopeData() {
       }
 
       const dollarAmount = Number.parseFloat(this.allocation.amount) || 0;
-      const amountStr = dollarAmount.toFixed(2);
+      const amountStr = Math.abs(dollarAmount).toFixed(2);
       const [dollars, cents] = amountStr.split('.');
       const amount = Number.parseInt(dollars) * 1000 + Number.parseInt(cents) * 10;
 
       try {
+        let fromEnvelopeId;
+        let toEnvelopeId;
+
+        if (dollarAmount < 0) {
+          // Negative allocation: move money from envelope to unallocated
+          fromEnvelopeId = this.selectedItem.id;
+          toEnvelopeId = 'unallocated';
+        } else {
+          // Positive allocation: move money from unallocated to envelope
+          fromEnvelopeId = 'unallocated';
+          toEnvelopeId = this.selectedItem.id;
+        }
+
         const response = await fetch(`/api/envelopes/${window.budgetId}/transfer`, {
           method: 'POST',
           headers: {
@@ -833,8 +858,8 @@ function envelopeData() {
             'X-CSRFToken': window.getCookie('csrftoken'),
           },
           body: JSON.stringify({
-            from_envelope_id: 'unallocated',
-            to_envelope_id: this.selectedItem.id,
+            from_envelope_id: fromEnvelopeId,
+            to_envelope_id: toEnvelopeId,
             amount: amount,
           }),
           credentials: 'include',
@@ -850,7 +875,7 @@ function envelopeData() {
           // Update the specific envelope balance locally
           const envelope = this.findEnvelopeById(this.selectedItem.id);
           if (envelope) {
-            envelope.balance = data.destination_envelope.balance;
+            envelope.balance = dollarAmount < 0 ? data.source_envelope.balance : data.destination_envelope.balance;
           }
 
           // Update the unallocated envelope balance
@@ -859,7 +884,7 @@ function envelopeData() {
           }
 
           // Update selected item balance
-          this.selectedItem.balance = data.destination_envelope.balance;
+          this.selectedItem.balance = envelope.balance;
 
           // Update affected categories
           for (const category of data.affected_categories) {
