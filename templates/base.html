@@ -438,8 +438,8 @@
           <ul class="space-y-2">
             <li>
               <a href="{% url 'envelopes' %}"
-                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
-                <svg class="w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+                 class="flex items-center p-2 text-base font-medium rounded-lg group {% if request.resolver_match.url_name == 'envelopes' %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
+                <svg class="w-6 h-6 transition duration-75 {% if request.resolver_match.url_name == 'envelopes' %} text-gray-900 dark:text-white {% else %} text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white {% endif %}"
                      aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg"
                      fill="currentColor"
@@ -452,7 +452,7 @@
             </li>
             <li>
               <a href="{% url 'transactions' %}"
-                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group {% if request.resolver_match.url_name == 'transactions' %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
                 <svg class="w-6 h-6 text-gray-500 dark:text-gray-400"
                      aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg"
@@ -493,7 +493,7 @@
                 {% for account in accounts %}
                   <li>
                     <a href="{% url 'account_transactions' slug=account.slug %}"
-                       class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700 account-link">
+                       class="flex items-center p-1 pl-3 w-full text-sm font-normal rounded-lg transition duration-75 group account-link {% if request.resolver_match.kwargs.slug == account.slug %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
                       <span class="flex-1 whitespace-nowrap truncate mr-1 account-name">{{ account.name }}</span>
                       <span id="id_account_balance_{{ account.id }}"
                             class="account-balance inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full {% if account.balance < 0 %}text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800{% else %}text-green-800 bg-green-100 dark:bg-green-200 dark:text-green-800{% endif %}">
@@ -532,7 +532,7 @@
                 {% for cc in credit_cards %}
                   <li>
                     <a href="{% url 'account_transactions' slug=cc.slug %}"
-                       class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700">
+                       class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700 {% if request.resolver_match.kwargs.slug == cc.slug %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
                       <span class="flex-1 whitespace-nowrap truncate mr-1">{{ cc.name }}</span>
                       <span id="id_account_balance_{{ cc.id }}"
                             class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full {% if cc.balance < 0 %}text-red-800 bg-red-100 dark:bg-red-200 dark:text-red-800{% else %}text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800{% endif %}">
@@ -570,7 +570,7 @@
                 {% for l in loans %}
                   <li>
                     <a href="{% url 'account_transactions' slug=l.slug %}"
-                       class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700">
+                       class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700 account {% if request.resolver_match.kwargs.slug == l.slug %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
                       <span class="flex-1 whitespace-nowrap truncate mr-1">{{ l.name }}</span>
                       <span id="id_account_balance_{{ l.id }}"
                             class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800">
@@ -603,7 +603,7 @@
             </li>
             <li>
               <a href="{% url 'payees' %}"
-                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group">
+                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group {% if request.resolver_match.url_name == 'payees' %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
                 <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                      aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg"
@@ -616,8 +616,8 @@
             </li>
             <li>
               <a href="{% url 'reports:report-list' %}"
-                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group">
-                <svg class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+                 class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group {% if '/reports' in request.path %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
+                <svg class="flex-shrink-0 w-5 h-5 transition duration-75 {% if '/reports' in request.path %} text-gray-900 dark:text-white {% else %} text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white {% endif %}"
                      aria-hidden="true"
                      xmlns="http://www.w3.org/2000/svg"
                      fill="currentColor"
@@ -627,6 +627,7 @@
                 <span class="ml-3">Reports</span>
               </a>
             </li>
+
             <li>
               <a href="#"
                  class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group">
