@@ -570,7 +570,9 @@ def import_ofx_data(request, budget_id: str, account_id: str, data: OFXDataSchem
 def list_payees(request, budget_id: str):
     user = request.auth
     budget = get_object_or_404(Budget, id=budget_id, user=user)
-    payees = Payee.objects.filter(budget=budget)
+    payees = Payee.objects.filter(
+        budget=budget, deleted=False
+    )  # Only show non-deleted payees
     return [PayeeSchema.from_orm(payee) for payee in payees]
 
 
@@ -622,7 +624,7 @@ def delete_payee(request, budget_id: str, payee_id: str):
     payee = get_object_or_404(Payee, id=payee_id, budget=budget)
     payee.deleted = True
     payee.save()
-    return {"detail": "Payee deleted successfully"}
+    return {"detail": "Payee deleted successfully", "payee_id": payee_id}
 
 
 @router.delete("/payees/{budget_id}/delete-unused", auth=django_auth, tags=["Payees"])
@@ -643,6 +645,47 @@ def delete_unused_payees(request, budget_id: str):
         "detail": f"Successfully deleted {deleted_count} unused payees",
         "count": deleted_count,
     }
+
+
+@router.post(
+    "/payees/{budget_id}/clean-names",
+    response={200: dict, 400: Error},
+    auth=django_auth,
+    tags=["Payees"],
+)
+def clean_payee_names(request, budget_id: str):
+    """
+    Clean payee names using AI or predefined rules.
+    This is a placeholder - implement your actual cleaning logic.
+    """
+    user = request.auth
+    get_object_or_404(Budget, id=budget_id, user=user)
+
+    try:
+        # Implement your payee name cleaning logic here
+        # For now, return a mock response
+        cleaned_count = 0
+
+        # Example: Get all payees and apply cleaning rules
+        payees = Payee.objects.filter(budget_id=budget_id, deleted=False)
+
+        for payee in payees:
+            # Apply your cleaning logic here
+            # This is just a placeholder
+            original_name = payee.name
+            cleaned_name = payee.name.strip().title()  # Simple example
+
+            if original_name != cleaned_name:
+                payee.name = cleaned_name
+                payee.save()
+                cleaned_count += 1
+
+        return {
+            "count": cleaned_count,
+            "message": f"Successfully cleaned {cleaned_count} payee names",
+        }
+    except Exception as e:
+        return 400, {"message": f"Failed to clean payee names: {str(e)}"}
 
 
 def search_transactions(request, budget_id: str, query: str = ""):
