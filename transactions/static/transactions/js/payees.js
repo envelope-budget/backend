@@ -15,6 +15,14 @@ function payeeData() {
     newPayeeName: '',
     selectedCategory: '',
 
+    // Merge functionality (simplified - no merge mode)
+    selectedPayees: [],
+    mergePreview: null,
+    showMergeModal: false,
+    suggestedMergeName: '',
+    customMergeName: '',
+    isMergeLoading: false,
+
     async init() {
       await this.loadPayees();
     },
@@ -301,6 +309,139 @@ function payeeData() {
 
       // Optional: Focus back on the search input for better UX
       document.getElementById('simple-search').focus();
+    },
+
+    togglePayeeSelection(payee) {
+      const index = this.selectedPayees.findIndex(p => p.id === payee.id);
+      if (index > -1) {
+        this.selectedPayees.splice(index, 1);
+      } else {
+        this.selectedPayees.push(payee);
+      }
+    },
+
+    isPayeeSelected(payee) {
+      return this.selectedPayees.some(p => p.id === payee.id);
+    },
+
+    clearSelection() {
+      this.selectedPayees = [];
+    },
+
+    async previewMerge() {
+      if (this.selectedPayees.length < 2) {
+        this.showResult('Please select at least 2 payees to merge', 'error');
+        return;
+      }
+
+      this.isMergeLoading = true;
+
+      try {
+        const response = await fetch(`/api/payees/${this.budgetId}/merge/preview`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': this.csrfToken,
+          },
+          body: JSON.stringify({
+            payee_ids: this.selectedPayees.map(p => p.id),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to preview merge');
+        }
+
+        this.mergePreview = await response.json();
+        this.suggestedMergeName = this.mergePreview.suggested_name;
+        this.customMergeName = this.suggestedMergeName;
+        this.showMergeModal = true;
+
+        // Initialize modal if using Flowbite
+        if (typeof FlowbiteInstances !== 'undefined' && FlowbiteInstances.getInstance('Modal', 'merge-preview-modal')) {
+          FlowbiteInstances.getInstance('Modal', 'merge-preview-modal').show();
+        }
+      } catch (error) {
+        console.error('Error previewing merge:', error);
+        this.showResult(`Error previewing merge: ${error.message}`, 'error');
+      } finally {
+        this.isMergeLoading = false;
+      }
+    },
+
+    async confirmMerge() {
+      if (!this.customMergeName.trim()) {
+        this.showResult('Please enter a name for the merged payee', 'error');
+        return;
+      }
+
+      this.isMergeLoading = true;
+
+      try {
+        const response = await fetch(`/api/payees/${this.budgetId}/merge/confirm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': this.csrfToken,
+          },
+          body: JSON.stringify({
+            payee_ids: this.selectedPayees.map(p => p.id),
+            new_payee_name: this.customMergeName.trim(),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to merge payees');
+        }
+
+        const result = await response.json();
+
+        this.showResult(
+          `Successfully merged ${this.selectedPayees.length} payees into "${result.merged_payee.name}". Updated ${result.updated_transaction_count} transactions.`,
+          'success'
+        );
+
+        // Close modal and clear selection
+        this.showMergeModal = false;
+        if (typeof FlowbiteInstances !== 'undefined' && FlowbiteInstances.getInstance('Modal', 'merge-preview-modal')) {
+          FlowbiteInstances.getInstance('Modal', 'merge-preview-modal').hide();
+        }
+
+        // Clear selection and reload payees
+        this.selectedPayees = [];
+        await this.loadPayees();
+      } catch (error) {
+        console.error('Error merging payees:', error);
+        this.showResult(`Error merging payees: ${error.message}`, 'error');
+      } finally {
+        this.isMergeLoading = false;
+      }
+    },
+
+    cancelMerge() {
+      this.showMergeModal = false;
+      this.mergePreview = null;
+      this.customMergeName = '';
+      this.suggestedMergeName = '';
+
+      if (typeof FlowbiteInstances !== 'undefined' && FlowbiteInstances.getInstance('Modal', 'merge-preview-modal')) {
+        FlowbiteInstances.getInstance('Modal', 'merge-preview-modal').hide();
+      }
+    },
+
+    // Helper method to format currency for display
+    formatCurrency(amount) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      }).format(amount / 1000); // Assuming amounts are stored in cents/thousandths
+    },
+
+    // Helper method to format date for display
+    formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString();
     },
   };
 }

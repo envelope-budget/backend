@@ -3,7 +3,7 @@ from typing import List, Optional
 import logging
 
 from django.core.exceptions import ValidationError
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.shortcuts import get_object_or_404
 from ninja import File, Router, Schema, UploadedFile
 from ninja.pagination import paginate
@@ -122,8 +122,6 @@ def list_transactions(
 
     # Apply search filter if provided
     if search:
-        from transactions.search import parse_search_query
-
         search_filter = parse_search_query(search, budget_id)
         transactions_query = transactions_query.filter(search_filter)
     # Only apply in_inbox filter if search is not provided or if explicitly requested
@@ -570,8 +568,8 @@ def import_ofx_data(request, budget_id: str, account_id: str, data: OFXDataSchem
 def list_payees(request, budget_id: str):
     user = request.auth
     budget = get_object_or_404(Budget, id=budget_id, user=user)
-    payees = Payee.objects.filter(
-        budget=budget, deleted=False
+    payees = Payee.objects.filter(budget=budget, deleted=False).order_by(
+        "name"
     )  # Only show non-deleted payees
     return [PayeeSchema.from_orm(payee) for payee in payees]
 
@@ -624,7 +622,7 @@ def delete_payee(request, budget_id: str, payee_id: str):
     payee = get_object_or_404(Payee, id=payee_id, budget=budget)
     payee.deleted = True
     payee.save()
-    return {"detail": "Payee deleted successfully", "payee_id": payee_id}
+    return {"detail": "Payee deleted successfully"}
 
 
 @router.delete("/payees/{budget_id}/delete-unused", auth=django_auth, tags=["Payees"])
@@ -708,3 +706,181 @@ def search_transactions(request, budget_id: str, query: str = ""):
 
     # Return the transactions
     return transactions
+
+
+class PayeeMergeRequest(Schema):
+    payee_ids: List[str]
+    new_payee_name: str
+
+
+class PayeeMergePreview(Schema):
+    payee_ids: List[str]
+    suggested_name: str
+    payees_to_merge: List[PayeeSchema]
+    transaction_count: int
+    sample_transactions: List[TransactionSchema]  # First 5-10 for preview
+
+
+class PayeeMergeResponse(Schema):
+    merged_payee: PayeeSchema
+    updated_transaction_count: int
+    deleted_payee_ids: List[str]
+
+
+@router.post(
+    "/payees/{budget_id}/merge/preview",
+    response={200: PayeeMergePreview, 400: Error},
+    auth=django_auth,
+    tags=["Payees"],
+)
+def preview_payee_merge(request, budget_id: str):
+    """Preview what will happen when merging payees"""
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    # Get data from request body
+    try:
+        import json
+
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return 400, {"message": "Invalid JSON data"}
+
+    payee_ids = data.get("payee_ids", [])
+
+    if len(payee_ids) < 2:
+        return 400, {"message": "At least 2 payees are required for merging"}
+
+    try:
+        # Get the payees to merge
+        payees = list(
+            Payee.objects.filter(id__in=payee_ids, budget_id=budget_id, deleted=False)
+        )
+
+        if len(payees) != len(payee_ids):
+            return 400, {"message": "One or more payees not found"}
+
+        # Get all transactions that will be affected
+        transactions = Transaction.objects.filter(
+            payee__in=payees, budget_id=budget_id, deleted=False
+        ).order_by("-date")
+
+        transaction_count = transactions.count()
+
+        # Get sample transactions (first 10 for preview)
+        sample_transactions = transactions[:10]
+
+        # Suggest a name - use the payee with the most transactions,
+        # or first alphabetically if tied
+        payee_transaction_counts = []
+        for payee in payees:
+            count = Transaction.objects.filter(
+                payee=payee, budget_id=budget_id, deleted=False
+            ).count()
+            payee_transaction_counts.append((payee, count))
+        # Sort by transaction count (desc) then by name (asc)
+        payee_transaction_counts.sort(key=lambda x: (-x[1], x[0].name.lower()))
+        suggested_name = payee_transaction_counts[0][0].name
+
+        return {
+            "payee_ids": payee_ids,
+            "suggested_name": suggested_name,
+            "payees_to_merge": [PayeeSchema.from_orm(p) for p in payees],
+            "transaction_count": transaction_count,
+            "sample_transactions": [
+                TransactionSchema.from_orm(t) for t in sample_transactions
+            ],
+        }
+
+    except Exception as e:
+        logger.error("Error previewing payee merge: %s", str(e))
+        return 400, {"message": f"Failed to preview merge: {str(e)}"}
+
+
+@router.post(
+    "/payees/{budget_id}/merge/confirm",
+    response={200: PayeeMergeResponse, 400: Error},
+    auth=django_auth,
+    tags=["Payees"],
+)
+def confirm_payee_merge(request, budget_id: str, merge_data: PayeeMergeRequest):
+    """Actually perform the payee merge"""
+    # Ensure the budget belongs to the user
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    if len(merge_data.payee_ids) < 2:
+        return 400, {"message": "At least 2 payees are required for merging"}
+
+    if not merge_data.new_payee_name.strip():
+        return 400, {"message": "New payee name cannot be empty"}
+
+    try:
+        with transaction.atomic():
+            # Get the payees to merge
+            payees_to_merge = list(
+                Payee.objects.filter(
+                    id__in=merge_data.payee_ids, budget_id=budget_id, deleted=False
+                )
+            )
+
+            if len(payees_to_merge) != len(merge_data.payee_ids):
+                return 400, {"message": "One or more payees not found"}
+
+            new_name = merge_data.new_payee_name.strip()
+
+            # Check if a payee with the new name already exists
+            existing_payee = Payee.objects.filter(
+                name=new_name, budget=budget, deleted=False
+            ).first()
+
+            if existing_payee and existing_payee.id not in merge_data.payee_ids:
+                # If the target name exists and it's NOT one of the payees being merged
+                return 400, {
+                    "message": f"A payee named '{new_name}' already exists. Please choose a different name."
+                }
+
+            # Determine the target payee
+            if existing_payee and existing_payee.id in merge_data.payee_ids:
+                # Use the existing payee as target (it's one of the ones being merged)
+                target_payee = existing_payee
+                payees_to_delete = [
+                    p for p in payees_to_merge if p.id != target_payee.id
+                ]
+            else:
+                # Use the first payee as target and rename it
+                target_payee = payees_to_merge[0]
+                target_payee.name = new_name
+                target_payee.save()
+                payees_to_delete = payees_to_merge[1:]
+
+            # Get all transactions from payees that will be deleted
+            transactions_to_update = Transaction.objects.filter(
+                payee__in=payees_to_delete, budget_id=budget_id, deleted=False
+            )
+
+            # Update transactions to point to the target payee
+            updated_count = transactions_to_update.update(payee=target_payee)
+
+            # Soft delete the old payees
+            deleted_payee_ids = []
+            for payee in payees_to_delete:
+                payee.deleted = True
+                payee.save()
+                deleted_payee_ids.append(str(payee.id))
+
+            logger.info(
+                "Merged %d payees into '%s', updated %d transactions",
+                len(merge_data.payee_ids),
+                target_payee.name,
+                updated_count,
+            )
+
+            return {
+                "merged_payee": PayeeSchema.from_orm(target_payee),
+                "updated_transaction_count": updated_count,
+                "deleted_payee_ids": deleted_payee_ids,
+            }
+
+    except Exception as e:
+        logger.error("Error merging payees: %s", str(e))
+        return 400, {"message": f"Failed to merge payees: {str(e)}"}

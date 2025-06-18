@@ -107,12 +107,31 @@
               Add payee
             </button>
 
+            <button type="button"
+                    @click="previewMerge()"
+                    :disabled="selectedPayees.length < 2"
+                    class="flex items-center justify-center text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-purple-600 dark:hover:bg-purple-700 focus:outline-none dark:focus:ring-purple-800 disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg class="h-3.5 w-3.5 mr-2"
+                   fill="currentColor"
+                   viewBox="0 0 20 20"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd">
+                </path>
+                <path fill-rule="evenodd" d="M12.293 14.707a1 1 0 010-1.414L15.586 10l-3.293-3.293a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd">
+                </path>
+              </svg>
+              Merge Selected (<span x-text="selectedPayees.length"></span>)
+            </button>
+
           </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
               <tr>
+                <th scope="col" class="px-4 py-3 w-12">
+                  <span class="sr-only">Select</span>
+                </th>
                 <th scope="col" class="px-4 py-3">Payee Name</th>
                 <th scope="col" class="px-4 py-3">Actions</th>
               </tr>
@@ -152,7 +171,13 @@
               </template>
 
               <template x-for="payee in filteredPayees" :key="payee.id">
-                <tr class="border-b dark:border-gray-700 text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                <tr class="border-b dark:border-gray-700">
+                  <td class="px-4 py-3">
+                    <input type="checkbox"
+                           :checked="selectedPayees.some(p => p.id === payee.id)"
+                           @change="togglePayeeSelection(payee)"
+                           class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                  </td>
                   <th scope="row"
                       class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white"
                       x-text="payee.name"></th>
@@ -168,6 +193,131 @@
       </div>
     </div>
     {% include "transactions/_payee_modal.html" %}
+
+    <!-- Merge Preview Modal -->
+    <div id="merge-preview-modal"
+         x-show="showMergeModal"
+         x-transition
+         class="fixed inset-0 z-50 overflow-y-auto"
+         style="display: none">
+      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+             @click="cancelMerge()"></div>
+
+        <!-- Modal panel -->
+        <div class="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg dark:bg-gray-800">
+          <!-- Modal header -->
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Merge Payees Preview</h3>
+            <button @click="cancelMerge()"
+                    class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal body -->
+          <div class="space-y-4">
+            <!-- New payee name input -->
+            <div>
+              <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">New Payee Name:</label>
+              <input x-model="customMergeName"
+                     :placeholder="suggestedMergeName"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                     required>
+            </div>
+
+            <!-- Payees to be merged -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Payees to be merged (click a name to use it):</h4>
+              <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <template x-for="payee in selectedPayees" :key="payee.id">
+                  <li class="flex items-center">
+                    <svg class="w-3 h-3 mr-2 text-gray-400"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd">
+                      </path>
+                    </svg>
+                    <button @click="customMergeName = payee.name"
+                            class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            x-text="payee.name"></button>
+                  </li>
+                </template>
+              </ul>
+            </div>
+
+            <!-- Transaction count -->
+            <div class="p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+              <p class="text-sm text-blue-800 dark:text-blue-200">
+                <strong x-text="mergePreview?.transaction_count || 0"></strong> transactions will be updated
+              </p>
+            </div>
+
+            <!-- Sample transactions -->
+            <div x-show="mergePreview?.sample_transactions?.length > 0">
+              <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Sample affected transactions:</h5>
+              <div class="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                <template x-for="transaction in mergePreview?.sample_transactions || []"
+                          :key="transaction.id">
+                  <div class="text-xs border-b border-gray-100 dark:border-gray-700 py-2 px-3 last:border-b-0">
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium" x-text="formatDate(transaction.date)"></span>
+                      <span class="text-green-600 dark:text-green-400"
+                            x-text="formatCurrency(transaction.amount)"></span>
+                    </div>
+                    <div class="text-gray-500 dark:text-gray-400 truncate"
+                         x-text="transaction.memo || 'No memo'"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal footer -->
+          <div class="flex gap-3 mt-6">
+            <button @click="confirmMerge()"
+                    :disabled="isMergeLoading || !customMergeName.trim()"
+                    class="flex-1 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed">
+              <span x-show="!isMergeLoading">Confirm Merge</span>
+              <span x-show="isMergeLoading" class="flex items-center justify-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4"
+                     fill="none"
+                     viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                  </path>
+                </svg>
+                Merging...
+              </span>
+            </button>
+            <button @click="cancelMerge()"
+                    class="flex-1 text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-gray-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div x-show="selectedPayees.length > 0"
+         class="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg mb-4">
+      <div class="flex items-center justify-between">
+        <span><strong x-text="selectedPayees.length"></strong> payees selected</span>
+        <div class="flex gap-2">
+          <button @click="previewMerge()"
+                  :disabled="selectedPayees.length < 2"
+                  class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg text-sm px-4 py-2">
+            Preview Merge
+          </button>
+          <button @click="selectedPayees = []"
+                  class="bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm px-4 py-2">
+            Clear Selection
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
   {% csrf_token %}
 {% endblock content %}
