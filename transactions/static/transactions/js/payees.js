@@ -294,5 +294,13 @@ function payeeData() {
         this.isLoading = false;
       }
     },
+
+    clearSearch() {
+      this.searchTerm = '';
+      this.applySearchFilter();
+
+      // Optional: Focus back on the search input for better UX
+      document.getElementById('simple-search').focus();
+    },
   };
 }
