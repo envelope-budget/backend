@@ -165,13 +165,16 @@ def export_budget_csv(budget_data, budget_name):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response)
-    writer.writerow(["Category", "Envelope", "Monthly Budget Amount", "Notes"])
+    writer.writerow(
+        ["Category", "Envelope", "Current Balance", "Monthly Budget Amount", "Notes"]
+    )
 
     for item in budget_data:
         writer.writerow(
             [
                 item["category_name"],
                 item["envelope_name"],
+                f"${item['current_balance']:.2f}",
                 f"${item['monthly_budget_amount']:.2f}",
                 item["note"],
             ]
@@ -196,7 +199,13 @@ def export_budget_xlsx(budget_data, budget_name):
     ws.title = "Budget Report"
 
     # Add headers
-    headers = ["Category", "Envelope", "Monthly Budget Amount", "Notes"]
+    headers = [
+        "Category",
+        "Envelope",
+        "Current Balance",
+        "Monthly Budget Amount",
+        "Notes",
+    ]
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=header)
         cell.font = Font(bold=True)
@@ -208,8 +217,9 @@ def export_budget_xlsx(budget_data, budget_name):
     for row, item in enumerate(budget_data, 2):
         ws.cell(row=row, column=1, value=item["category_name"])
         ws.cell(row=row, column=2, value=item["envelope_name"])
-        ws.cell(row=row, column=3, value=item["monthly_budget_amount"])
-        ws.cell(row=row, column=4, value=item["note"])
+        ws.cell(row=row, column=3, value=item["current_balance"])
+        ws.cell(row=row, column=4, value=item["monthly_budget_amount"])
+        ws.cell(row=row, column=5, value=item["note"])
 
     # Auto-adjust column widths
     for column in ws.columns:
@@ -241,13 +251,34 @@ def export_budget_markdown(budget_data, budget_name):
     filename = f"budget_report_{budget_name}_{datetime.now().strftime('%Y%m%d')}.md"
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
+    # Calculate totals
+    total_balance = sum(item["current_balance"] for item in budget_data)
+    total_budget = sum(item["monthly_budget_amount"] for item in budget_data)
+
     content = f"# Budget Report - {budget_name}\n\n"
     content += f"Generated on: {datetime.now().strftime('%B %d, %Y')}\n\n"
-    content += "| Category | Envelope | Monthly Budget Amount | Notes |\n"
-    content += "|----------|----------|----------------------|-------|\n"
+
+    content += "## Summary\n\n"
+    content += "| Metric | Amount |\n"
+    content += "|--------|--------|\n"
+    content += f"| Total Current Balance | ${total_balance:,.2f} |\n"
+    content += f"| Total Monthly Budget | ${total_budget:,.2f} |\n\n"
+
+    content += "## Budget Details\n\n"
+    content += (
+        "| Category | Envelope | Current Balance | Monthly Budget Amount | Notes |\n"
+    )
+    content += (
+        "|----------|----------|----------------|----------------------|-------|\n"
+    )
 
     for item in budget_data:
-        content += f"| {item['category_name']} | {item['envelope_name']} | ${item['monthly_budget_amount']:.2f} | {item['note']} |\n"
+        # Escape pipe characters in content
+        category = item["category_name"].replace("|", "\\|")
+        envelope = item["envelope_name"].replace("|", "\\|")
+        note = item["note"].replace("|", "\\|") if item["note"] else "—"
+
+        content += f"| {category} | {envelope} | ${item['current_balance']:.2f} | ${item['monthly_budget_amount']:.2f} | {note} |\n"
 
     response.write(content)
     return response

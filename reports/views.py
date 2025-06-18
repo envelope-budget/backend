@@ -252,6 +252,7 @@ def get_budget_data_for_export(budget):
                 {
                     "category_name": category.name,
                     "envelope_name": envelope.name,
+                    "current_balance": envelope.balance / 1000,
                     "monthly_budget_amount": envelope.monthly_budget_amount / 1000,
                     "note": envelope.note or "",
                 }

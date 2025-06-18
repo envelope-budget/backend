@@ -144,19 +144,36 @@
                 <div class="flex justify-between items-center">
                   <h4 class="text-lg font-semibold text-gray-900 dark:text-white"
                       x-text="categoryData.category.name"></h4>
-                  <span class="text-lg font-bold text-primary-600"
-                        x-text="'$' + getCategoryTotal(categoryIndex).toFixed(2)"></span>
+                  <div class="flex gap-6 text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">
+                      Balance: <span class="font-semibold text-gray-900 dark:text-white"
+       x-text="'$' + getCategoryBalance(categoryIndex).toFixed(2)"></span>
+                    </span>
+                    <span class="text-primary-600 font-bold text-lg"
+                          x-text="'$' + getCategoryTotal(categoryIndex).toFixed(2)"></span>
+                  </div>
                 </div>
               </div>
 
               <!-- Envelopes in Category -->
               <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-600 dark:text-gray-400">
+                  <tr>
+                    <th scope="col" class="px-6 py-3">Envelope</th>
+                    <th scope="col" class="px-6 py-3 text-right">Current Balance</th>
+                    <th scope="col" class="px-6 py-3 text-right">Monthly Budget</th>
+                    <th scope="col" class="px-6 py-3 text-right">Notes</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <template x-for="(envelope, envelopeIndex) in categoryData.envelopes"
                             :key="envelope.id">
                     <tr class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-600">
                       <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"
                           x-text="envelope.name"></td>
+                      <td class="px-6 py-4 text-right font-medium"
+                          :class="envelope.balance >= 0 ? 'text-green-600' : 'text-red-600'"
+                          x-text="'$' + envelope.balance.toFixed(2)"></td>
                       <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end">
                           <span class="mr-1 text-gray-600">$</span>
@@ -275,6 +292,12 @@
               getCategoryTotal(categoryIndex) {
                   return this.budgetData[categoryIndex].envelopes.reduce((total, envelope) => {
                       return total + parseFloat(envelope.monthly_budget_amount_dollars || 0);
+                  }, 0);
+              },
+
+              getCategoryBalance(categoryIndex) {
+                  return this.budgetData[categoryIndex].envelopes.reduce((total, envelope) => {
+                      return total + parseFloat(envelope.balance || 0);
                   }, 0);
               },
 

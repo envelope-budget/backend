@@ -15,6 +15,7 @@ class EnvelopeBudgetSchema(Schema):
     id: str
     name: str
     monthly_budget_amount_dollars: float
+    balance: float
     note: Optional[str] = None
 
 
@@ -51,6 +52,7 @@ def get_budget_report_data(request, budget_id: str):
 
         for envelope in envelopes:
             monthly_budget_dollars = envelope.monthly_budget_amount / 1000
+            balance_dollars = envelope.balance / 1000
             category_total += monthly_budget_dollars
 
             envelope_data.append(
@@ -58,6 +60,7 @@ def get_budget_report_data(request, budget_id: str):
                     "id": envelope.id,
                     "name": envelope.name,
                     "monthly_budget_amount_dollars": monthly_budget_dollars,
+                    "balance": balance_dollars,
                     "note": envelope.note or "",
                 }
             )
