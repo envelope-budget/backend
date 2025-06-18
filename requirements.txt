@@ -26,12 +26,18 @@ django==5.2.1
     #   django-allauth
     #   django-appconf
     #   django-compressor
+    #   django-csp
+    #   django-debug-toolbar
     #   django-ninja
 django-allauth==65.8.1
     # via -r requirements.in
 django-appconf==1.1.0
     # via django-compressor
 django-compressor==4.5.1
+    # via -r requirements.in
+django-csp==4.0
+    # via -r requirements.in
+django-debug-toolbar==5.2.0
     # via -r requirements.in
 django-ninja==1.4.1
     # via -r requirements.in
@@ -49,6 +55,8 @@ ofxparse==0.21
     # via -r requirements.in
 openpyxl==3.1.5
     # via -r requirements.in
+packaging==25.0
+    # via django-csp
 plaid-python==32.0.0
     # via -r requirements.in
 pycparser==2.22
@@ -74,7 +82,9 @@ six==1.17.0
 soupsieve==2.7
     # via beautifulsoup4
 sqlparse==0.5.3
-    # via django
+    # via
+    #   django
+    #   django-debug-toolbar
 typing-extensions==4.13.2
     # via
     #   beautifulsoup4

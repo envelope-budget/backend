@@ -37,6 +37,14 @@ class Account(models.Model):
     deleted = models.BooleanField(default=False)
     sfin_id = models.CharField(max_length=255, blank=True, null=True)
     sfin_last_imported_on = models.DateTimeField(blank=True, null=True)
+    plaid_access_token = models.CharField(max_length=255, blank=True, null=True)
+    plaid_account_id = models.CharField(max_length=255, blank=True, null=True)
+    plaid_item_id = models.CharField(max_length=255, blank=True, null=True)
+    plaid_account_type = models.CharField(max_length=50, blank=True, null=True)
+    plaid_account_subtype = models.CharField(max_length=50, blank=True, null=True)
+    plaid_official_name = models.CharField(max_length=255, blank=True, null=True)
+    plaid_mask = models.CharField(max_length=10, blank=True, null=True)
+    plaid_last_sync = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         unique_together = ["budget", "slug"]

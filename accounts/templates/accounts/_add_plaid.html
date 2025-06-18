@@ -1,35 +1,38 @@
 <script>
-  function closeModal() {
-    closeButton = document.querySelector(".close-account-modal");
-    closeButton.click();
-  }
+    function closeModal() {
+        closeButton = document.querySelector(".close-account-modal");
+        closeButton.click();
+    }
 
-  if (typeof window.linkHandler === "undefined") {
-    window.linkHandler = Plaid.create({
-      token: "{{ link_token }}",
-      onSuccess: (public_token, metadata) => {
-        // Send the public_token to your app server.
-        $.post("{% url 'exchange_plaid_token' %}", {
-          public_token: public_token,
+    if (typeof window.linkHandler === "undefined") {
+        window.linkHandler = Plaid.create({
+            token: "{{ link_token }}",
+            onSuccess: (public_token, metadata) => {
+                fetch("{% url 'exchange_plaid_token' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: `public_token=${public_token}`
+                });
+                closeModal();
+            },
+            onExit: (err, metadata) => {
+                console.log(err);
+                console.log(metadata);
+                console.log("Exited");
+                closeModal();
+            },
+            onEvent: (eventName, metadata) => {
+                console.log("onEvent", eventName, metadata);
+                if (eventName === "HANDOFF") {
+                    console.log('Handoff event received. Closing modal...');
+                    console.error('TODO: IMPLEMENT THIS PART - send handoff data to backend to create the account')
+                    closeModal();
+                }
+            },
         });
-      },
-      onExit: (err, metadata) => {
-        // Optionally capture when your user exited the Link flow.
-        console.log(err);
-        console.log(metadata);
-        console.log("Exited");
-        closeModal();
-      },
-      onEvent: (eventName, metadata) => {
-        // Optionally capture Link flow events, streamed through
-        // this callback as your users connect an Item to Plaid.
-        console.log("onEvent", eventName, metadata);
-        if (eventName === "HANDOFF") {
-          // TODO: save data to server.
-          closeModal();
-        }
-      },
-    });
-  }
-  window.linkHandler.open();
+    }
+    window.linkHandler.open();
 </script>

@@ -397,7 +397,7 @@
                   </div>
                 </td>
                 <td class="px-1 py-3 align-text-top">
-                  <payee-select id="id_payee" class="block w-full" x-ref="payeeSelect" :data-selected-name="editableTransaction.payee ? editableTransaction.payee.name : ''" @change="editableTransaction.payee = $event.detail;" x-init="$nextTick(() => { // Wait for payees to be ready before setting initial value $refs.payeeSelect.addEventListener('payees-ready', () => { if (editableTransaction.payee) { $refs.payeeSelect.setValue(editableTransaction.payee); } }, { once: true }); })">
+                  <payee-select id="id_payee" class="block w-full" x-ref="payeeSelect" :data-selected-name="editableTransaction.payee ? editableTransaction.payee.name : ''" @change="editableTransaction.payee = $event.detail;" x-init="$nextTick(() => { $refs.payeeSelect.addEventListener('payees-ready', () => { if (editableTransaction.payee) { $refs.payeeSelect.setValue(editableTransaction.payee); } }, { once: true }); })">
                   </payee-select>
                 </td>
                 <td class="px-1 py-3 align-text-top">

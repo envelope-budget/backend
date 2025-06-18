@@ -86,6 +86,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # third party
     "allauth.account.middleware.AccountMiddleware",
+    "csp.middleware.CSPMiddleware",
 ]
 if DEBUG:
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
@@ -226,6 +227,43 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     "compressor.finders.CompressorFinder",
 ]
+
+
+# CSP Settings for Plaid
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # Add this if missing
+    "'unsafe-eval'",  # You already have this
+    "https://*.plaid.com",
+    "https://cdn.plaid.com",  # Add this if missing
+    "blob:",  # Add this - this is the key missing piece
+    "https://www.gstatic.com/recaptcha/",
+    "https://www.google.com/recaptcha/",
+    "https://cdn.getpinwheel.com",
+    "https://maps.googleapis.com",
+)
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",
+    "https://*.plaid.com",
+    "https://cdn.plaid.com",
+)
+CSP_IMG_SRC = (
+    "'self'",
+    "data:",
+    "https://*.plaid.com",
+    "https://cdn.plaid.com",
+)
+CSP_CONNECT_SRC = (
+    "'self'",
+    "https://*.plaid.com",
+    "https://cdn.plaid.com",
+)
+CSP_FRAME_SRC = (
+    "'self'",
+    "https://*.plaid.com",
+)
 
 
 # Plaid

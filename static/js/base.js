@@ -84,7 +84,6 @@ window.getSimpleFINConnection = async budgetId => {
 
   // If we have a stored access URL for the current budget, return it
   if (storedBudgetId === budgetId && storedAccessUrl) {
-    console.log('Using cached SimpleFIN access URL');
     return storedAccessUrl;
   }
 
@@ -151,20 +150,10 @@ document.addEventListener('DOMContentLoaded', event => {
     getSimpleFINConnection(budgetId)
       .then(accessUrl => {
         if (accessUrl) {
-          console.log('SimpleFIN connection loaded successfully');
         }
       })
       .catch(error => {
         console.error('Failed to load SimpleFIN connection:', error);
       });
   }
-});
-
-// Plaid Link
-const handler = Plaid.create({
-  token: 'GENERATED_LINK_TOKEN',
-  onSuccess: (public_token, metadata) => {},
-  onLoad: () => {},
-  onExit: (err, metadata) => {},
-  onEvent: (eventName, metadata) => {},
 });

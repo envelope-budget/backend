@@ -243,7 +243,7 @@ function envelopeData() {
     async loadEnvelopes() {
       this.loading = true;
       try {
-        console.log(`Budget ID: ${window.budgetId}`);
+        // console.log(`Budget ID: ${window.budgetId}`);
         const response = await fetch(`/api/envelopes/${window.budgetId}`, {
           credentials: 'include',
         });
