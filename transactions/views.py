@@ -26,7 +26,6 @@ def transactions(request):
         "transactions/transactions.html",
         {"categorized_envelopes": categorized_envelopes},
     )
-    response.set_cookie("budget_id", request.session.get("budget"))
     response.delete_cookie("account_id")
     return response
 

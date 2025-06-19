@@ -87,6 +87,8 @@ MIDDLEWARE = [
     # third party
     "allauth.account.middleware.AccountMiddleware",
     "csp.middleware.CSPMiddleware",
+    # internal
+    "budgetapp.middleware.BudgetCookieMiddleware",
 ]
 if DEBUG:
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
