@@ -543,6 +543,8 @@
                 {% endfor %}
               </ul>
             </li>
+
+            <!-- Loans -->
             <li>
               <button type="button"
                       class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
@@ -575,6 +577,46 @@
                       <span id="id_account_balance_{{ l.id }}"
                             class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800">
                         {{ l.balance|money }}
+                      </span>
+                    </a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </li>
+
+            <!-- Archived -->
+            <li>
+              <button type="button"
+                      class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                      aria-controls="dropdown-archived"
+                      data-collapse-toggle="dropdown-archived">
+                <svg class="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
+                     aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg"
+                     fill="currentColor"
+                     viewBox="0 0 18 18">
+                  <path d="M17 16h-1V2a1 1 0 1 0 0-2H2a1 1 0 0 0 0 2v14H1a1 1 0 0 0 0 2h16a1 1 0 0 0 0-2ZM5 4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4Zm0 5V8a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1Zm6 7H7v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3Zm2-7a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1Zm0-4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1Z" />
+                </svg>
+                <span class="flex-1 ml-3 text-left whitespace-nowrap">Archived</span>
+                <svg aria-hidden="true"
+                     class="w-6 h-6 transition-transform duration-200 {% if not show_archived %}rotate-90{% endif %}"
+                     fill="currentColor"
+                     viewBox="0 0 20 20"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd">
+                  </path>
+                </svg>
+              </button>
+              <ul id="dropdown-archived"
+                  class="{% if not show_archived %}hidden{% endif %} py-2 space-y-2">
+                {% for account in closed_accounts %}
+                  <li>
+                    <a href="{% url 'account_transactions' slug=account.slug %}"
+                       class="flex items-center p-1 pl-3 w-full text-sm font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700 account {% if request.resolver_match.kwargs.slug == account.slug %} bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white {% else %} text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {% endif %}">
+                      <span class="flex-1 whitespace-nowrap truncate mr-1">{{ account.name }}</span>
+                      <span id="id_account_balance_{{ l.id }}"
+                            class="inline-flex justify-center items-center p-2 h-5 text-xs font-semibold rounded-full text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800">
+                        {{ account.balance|money }}
                       </span>
                     </a>
                   </li>

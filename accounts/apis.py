@@ -98,10 +98,9 @@ class AddSimpleFINAccountsRequest(Schema):
 )
 def list_accounts(request, budget_id: str):
     user = request.auth
-    budget = get_object_or_404(
-        Budget, id=budget_id, user=user
-    )  # Ensure the budget belongs to the user
-    accounts = Account.objects.filter(budget=budget, deleted=False)
+    budget = get_object_or_404(Budget, id=budget_id, user=user)
+
+    accounts = Account.objects.filter(budget=budget, deleted=False, closed=False)
     return [AccountSchema.from_orm(account) for account in accounts]
 
 

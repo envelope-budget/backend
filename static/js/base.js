@@ -127,7 +127,7 @@ window.getSimpleFINConnection = async budgetId => {
 
 // side menu drop-down toggles
 document.addEventListener('DOMContentLoaded', event => {
-  const dropdowns = ['loans', 'credit-cards', 'accounts'];
+  const dropdowns = ['loans', 'credit-cards', 'accounts', 'archived'];
 
   // Restore the state from cookies
   for (const dropdown of dropdowns) {

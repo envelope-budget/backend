@@ -36,27 +36,40 @@ def global_context(request):
             )
         request.session["budget"] = budget.id
 
-    all_accounts = Account.objects.filter(budget=budget).order_by("-balance")
+    # Get all accounts (open and closed) in one query
+    all_accounts = Account.objects.filter(budget=budget, deleted=False).order_by(
+        "-balance", "name"
+    )
+
     accounts = []
     credit_cards = []
     loans = []
+    closed_accounts = []
+
     for a in all_accounts:
-        if a.type in ("checking", "savings"):
+        if a.closed:
+            closed_accounts.append(a)
+        elif a.type in ("checking", "savings"):
             accounts.append(a)
-        if a.type == "credit_card":
+        elif a.type == "credit_card":
             credit_cards.append(a)
-        if a.type == "loan":
+        elif a.type == "loan":
             loans.append(a)
+
+    # Sort closed accounts by name since we ordered by balance first
+    closed_accounts.sort(key=lambda x: x.name)
 
     return {
         "accounts": accounts,
         "credit_cards": credit_cards,
         "loans": loans,
+        "closed_accounts": closed_accounts,
         "budget": budget,
         "budgets": user_budgets,
         "show_accounts": request.COOKIES.get("show-accounts") == "true",
         "show_credit_cards": request.COOKIES.get("show-credit-cards") == "true",
         "show_loans": request.COOKIES.get("show-loans") == "true",
+        "show_archived": request.COOKIES.get("show-archived") == "true",
     }
 
 
