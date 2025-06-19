@@ -48,11 +48,16 @@ class SearchableSelect extends HTMLElement {
         <input type="text"
                class="search-envelopes bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                placeholder="Search envelopes...">
-        <div class="envelope-dropdown absolute z-10 w-full mt-1 bg-white rounded-lg border border-gray-200 shadow-md dark:bg-gray-800 dark:border-gray-700 max-h-60 overflow-y-auto hidden">
-          ${this.renderOptions()}
-        </div>
       </div>
     `;
+
+    // Create dropdown as a separate element appended to body
+    this.dropdown = document.createElement('div');
+    this.dropdown.className =
+      'envelope-dropdown absolute z-50 bg-white rounded-lg border border-gray-200 shadow-md dark:bg-gray-800 dark:border-gray-700 max-h-60 overflow-y-auto hidden';
+    this.dropdown.style.minWidth = '200px';
+    this.dropdown.innerHTML = this.renderOptions();
+    document.body.appendChild(this.dropdown);
   }
 
   renderOptions() {
@@ -92,15 +97,14 @@ class SearchableSelect extends HTMLElement {
   }
 
   updateDropdown() {
-    const dropdown = this.querySelector('.envelope-dropdown');
-    dropdown.innerHTML = this.renderOptions();
+    this.dropdown.innerHTML = this.renderOptions();
 
     // Don't re-setup listeners, just use event delegation
     // The click listener on the dropdown container will handle clicks on new options
 
     // Ensure the highlighted option is visible in the dropdown
     if (this.selectedIndex >= 0) {
-      const highlighted = dropdown.querySelector(`[data-index="${this.selectedIndex}"]`);
+      const highlighted = this.dropdown.querySelector(`[data-index="${this.selectedIndex}"]`);
       if (highlighted) {
         highlighted.scrollIntoView({ block: 'nearest' });
       }
@@ -113,8 +117,14 @@ class SearchableSelect extends HTMLElement {
     // Input focus events
     input.addEventListener('focus', () => {
       this.isOpen = true;
-      const dropdown = this.querySelector('.envelope-dropdown');
-      dropdown.classList.remove('hidden');
+
+      // Position the dropdown relative to the input
+      const inputRect = input.getBoundingClientRect();
+      this.dropdown.style.left = `${inputRect.left}px`;
+      this.dropdown.style.top = `${inputRect.bottom + window.scrollY}px`;
+      this.dropdown.style.width = `${inputRect.width}px`;
+
+      this.dropdown.classList.remove('hidden');
     });
 
     // Input blur events - increase delay significantly
@@ -213,9 +223,8 @@ class SearchableSelect extends HTMLElement {
 
   closeDropdown() {
     this.isOpen = false;
-    const dropdown = this.querySelector('.envelope-dropdown');
-    if (dropdown) {
-      dropdown.classList.add('hidden');
+    if (this.dropdown) {
+      this.dropdown.classList.add('hidden');
     }
   }
 
