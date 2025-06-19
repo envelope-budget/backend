@@ -20,8 +20,16 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
+from django.views.static import serve
+from django.http import FileResponse
+import os
 
 from .api import api
+
+
+def manifest_view(request):
+    manifest_path = os.path.join(settings.BASE_DIR, "static", "manifest.json")
+    return FileResponse(open(manifest_path, "rb"), content_type="application/json")
 
 
 urlpatterns = [
@@ -34,6 +42,7 @@ urlpatterns = [
     path("envelopes/", include("envelopes.urls")),
     path("transactions/", include("transactions.urls")),
     path("reports/", include("reports.urls")),
+    path("manifest.json", manifest_view, name="manifest"),
     path(
         "favicon.ico",
         RedirectView.as_view(url=settings.STATIC_URL + "img/favicon/favicon.ico"),

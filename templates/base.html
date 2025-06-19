@@ -15,6 +15,41 @@
           content="Budgeting app based on the classic envelope method." />
     <meta name="keywords"
           content="envelope budget, envelope budgeting, envelope budget app, envelope budgeting app" />
+
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="EnvelopeBudget" />
+    <link rel="apple-touch-icon"
+          href="{% static 'img/favicon/apple-touch-icon.png' %}" />
+    <link rel="apple-touch-startup-image"
+          href="{% static 'img/favicon/apple-touch-icon.png' %}" />
+
+    <!-- Android Web App Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="EnvelopeBudget" />
+    <meta name="theme-color" content="#1f2937" />
+    <meta name="msapplication-navbutton-color" content="#1f2937" />
+    <meta name="msapplication-TileColor" content="#1f2937" />
+    <meta name="msapplication-TileImage"
+          content="{% static 'img/favicon/android-chrome-192x192.png' %}" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="{% url 'manifest' %}" />
+
+    <!-- Favicon and Icons -->
+    <link rel="icon"
+          type="image/png"
+          sizes="192x192"
+          href="{% static 'img/favicon/android-chrome-192x192.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="512x512"
+          href="{% static 'img/favicon/android-chrome-512x512.png' %}" />
+
+    <!-- Additional optimizations -->
+    <meta name="format-detection" content="telephone=no" />
+
     {% compress css %}
       <link rel="stylesheet" href="{% static 'src/output.css' %}" />
       <link rel="stylesheet" href="{% static 'css/base.css' %}" />
