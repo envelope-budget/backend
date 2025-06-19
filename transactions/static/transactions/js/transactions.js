@@ -423,6 +423,12 @@ function transactionData() {
     toggleCleared(transaction) {
       if (transaction) {
         transaction.cleared = !transaction.cleared;
+
+        // If marking as cleared, remove pending status
+        if (transaction.cleared && transaction.pending) {
+          transaction.pending = false;
+        }
+
         if (transaction.id) {
           patchTransaction(transaction.id, {
             cleared: transaction.cleared,

@@ -131,6 +131,10 @@ class Transaction(models.Model):
 
     # Override the save method
     def save(self, *args, **kwargs):
+        # If transaction is being marked as cleared, remove pending status
+        if self.cleared and self.pending:
+            self.pending = False
+
         if self.import_id:
             # Check if a transaction with the same budget, account, and import_id already exists
             existing_query = Transaction.objects.filter(
@@ -184,7 +188,7 @@ class Transaction(models.Model):
                 if self.envelope.category:
                     self.envelope.category.update_balance()
 
-        super(Transaction, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def soft_delete(self):
         # Update the balance for deleted transactions
