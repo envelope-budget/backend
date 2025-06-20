@@ -78,6 +78,7 @@ class SearchableSelect extends HTMLElement {
     this.value = null;
     this.isOpen = false;
     this.isClickingDropdown = false;
+    this.showSplitOption = true;
   }
 
   async connectedCallback() {
@@ -122,17 +123,47 @@ class SearchableSelect extends HTMLElement {
   }
 
   renderOptions() {
+    let content = '';
+
+    // Add split option if it should be shown
+    if (this.showSplitOption !== false) {
+      // Split option is highlighted when selectedIndex is -1 (if split is shown) or 0 (if split is first item)
+      const isSplitHighlighted = this.selectedIndex === -1;
+      const splitHighlightClass = isSplitHighlighted
+        ? 'bg-blue-100 dark:bg-blue-900'
+        : 'hover:bg-gray-100 dark:hover:bg-gray-700';
+
+      content += `
+        <div class="envelope-option p-2 ${splitHighlightClass} cursor-pointer border-b border-gray-200 dark:border-gray-600"
+             data-envelope-id="split"
+             data-index="-1">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="font-medium text-blue-600 dark:text-blue-400">Split...</span>
+                    <div class="text-xs text-gray-500">Split between multiple envelopes</div>
+                </div>
+                <span class="text-sm text-gray-400">⚡</span>
+            </div>
+        </div>
+      `;
+    }
+
     if (this.filteredEnvelopes.length === 0) {
+      if (this.showSplitOption !== false) {
+        return content;
+      }
       return '<div class="p-2 text-gray-500 dark:text-gray-400">No envelopes found</div>';
     }
 
-    return this.filteredEnvelopes
+    const envelopeOptions = this.filteredEnvelopes
       .map((envelope, index) => {
-        const linkedIndicator = envelope.linked_account_name
-          ? `<span class="text-xs text-blue-600 dark:text-blue-400">🔗 ${envelope.linked_account_name}</span>`
-          : '';
+        // When split option is shown, envelope indices start from 0 (selectedIndex 0, 1, 2...)
+        // When split option is not shown, envelope indices also start from 0
+        const isHighlighted =
+          this.showSplitOption !== false
+            ? this.selectedIndex === index // Split takes selectedIndex -1, envelopes start at 0
+            : this.selectedIndex === index;
 
-        const isHighlighted = index === this.selectedIndex;
         const highlightClass = isHighlighted
           ? 'bg-blue-100 dark:bg-blue-900'
           : 'hover:bg-gray-100 dark:hover:bg-gray-700';
@@ -145,7 +176,7 @@ class SearchableSelect extends HTMLElement {
                     <div>
                         <span class="font-medium">${envelope.name}</span>
                         <div class="text-xs text-gray-500">${envelope.categoryName}</div>
-                        ${linkedIndicator}
+                        ${envelope.linked_account_name ? `<span class="text-xs text-blue-600 dark:text-blue-400">🔗 ${envelope.linked_account_name}</span>` : ''}
                     </div>
                     <span class="text-sm ${envelope.balance >= 0 ? 'text-green-600' : 'text-red-600'}">
                         ${(envelope.balance / 1000).toFixed(2)}
@@ -155,6 +186,8 @@ class SearchableSelect extends HTMLElement {
         `;
       })
       .join('');
+
+    return content + envelopeOptions;
   }
 
   updateDropdown() {
@@ -164,8 +197,18 @@ class SearchableSelect extends HTMLElement {
     // The click listener on the dropdown container will handle clicks on new options
 
     // Ensure the highlighted option is visible in the dropdown
-    if (this.selectedIndex >= 0) {
-      const highlighted = this.dropdown.querySelector(`[data-index="${this.selectedIndex}"]`);
+    if (this.selectedIndex >= -1) {
+      let highlighted;
+
+      if (this.selectedIndex === -1 && this.showSplitOption !== false) {
+        // Split option is selected
+        highlighted = this.dropdown.querySelector('[data-envelope-id="split"]');
+      } else {
+        // Regular envelope option is selected
+        const envelopeIndex = this.showSplitOption !== false ? this.selectedIndex - 1 : this.selectedIndex;
+        highlighted = this.dropdown.querySelector(`[data-index="${envelopeIndex}"]`);
+      }
+
       if (highlighted) {
         highlighted.scrollIntoView({ block: 'nearest' });
       }
@@ -178,6 +221,14 @@ class SearchableSelect extends HTMLElement {
     // Input focus events
     input.addEventListener('focus', () => {
       this.isOpen = true;
+
+      // Initialize selectedIndex if not set
+      if (this.selectedIndex === -1) {
+        const totalItems = this.getTotalSelectableItems();
+        if (totalItems > 0) {
+          this.selectedIndex = this.showSplitOption !== false ? -1 : 0;
+        }
+      }
 
       // Position the dropdown relative to the input
       const inputRect = input.getBoundingClientRect();
@@ -201,26 +252,63 @@ class SearchableSelect extends HTMLElement {
     input.addEventListener('input', event => {
       const searchText = event.target.value.toLowerCase();
       this.filteredEnvelopes = this.envelopes.filter(envelope => envelope.name.toLowerCase().includes(searchText));
-      this.selectedIndex = this.filteredEnvelopes.length > 0 ? 0 : -1;
+
+      // Check if "Split..." should be included in filtered results
+      this.showSplitOption = searchText === '' || 'split'.includes(searchText);
+
+      // Reset to first item (split if available, otherwise first envelope)
+      const totalItems = this.getTotalSelectableItems();
+      this.selectedIndex = totalItems > 0 ? (this.showSplitOption !== false ? -1 : 0) : -1;
+
       this.updateDropdown();
     });
 
     // Keyboard navigation
     input.addEventListener('keydown', event => {
+      const totalItems = this.getTotalSelectableItems();
+
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault();
-          if (this.filteredEnvelopes.length > 0) {
-            this.selectedIndex = (this.selectedIndex + 1) % this.filteredEnvelopes.length;
+          if (totalItems > 0) {
+            if (this.showSplitOption !== false) {
+              // With split: -1 (split) -> 0, 1, 2... (envelopes) -> -1
+              if (this.selectedIndex === -1) {
+                this.selectedIndex = this.filteredEnvelopes.length > 0 ? 0 : -1;
+              } else {
+                this.selectedIndex = (this.selectedIndex + 1) % this.filteredEnvelopes.length;
+                if (this.selectedIndex === 0 && this.filteredEnvelopes.length > 1) {
+                  // Continue to next envelope
+                } else if (this.selectedIndex === 0) {
+                  // Wrap back to split
+                  this.selectedIndex = -1;
+                }
+              }
+            } else {
+              // Without split: normal 0-based indexing
+              this.selectedIndex = (this.selectedIndex + 1) % this.filteredEnvelopes.length;
+            }
             this.updateDropdown();
           }
           break;
 
         case 'ArrowUp':
           event.preventDefault();
-          if (this.filteredEnvelopes.length > 0) {
-            this.selectedIndex =
-              (this.selectedIndex - 1 + this.filteredEnvelopes.length) % this.filteredEnvelopes.length;
+          if (totalItems > 0) {
+            if (this.showSplitOption !== false) {
+              // With split: navigate between -1 and envelope indices
+              if (this.selectedIndex === -1) {
+                this.selectedIndex = this.filteredEnvelopes.length > 0 ? this.filteredEnvelopes.length - 1 : -1;
+              } else if (this.selectedIndex === 0) {
+                this.selectedIndex = -1;
+              } else {
+                this.selectedIndex = this.selectedIndex - 1;
+              }
+            } else {
+              // Without split: normal 0-based indexing
+              this.selectedIndex =
+                (this.selectedIndex - 1 + this.filteredEnvelopes.length) % this.filteredEnvelopes.length;
+            }
             this.updateDropdown();
           }
           break;
@@ -230,9 +318,9 @@ class SearchableSelect extends HTMLElement {
             event.preventDefault();
             event.stopPropagation();
 
-            if (this.filteredEnvelopes.length === 1) {
-              this.selectOption(0);
-            } else if (this.selectedIndex >= 0) {
+            if (this.selectedIndex === -1 && this.showSplitOption !== false) {
+              this.selectSplitOption();
+            } else if (this.selectedIndex >= 0 && this.selectedIndex < this.filteredEnvelopes.length) {
               this.selectOption(this.selectedIndex);
             }
           }
@@ -267,6 +355,14 @@ class SearchableSelect extends HTMLElement {
 
         const envelopeId = option.getAttribute('data-envelope-id');
         const index = option.getAttribute('data-index');
+
+        // Handle split option
+        if (envelopeId === 'split') {
+          setTimeout(() => {
+            this.selectSplitOption();
+          }, 10);
+          return;
+        }
 
         if (index !== null) {
           const parsedIndex = Number.parseInt(index, 10);
@@ -313,6 +409,30 @@ class SearchableSelect extends HTMLElement {
     }
   }
 
+  selectSplitOption() {
+    this.value = 'split';
+
+    // Update input to show the selected value
+    const input = this.querySelector('input');
+    input.value = '⚡️ Split...';
+
+    // Close dropdown
+    this.isOpen = false;
+    this.dropdown.classList.add('hidden');
+
+    // Dispatch change event with split indicator
+    this.dispatchEvent(
+      new CustomEvent('change', {
+        detail: {
+          value: 'split',
+          envelope: null,
+          isSplit: true,
+        },
+        bubbles: true,
+      })
+    );
+  }
+
   // Public methods
   getValue() {
     return this.value;
@@ -354,6 +474,24 @@ class SearchableSelect extends HTMLElement {
     this.filteredEnvelopes = [...this.envelopes];
     this.selectedIndex = -1;
     this.updateDropdown();
+  }
+
+  getTotalSelectableItems() {
+    const splitCount = this.showSplitOption !== false ? 1 : 0;
+    return splitCount + this.filteredEnvelopes.length;
+  }
+
+  getSelectedItem() {
+    if (this.selectedIndex === -1 && this.showSplitOption !== false) {
+      return { type: 'split' };
+    }
+    if (this.selectedIndex >= 0) {
+      const envelopeIndex = this.showSplitOption !== false ? this.selectedIndex - 1 : this.selectedIndex;
+      if (envelopeIndex >= 0 && envelopeIndex < this.filteredEnvelopes.length) {
+        return { type: 'envelope', envelope: this.filteredEnvelopes[envelopeIndex], index: envelopeIndex };
+      }
+    }
+    return null;
   }
 }
 
