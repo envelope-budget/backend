@@ -189,14 +189,13 @@ class SearchableSelect extends HTMLElement {
   }
 
   setupDropdownListeners() {
-    const dropdown = this.querySelector('.envelope-dropdown');
-
-    if (!dropdown) {
+    // Use this.dropdown instead of querySelector since it's appended to document.body
+    if (!this.dropdown) {
       return;
     }
 
     // Use event delegation - listen on the dropdown container
-    dropdown.addEventListener('click', event => {
+    this.dropdown.addEventListener('click', event => {
       // Find the option element
       const option = event.target.closest('.envelope-option');
 
@@ -216,7 +215,6 @@ class SearchableSelect extends HTMLElement {
             this.selectOption(parsedIndex);
           }, 10);
         }
-      } else {
       }
     });
   }
@@ -237,9 +235,9 @@ class SearchableSelect extends HTMLElement {
       const input = this.querySelector('input');
       input.value = selectedEnvelope.name;
 
-      // Close dropdown
+      // Close dropdown - use this.dropdown instead of querySelector
       this.isOpen = false;
-      this.querySelector('.envelope-dropdown').classList.add('hidden');
+      this.dropdown.classList.add('hidden');
 
       // Dispatch change event
       this.dispatchEvent(
