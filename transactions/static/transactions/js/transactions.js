@@ -341,6 +341,21 @@ function transactionData() {
       }
     },
 
+    handleSearchEnter(event) {
+      // If suggestions are visible and one is selected, use the suggestion
+      if (this.showSearchSuggestions && this.searchSuggestions.length > 0 && this.selectedSuggestionIndex >= 0) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const selectedSuggestion = this.searchSuggestions[this.selectedSuggestionIndex];
+        this.selectSuggestion(selectedSuggestion);
+        return;
+      }
+
+      // Otherwise, perform normal search
+      this.performSearch();
+    },
+
     scrollToSelectedSuggestion() {
       // Use Alpine's nextTick to ensure DOM is updated
       this.$nextTick(() => {
