@@ -1,3 +1,74 @@
+class EnvelopeDataManager {
+  constructor() {
+    this.envelopes = [];
+    this.accounts = [];
+    this.dataLoaded = false;
+    this.loadPromise = null;
+  }
+
+  loadData() {
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
+
+    this.loadPromise = this._fetchData();
+    return this.loadPromise;
+  }
+
+  async _fetchData() {
+    if (this.dataLoaded) {
+      return { envelopes: this.envelopes, accounts: this.accounts };
+    }
+
+    try {
+      // Fetch envelopes
+      const response = await fetch('/envelopes/categorized_envelopes.json');
+      const data = await response.json();
+
+      this.envelopes = data.categorized_envelopes.flatMap(category =>
+        category.envelopes.map(envelope => ({
+          id: envelope.id,
+          name: envelope.name,
+          balance: envelope.balance,
+          categoryName: category.category.name,
+          linked_account_name: envelope.linked_account_name,
+        }))
+      );
+
+      // Get accounts from the existing dropdown if available
+      const accountSelect = document.getElementById('id_account');
+      if (accountSelect) {
+        this.accounts = Array.from(accountSelect.options)
+          .filter(option => option.value && option.value !== '')
+          .map(option => ({
+            id: option.value,
+            name: option.textContent,
+          }));
+      }
+
+      this.dataLoaded = true;
+      return { envelopes: this.envelopes, accounts: this.accounts };
+    } catch (error) {
+      console.error('Error loading envelope/account data:', error);
+      throw error;
+    }
+  }
+
+  getEnvelopes() {
+    return this.envelopes;
+  }
+
+  getAccounts() {
+    return this.accounts;
+  }
+}
+
+// Create a singleton instance
+const envelopeDataManager = new EnvelopeDataManager();
+
+// Export for use in other components
+window.envelopeDataManager = envelopeDataManager;
+
 class SearchableSelect extends HTMLElement {
   constructor() {
     super();
@@ -11,19 +82,9 @@ class SearchableSelect extends HTMLElement {
 
   async connectedCallback() {
     try {
-      // Fetch the data
-      const response = await fetch('/envelopes/categorized_envelopes.json');
-      const data = await response.json();
-
-      // Extract all envelopes from categories
-      this.envelopes = data.categorized_envelopes.flatMap(category =>
-        category.envelopes.map(envelope => ({
-          id: envelope.id,
-          name: envelope.name,
-          balance: envelope.balance,
-          categoryName: category.category.name,
-        }))
-      );
+      // Use the shared data manager
+      const data = await envelopeDataManager.loadData();
+      this.envelopes = data.envelopes;
 
       this.filteredEnvelopes = [...this.envelopes];
       this.render();
