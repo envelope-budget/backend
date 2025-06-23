@@ -91,7 +91,9 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
+              // Only clear auth-related data, keep base_url
+              await prefs.remove('auth_token');
+              await prefs.remove('user_email');
               if (mounted) {
                 Navigator.pushReplacement(
                   context,

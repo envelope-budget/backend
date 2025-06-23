@@ -56,8 +56,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _saveBaseUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('base_url', _baseUrlController.text);
+    // Only save if URL is valid
+    final url = _baseUrlController.text;
+    final uri = Uri.tryParse(url);
+
+    if (uri != null && uri.host.isNotEmpty && uri.scheme.startsWith('http')) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('base_url', url);
+    }
   }
 
   Future<void> _login() async {
