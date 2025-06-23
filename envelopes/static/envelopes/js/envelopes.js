@@ -463,13 +463,28 @@ function envelopeData() {
       this.envelope.balance = 0;
       this.envelope.category_id = category_id;
       this.envelope.note = '';
-      this.monthly_budget_amount = 0;
+      this.envelope.monthly_budget_amount = 0;
 
       // Clear the name input field
       const nameInput = document.getElementById('envelope-name');
       if (nameInput) {
         nameInput.value = '';
       }
+
+      // Explicitly open the modal
+      this.$nextTick(() => {
+        const modal = FlowbiteInstances.getInstance('Modal', 'envelope-modal');
+        if (modal) {
+          modal.show();
+        } else {
+          // Fallback: try to initialize and show the modal
+          const modalElement = document.getElementById('envelope-modal');
+          if (modalElement) {
+            const newModal = new Modal(modalElement);
+            newModal.show();
+          }
+        }
+      });
     },
 
     startNewCategory() {

@@ -133,9 +133,8 @@
                       <span class="text-lg font-medium text-gray-900 dark:text-white"
                             x-text="category.name"></span>
                       <button class="flex ml-4 px-3 py-1 items-center justify-center rounded-full bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700"
-                              data-modal-target="envelope-modal"
-                              data-modal-toggle="envelope-modal"
-                              @click.stop="startNewEnvelope(category.id)">
+                              @click.stop="startNewEnvelope(category.id); $dispatch('open-envelope-modal')"
+                              type="button">
                         <svg class="w-[8px] h-[8px] text-white dark:text-white mr-1"
                              aria-hidden="true"
                              xmlns="http://www.w3.org/2000/svg"
