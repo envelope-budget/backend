@@ -283,9 +283,48 @@ PLAID_CLIENT_NAME = os.environ.get("PLAID_CLIENT_NAME", "EnvelopeBudget.com")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {name} {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "formatter": "verbose" if DEBUG else "simple",
+        },
+        "file": (
+            {
+                "class": "logging.FileHandler",
+                "filename": BASE_DIR / "logs" / "django.log",
+                "formatter": "verbose",
+            }
+            if not DEBUG
+            else {
+                "class": "logging.NullHandler",
+            }
+        ),
+    },
+    "loggers": {
+        "budgetapp": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        "authentication": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
     "root": {

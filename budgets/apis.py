@@ -75,7 +75,7 @@ class BudgetSchema(Schema):
         )
 
 
-@router.post("", response=BudgetSchema, auth=django_auth, tags=["Budgets"])
+@router.post("", response=BudgetSchema, tags=["Budgets"])
 def create_budget(request, payload: createBudgetSchema):
     budget = Budget.objects.create(
         user=request.auth,
@@ -92,14 +92,14 @@ def create_budget(request, payload: createBudgetSchema):
     return BudgetSchema.from_django(budget)
 
 
-@router.get("", response=List[BudgetSchema], auth=django_auth, tags=["Budgets"])
+@router.get("", response=List[BudgetSchema], tags=["Budgets"])
 def list_budgets(request):
     user = request.auth
     budgets = Budget.objects.filter(user=user)
     return [BudgetSchema.from_django(budget) for budget in budgets]
 
 
-@router.get("/{budget_id}", response=BudgetSchema, auth=django_auth, tags=["Budgets"])
+@router.get("/{budget_id}", response=BudgetSchema, tags=["Budgets"])
 def get_budget(request, budget_id: str):
     budget = get_object_or_404(Budget, id=budget_id)
     return BudgetSchema.from_django(budget)

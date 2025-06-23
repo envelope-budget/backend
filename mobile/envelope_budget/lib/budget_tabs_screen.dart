@@ -4,6 +4,7 @@ import 'envelopes_screen.dart';
 import 'transactions_screen.dart';
 import 'add_transaction_screen.dart';
 import 'main.dart';
+import 'services/api_service.dart';
 
 class BudgetTabsScreen extends StatefulWidget {
   const BudgetTabsScreen({super.key});
@@ -14,20 +15,52 @@ class BudgetTabsScreen extends StatefulWidget {
 
 class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
   int _currentIndex = 0;
-  String _selectedBudget = 'Personal Budget';
-
-  // Mock budget data
-  final List<String> _budgets = [
-    'Personal Budget',
-    'Family Budget',
-    'Business Budget',
-    'Vacation Fund',
-  ];
+  String _selectedBudgetId = '';
+  String _selectedBudgetName = 'Loading...';
+  List<Budget> _budgets = [];
+  bool _isLoadingBudgets = true;
 
   final List<Widget> _screens = [
     const EnvelopesScreen(),
     const TransactionsScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBudgets();
+  }
+
+  Future<void> _loadBudgets() async {
+    try {
+      setState(() {
+        _isLoadingBudgets = true;
+      });
+
+      final budgets = await ApiService.getBudgets();
+
+      setState(() {
+        _budgets = budgets;
+        _isLoadingBudgets = false;
+
+        // Set the first budget as selected if available
+        if (budgets.isNotEmpty && _selectedBudgetId.isEmpty) {
+          _selectedBudgetId = budgets.first.id;
+          _selectedBudgetName = budgets.first.name;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingBudgets = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load budgets: $e')),
+        );
+      }
+    }
+  }
 
   void _showBudgetSelector() {
     showModalBottomSheet(
@@ -46,19 +79,25 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              ...(_budgets.map((budget) => ListTile(
-                leading: Icon(
-                  _selectedBudget == budget ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                  color: Colors.green,
-                ),
-                title: Text(budget),
-                onTap: () {
-                  setState(() {
-                    _selectedBudget = budget;
-                  });
-                  Navigator.pop(context);
-                },
-              ))),
+              if (_isLoadingBudgets)
+                const Center(child: CircularProgressIndicator())
+              else if (_budgets.isEmpty)
+                const Center(child: Text('No budgets available'))
+              else
+                ...(_budgets.map((budget) => ListTile(
+                  leading: Icon(
+                    _selectedBudgetId == budget.id ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    color: Colors.green,
+                  ),
+                  title: Text(budget.name),
+                  onTap: () {
+                    setState(() {
+                      _selectedBudgetId = budget.id;
+                      _selectedBudgetName = budget.name;
+                    });
+                    Navigator.pop(context);
+                  },
+                ))),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -101,7 +140,7 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
             children: [
               Flexible(
                 child: Text(
-                  _selectedBudget,
+                  _selectedBudgetName,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -112,6 +151,10 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadBudgets,
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
