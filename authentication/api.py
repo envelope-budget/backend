@@ -16,7 +16,6 @@ from .serializers import (
     APIKeyCreateSerializer,
     APIKeyResponseSerializer,
 )
-from .decorators import conditional_csrf_exempt
 
 router = Router()
 
@@ -37,7 +36,7 @@ def generate_jwt_token(user):
     return jwt.encode(payload, secret_key, algorithm="HS256")
 
 
-@router.post("/register")
+@router.post("/register", auth=None)  # Exempt from authentication
 def register(request, data: RegisterSerializer):
     # Validate and create user
     user = User.objects.create_user(email=data.email, password=data.password)
@@ -46,8 +45,7 @@ def register(request, data: RegisterSerializer):
     return {"success": True, "message": "User registered successfully."}
 
 
-@router.post("/login")
-@conditional_csrf_exempt
+@router.post("/login", auth=None)  # Exempt from authentication
 def login(request, data: LoginSerializer):
     user = authenticate(email=data.email, password=data.password)
     if user:

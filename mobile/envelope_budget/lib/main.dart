@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'envelopes_screen.dart';
 
 void main() {
   runApp(const EnvelopeBudgetApp());
@@ -71,7 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _saveBaseUrl();
 
-      final baseUrl = _baseUrlController.text.replaceAll(RegExp(r'/$'), '');
+      final baseUrl = _baseUrlController.text;
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         headers: {
@@ -93,11 +95,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (mounted) {
           _showSuccessMessage('Login successful!');
-          // Navigate to main app screen (you'll need to create this)
-          // Navigator.pushReplacement(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => const MainScreen()),
-          // );
+          // Navigate to envelopes screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const EnvelopesScreen()),
+          );
         }
       } else {
         final errorData = jsonDecode(response.body);

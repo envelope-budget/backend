@@ -219,6 +219,9 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", True)
 EMAIL_SUBJECT_PREFIX = os.environ.get("EMAIL_SUBJECT_PREFIX", "[EnvelopeBudget] ")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
+# Turn off CSRF for API endpoints
+NINJA_CSRF = False
+
 
 # Django Compressor
 COMPRESS_ROOT = BASE_DIR / "static"
