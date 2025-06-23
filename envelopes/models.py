@@ -136,17 +136,37 @@ class Envelope(models.Model):
             self.save()
             return
 
+        # Store the category before deletion to update its balance after
+        category = self.category
+
         # For regular envelopes, proceed with normal deletion
-        # Update category balance before deletion
-        if self.category:
-            self.category.update_balance()
 
         super().delete(*args, **kwargs)
 
+        # Update category balance after deletion
+        if category:
+            category.update_balance()
+
     def save(self, *args, **kwargs):
+        # Check if this is an update and if the category or balance changed
+        old_category = None
+        if self.pk:
+            try:
+                old_envelope = Envelope.objects.get(pk=self.pk)
+                old_category = old_envelope.category
+            except Envelope.DoesNotExist:
+                pass
+
+        # Save the envelope first
+        super().save(*args, **kwargs)
+
+        # Update the current category balance
         if self.category:
             self.category.update_balance()
-        super().save(*args, **kwargs)
+
+        # If the envelope moved to a different category, update the old category too
+        if old_category and old_category != self.category:
+            old_category.update_balance()
 
 
 class EnvelopeGoal(models.Model):

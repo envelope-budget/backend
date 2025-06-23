@@ -239,6 +239,15 @@ function envelopeData() {
         .filter(Boolean);
     },
 
+    // Helper method to update category balance
+    updateCategoryBalance(categoryId) {
+      const category = this.categories.find(cat => cat.id === categoryId);
+      if (category) {
+        // Recalculate the category balance from its envelopes
+        category.balance = category.envelopes.reduce((sum, envelope) => sum + envelope.balance, 0);
+      }
+    },
+
     // Methods
     async loadEnvelopes() {
       this.loading = true;
@@ -691,8 +700,11 @@ function envelopeData() {
         const data = await response.json();
         console.log('Envelope updated successfully:', data);
 
-        // Update the envelope in local data
+        // Find the envelope and its old category
         const envelope = this.findEnvelopeById(this.envelope.id);
+        const oldCategoryId = envelope ? envelope.category_id : null;
+
+        // Update the envelope in local data
         if (envelope) {
           envelope.name = data.name;
           envelope.balance = data.balance;
@@ -705,6 +717,14 @@ function envelopeData() {
         if (this.selectedItem.id === this.envelope.id && this.selectedItem.type === 'envelope') {
           this.selectedItem.name = data.name;
           this.selectedItem.balance = data.balance;
+        }
+
+        // Update category balances
+        if (oldCategoryId) {
+          this.updateCategoryBalance(oldCategoryId);
+        }
+        if (data.category_id && data.category_id !== oldCategoryId) {
+          this.updateCategoryBalance(data.category_id);
         }
 
         // If category changed, reload envelopes to reflect the change
