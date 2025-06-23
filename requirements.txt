@@ -65,6 +65,8 @@ pydantic==2.11.5
     # via django-ninja
 pydantic-core==2.33.2
     # via pydantic
+pyjwt==2.10.1
+    # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via plaid-python
 python-dotenv==1.1.0

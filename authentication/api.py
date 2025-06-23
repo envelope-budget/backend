@@ -1,15 +1,14 @@
 from ninja import Router
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from django.utils.crypto import get_random_string
-
-
 from budgetapp.models import User, APIKey
-
+import jwt
+import datetime
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 from .serializers import (
     LoginSerializer,
@@ -17,8 +16,25 @@ from .serializers import (
     APIKeyCreateSerializer,
     APIKeyResponseSerializer,
 )
+from .decorators import conditional_csrf_exempt
 
 router = Router()
+
+
+def generate_jwt_token(user):
+    """Generate JWT token for user"""
+    payload = {
+        "user_id": user.id,
+        "email": user.email,
+        "exp": datetime.datetime.utcnow()
+        + datetime.timedelta(days=7),  # Token expires in 7 days
+        "iat": datetime.datetime.utcnow(),
+    }
+
+    # Use Django's SECRET_KEY
+    secret_key = settings.SECRET_KEY
+
+    return jwt.encode(payload, secret_key, algorithm="HS256")
 
 
 @router.post("/register")
@@ -27,17 +43,16 @@ def register(request, data: RegisterSerializer):
     user = User.objects.create_user(email=data.email, password=data.password)
     # Send confirmation email (use django-allauth functionality)
     # ...
-
     return {"success": True, "message": "User registered successfully."}
 
 
 @router.post("/login")
+@conditional_csrf_exempt
 def login(request, data: LoginSerializer):
     user = authenticate(email=data.email, password=data.password)
     if user:
-        # Generate and return token (JWT or similar)
-        # ...
-        token = "foobar"
+        # Generate JWT token
+        token = generate_jwt_token(user)
         return {"success": True, "token": token}
     else:
         return {"success": False, "message": "Invalid credentials"}

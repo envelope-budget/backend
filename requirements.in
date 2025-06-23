@@ -8,5 +8,6 @@ jwt
 ofxparse
 openpyxl
 plaid-python
+PyJWT
 python-dotenv
 requests
