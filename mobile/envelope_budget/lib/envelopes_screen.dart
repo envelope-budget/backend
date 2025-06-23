@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'main.dart';
 
 class EnvelopesScreen extends StatefulWidget {
   const EnvelopesScreen({super.key});
@@ -13,8 +12,40 @@ class EnvelopesScreen extends StatefulWidget {
 
 class _EnvelopesScreenState extends State<EnvelopesScreen> {
   List<dynamic> categories = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
   String? _errorMessage;
+
+  // Mock data for now
+  final List<Map<String, dynamic>> _mockCategories = [
+    {
+      'name': 'Essential',
+      'balance': 125000, // $1,250.00
+      'envelopes': [
+        {'name': 'Rent/Mortgage', 'balance': 150000},
+        {'name': 'Groceries', 'balance': 45000},
+        {'name': 'Utilities', 'balance': 12000},
+        {'name': 'Transportation', 'balance': -2500},
+      ]
+    },
+    {
+      'name': 'Lifestyle',
+      'balance': 32500,
+      'envelopes': [
+        {'name': 'Dining Out', 'balance': 15000},
+        {'name': 'Entertainment', 'balance': 8500},
+        {'name': 'Shopping', 'balance': 9000},
+      ]
+    },
+    {
+      'name': 'Savings',
+      'balance': 200000,
+      'envelopes': [
+        {'name': 'Emergency Fund', 'balance': 150000},
+        {'name': 'Vacation', 'balance': 35000},
+        {'name': 'New Car', 'balance': 15000},
+      ]
+    },
+  ];
 
   @override
   void initState() {
@@ -23,7 +54,21 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
   }
 
   Future<void> _loadEnvelopes() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     try {
+      // For now, just use mock data
+      await Future.delayed(const Duration(milliseconds: 500)); // Simulate network delay
+
+      setState(() {
+        categories = _mockCategories;
+        _isLoading = false;
+      });
+
+      /* TODO: Implement real API call
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
       final baseUrl = prefs.getString('base_url') ?? 'https://envelopebudget.com';
@@ -33,8 +78,7 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
         return;
       }
 
-      // For now, using a placeholder budget ID - you'll need to implement budget selection
-      const budgetId = 'your-budget-id-here'; // Replace with actual budget ID
+      const budgetId = 'your-budget-id-here';
 
       final response = await http.get(
         Uri.parse('$baseUrl/api/envelopes/$budgetId'),
@@ -56,6 +100,7 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
           _isLoading = false;
         });
       }
+      */
     } catch (e) {
       setState(() {
         _errorMessage = 'Network error: ${e.toString()}';
@@ -81,30 +126,9 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Envelopes'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              // Only clear auth-related data, keep base_url
-              await prefs.remove('auth_token');
-              await prefs.remove('user_email');
-              if (mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: _isLoading
+    return RefreshIndicator(
+      onRefresh: _loadEnvelopes,
+      child: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
               ? Center(
@@ -116,13 +140,7 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
                       Text(_errorMessage!, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _isLoading = true;
-                            _errorMessage = null;
-                          });
-                          _loadEnvelopes();
-                        },
+                        onPressed: _loadEnvelopes,
                         child: const Text('Retry'),
                       ),
                     ],
@@ -158,6 +176,12 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                                onTap: () {
+                                  // TODO: Navigate to envelope details
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('${envelope['name']} details - Coming soon!')),
+                                  );
+                                },
                               );
                             }).toList(),
                           ),
