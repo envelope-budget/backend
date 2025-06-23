@@ -15,7 +15,7 @@ class EnvelopeBudgetApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Envelope Budget',
+      title: 'EnvelopeBudget',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF0071BC), // Your logo blue
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Title
                 Text(
-                  'Envelope Budget',
+                  'EnvelopeBudget',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF0071BC),
