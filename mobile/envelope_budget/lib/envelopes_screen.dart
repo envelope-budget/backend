@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EnvelopesScreen extends StatefulWidget {
-  const EnvelopesScreen({super.key});
+  final String budgetId; // Add budget ID parameter
+
+  const EnvelopesScreen({super.key, required this.budgetId});
 
   @override
   State<EnvelopesScreen> createState() => _EnvelopesScreenState();
@@ -61,8 +63,8 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
   @override
   void didUpdateWidget(EnvelopesScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reload when the widget updates (budget changes)
-    if (oldWidget.key != widget.key) {
+    // Reload when the budget ID changes
+    if (oldWidget.budgetId != widget.budgetId) {
       _loadEnvelopes();
     }
   }
@@ -78,7 +80,9 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
       final token = prefs.getString('auth_token');
       final baseUrl =
           prefs.getString('base_url') ?? 'https://envelopebudget.com';
-      final budgetId = prefs.getString('budget_id');
+
+      // Use the budget ID from widget parameter instead of SharedPreferences
+      final budgetId = widget.budgetId;
 
       if (token == null) {
         setState(() {
@@ -88,9 +92,9 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
         return;
       }
 
-      if (budgetId == null) {
+      if (budgetId.isEmpty) {
         setState(() {
-          _errorMessage = 'No budget ID found';
+          _errorMessage = 'No budget ID provided';
           _isLoading = false;
         });
         return;

@@ -26,7 +26,10 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
   void initState() {
     super.initState();
     _screens = [
-      EnvelopesScreen(key: ValueKey(_selectedBudgetId)),
+      EnvelopesScreen(
+        key: ValueKey(_selectedBudgetId),
+        budgetId: _selectedBudgetId, // Pass budget ID directly
+      ),
       const TransactionsScreen(),
     ];
     _loadBudgets().then((_) => _loadSavedBudgetId());
@@ -35,7 +38,10 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
   void _updateScreens() {
     setState(() {
       _screens = [
-        EnvelopesScreen(key: ValueKey(_selectedBudgetId)),
+        EnvelopesScreen(
+          key: ValueKey(_selectedBudgetId),
+          budgetId: _selectedBudgetId, // Pass budget ID directly
+        ),
         const TransactionsScreen(),
       ];
     });
@@ -140,6 +146,7 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
                           _selectedBudgetName = budget.name;
                         });
                         _saveBudgetId(budget.id);
+                        _updateScreens();
                         Navigator.pop(context);
                       },
                     ))),
