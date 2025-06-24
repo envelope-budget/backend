@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 from ninja import Router, Schema
-from ninja.security import django_auth
 from django.shortcuts import get_object_or_404
 
 from .models import Envelope, Category
@@ -112,7 +111,6 @@ class UpdateCategorySchema(Schema):
 @router.get(
     "/{budget_id}",
     response=List[CategorySchema],
-    auth=django_auth,
     tags=["Envelopes"],
 )
 def list_envelopes(request, budget_id: str):
@@ -125,7 +123,6 @@ def list_envelopes(request, budget_id: str):
 @router.get(
     "/budgets/{budget_id}",
     response=BudgetDataSchema,
-    auth=django_auth,
     tags=["Budgets"],
 )
 def get_budget_data(request, budget_id: str):
@@ -148,7 +145,6 @@ def get_budget_data(request, budget_id: str):
 @router.post(
     "/{budget_id}/order",
     response=dict,
-    auth=django_auth,
     tags=["Envelopes"],
 )
 def set_envelopes_order(request, budget_id: str, data: EnvelopeOrderSchema):
@@ -175,7 +171,6 @@ def set_envelopes_order(request, budget_id: str, data: EnvelopeOrderSchema):
 @router.post(
     "/categories/{budget_id}/order",
     response=dict,
-    auth=django_auth,
     tags=["Categories"],
 )
 def set_categories_order(request, budget_id: str, data: CategoryOrderSchema):
@@ -197,7 +192,6 @@ def set_categories_order(request, budget_id: str, data: CategoryOrderSchema):
 @router.post(
     "/categories/{budget_id}",
     response=CategorySchema,
-    auth=django_auth,
     tags=["Categories"],
 )
 def create_category(request, budget_id: str, data: CreateCategorySchema):
@@ -224,7 +218,6 @@ def create_category(request, budget_id: str, data: CreateCategorySchema):
 @router.patch(
     "/categories/{budget_id}/{category_id}",
     response=CategorySchema,
-    auth=django_auth,
     tags=["Categories"],
 )
 def update_category(
@@ -283,7 +276,6 @@ def update_category(
 @router.delete(
     "/categories/{budget_id}/{category_id}",
     response=dict,
-    auth=django_auth,
     tags=["Categories"],
 )
 def delete_category(request, budget_id: str, category_id: str):
@@ -318,7 +310,6 @@ class EnvelopeTransferSchema(Schema):
 @router.post(
     "/{budget_id}/transfer",
     response=dict,
-    auth=django_auth,
     tags=["Envelopes"],
 )
 def transfer_funds(request, budget_id: str, data: EnvelopeTransferSchema):
@@ -435,7 +426,6 @@ def transfer_funds(request, budget_id: str, data: EnvelopeTransferSchema):
 @router.get(
     "/{budget_id}/{envelope_id}",
     response=EnvelopeSchema,
-    auth=django_auth,
     tags=["Envelopes"],
 )
 def get_envelope(request, budget_id: str, envelope_id: str):
@@ -443,9 +433,7 @@ def get_envelope(request, budget_id: str, envelope_id: str):
     return envelope
 
 
-@router.post(
-    "/{budget_id}", response=EnvelopeSchema, auth=django_auth, tags=["Envelopes"]
-)
+@router.post("/{budget_id}", response=EnvelopeSchema, tags=["Envelopes"])
 def create_envelope(request, budget_id: str, envelope: createEnvelopeSchema):
     from budgets.models import Budget
 
@@ -464,7 +452,6 @@ def create_envelope(request, budget_id: str, envelope: createEnvelopeSchema):
 @router.patch(
     "/{budget_id}/{envelope_id}",
     response=EnvelopeSchema,
-    auth=django_auth,
     tags=["Envelopes"],
 )
 def update_envelope(
@@ -502,7 +489,6 @@ class DeleteEnvelopeResponse(Schema):
 @router.delete(
     "/{budget_id}/{envelope_id}",
     response=DeleteEnvelopeResponse,
-    auth=django_auth,
     tags=["Envelopes"],
 )
 def delete_envelope(request, budget_id: str, envelope_id: str):

@@ -97,7 +97,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Transaction'),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF0071BC),
         foregroundColor: Colors.white,
         actions: [
           TextButton(
@@ -194,7 +194,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 hintText: '0.00',
                 prefixIcon: Icon(
                   Icons.attach_money,
-                  color: _isExpense ? Colors.red : Colors.green,
+                  color: _isExpense ? Colors.red : const Color(0xFF0071BC),
                 ),
                 prefixText: _isExpense ? '-\$' : '+\$',
                 border: const OutlineInputBorder(),
@@ -256,7 +256,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _saveTransaction,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: const Color(0xFF0071BC),
                   foregroundColor: Colors.white,
                 ),
                 child: _isLoading

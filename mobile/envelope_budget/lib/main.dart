@@ -54,7 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _baseUrlController = TextEditingController(text: 'https://envelopebudget.com');
+  final _baseUrlController =
+      TextEditingController(text: 'https://envelopebudget.com');
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -68,7 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadSavedBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedBaseUrl = prefs.getString('base_url') ?? 'https://envelopebudget.com';
+    final savedBaseUrl =
+        prefs.getString('base_url') ?? 'https://envelopebudget.com';
     setState(() {
       _baseUrlController.text = savedBaseUrl;
     });
@@ -192,9 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'EnvelopeBudget',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0071BC),
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF0071BC),
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
@@ -206,17 +208,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   onFieldSubmitted: (_) => _login(),
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: const Icon(Icons.email, color: Color(0xFF0071BC)),
+                    prefixIcon:
+                        const Icon(Icons.email, color: Color(0xFF0071BC)),
                     border: const OutlineInputBorder(),
                     focusedBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFF0071BC), width: 2),
+                      borderSide:
+                          BorderSide(color: Color(0xFF0071BC), width: 2),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                        .hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -231,10 +236,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   onFieldSubmitted: (_) => _login(),
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock, color: Color(0xFF0071BC)),
+                    prefixIcon:
+                        const Icon(Icons.lock, color: Color(0xFF0071BC)),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: const Color(0xFF666666),
                       ),
                       onPressed: () {
@@ -245,7 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     border: const OutlineInputBorder(),
                     focusedBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFF0071BC), width: 2),
+                      borderSide:
+                          BorderSide(color: Color(0xFF0071BC), width: 2),
                     ),
                   ),
                   validator: (value) {
@@ -274,10 +283,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : const Text('Login',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 16),
 
@@ -292,7 +304,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        _showAdvancedSettings ? Icons.expand_less : Icons.expand_more,
+                        _showAdvancedSettings
+                            ? Icons.expand_less
+                            : Icons.expand_more,
                         color: const Color(0xFF666666),
                       ),
                       Text(
@@ -313,7 +327,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: Icon(Icons.cloud, color: Color(0xFF0071BC)),
                       border: OutlineInputBorder(),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF0071BC), width: 2),
+                        borderSide:
+                            BorderSide(color: Color(0xFF0071BC), width: 2),
                       ),
                       helperText: 'e.g., https://budget.example.com',
                     ),

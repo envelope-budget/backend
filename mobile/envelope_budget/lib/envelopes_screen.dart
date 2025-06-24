@@ -50,7 +50,21 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
   @override
   void initState() {
     super.initState();
-    _loadEnvelopes();
+    // Add a small delay to ensure budget ID is saved
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _loadEnvelopes();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(EnvelopesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload when the widget updates (budget changes)
+    if (oldWidget.key != widget.key) {
+      _loadEnvelopes();
+    }
   }
 
   Future<void> _loadEnvelopes() async {
@@ -60,25 +74,32 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
     });
 
     try {
-      // For now, just use mock data
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate network delay
-
-      setState(() {
-        categories = _mockCategories;
-        _isLoading = false;
-      });
-
-      /* TODO: Implement real API call
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-      final baseUrl = prefs.getString('base_url') ?? 'https://envelopebudget.com';
+      final baseUrl =
+          prefs.getString('base_url') ?? 'https://envelopebudget.com';
+      final budgetId = prefs.getString('budget_id');
 
       if (token == null) {
-        _showErrorMessage('No authentication token found');
+        setState(() {
+          _errorMessage = 'No authentication token found';
+          _isLoading = false;
+        });
         return;
       }
 
-      const budgetId = 'your-budget-id-here';
+      if (budgetId == null) {
+        setState(() {
+          _errorMessage = 'No budget ID found';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      print('Making request to: $baseUrl/api/envelopes/$budgetId');
+      print('Budget ID: $budgetId');
+      print(
+          'Token: ${token.substring(0, 20)}...'); // Only show first 20 chars for security
 
       final response = await http.get(
         Uri.parse('$baseUrl/api/envelopes/$budgetId'),
@@ -88,10 +109,39 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
         },
       );
 
+      print('Response status: ${response.statusCode}');
+      print('Response headers: ${response.headers}');
+      print('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+        final responseData = jsonDecode(response.body) as List<dynamic>;
+
+        // Filter out hidden and deleted categories, and their hidden/deleted envelopes
+        final filteredCategories = responseData.where((category) {
+          return !(category['hidden'] == true || category['deleted'] == true);
+        }).map((category) {
+          // Filter envelopes within each category
+          final envelopes =
+              (category['envelopes'] as List<dynamic>).where((envelope) {
+            return !(envelope['hidden'] == true || envelope['deleted'] == true);
+          }).toList();
+
+          // Sort envelopes by sort_order
+          envelopes.sort(
+              (a, b) => (a['sort_order'] ?? 0).compareTo(b['sort_order'] ?? 0));
+
+          return {
+            ...category,
+            'envelopes': envelopes,
+          };
+        }).toList();
+
+        // Sort categories by sort_order
+        filteredCategories.sort(
+            (a, b) => (a['sort_order'] ?? 0).compareTo(b['sort_order'] ?? 0));
+
         setState(() {
-          categories = responseData;
+          categories = filteredCategories;
           _isLoading = false;
         });
       } else {
@@ -100,7 +150,6 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
           _isLoading = false;
         });
       }
-      */
     } catch (e) {
       setState(() {
         _errorMessage = 'Network error: ${e.toString()}';
@@ -135,9 +184,12 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Colors.red[300]),
                       const SizedBox(height: 16),
-                      Text(_errorMessage!, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+                      Text(_errorMessage!,
+                          style: const TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadEnvelopes,
@@ -147,21 +199,28 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
                   ),
                 )
               : categories.isEmpty
-                  ? const Center(child: Text('No envelopes found', style: TextStyle(fontSize: 16)))
+                  ? const Center(
+                      child: Text('No envelopes found',
+                          style: TextStyle(fontSize: 16)))
                   : ListView.builder(
                       itemCount: categories.length,
                       itemBuilder: (context, index) {
                         final category = categories[index];
-                        final envelopes = category['envelopes'] as List<dynamic>;
+                        final envelopes =
+                            category['envelopes'] as List<dynamic>;
 
                         return Card(
                           margin: const EdgeInsets.all(8.0),
                           child: ExpansionTile(
-                            title: Text(category['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                            title: Text(category['name'],
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 18)),
                             subtitle: Text(
                               'Balance: ${_formatCurrency(category['balance'])}',
                               style: TextStyle(
-                                color: category['balance'] >= 0 ? Colors.green : Colors.red,
+                                color: category['balance'] >= 0
+                                    ? Colors.green
+                                    : Colors.red,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -172,14 +231,18 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
                                 trailing: Text(
                                   _formatCurrency(envelope['balance']),
                                   style: TextStyle(
-                                    color: envelope['balance'] >= 0 ? Colors.green : Colors.red,
+                                    color: envelope['balance'] >= 0
+                                        ? Colors.green
+                                        : Colors.red,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 onTap: () {
                                   // TODO: Navigate to envelope details
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('${envelope['name']} details - Coming soon!')),
+                                    SnackBar(
+                                        content: Text(
+                                            '${envelope['name']} details - Coming soon!')),
                                   );
                                 },
                               );

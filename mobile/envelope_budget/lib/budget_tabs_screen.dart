@@ -20,15 +20,25 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
   List<Budget> _budgets = [];
   bool _isLoadingBudgets = true;
 
-  final List<Widget> _screens = [
-    const EnvelopesScreen(),
-    const TransactionsScreen(),
-  ];
+  late List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
-    _loadBudgets();
+    _screens = [
+      EnvelopesScreen(key: ValueKey(_selectedBudgetId)),
+      const TransactionsScreen(),
+    ];
+    _loadBudgets().then((_) => _loadSavedBudgetId());
+  }
+
+  void _updateScreens() {
+    setState(() {
+      _screens = [
+        EnvelopesScreen(key: ValueKey(_selectedBudgetId)),
+        const TransactionsScreen(),
+      ];
+    });
   }
 
   Future<void> _loadBudgets() async {
@@ -47,6 +57,8 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
         if (budgets.isNotEmpty && _selectedBudgetId.isEmpty) {
           _selectedBudgetId = budgets.first.id;
           _selectedBudgetName = budgets.first.name;
+          _saveBudgetId(_selectedBudgetId);
+          _updateScreens();
         }
       });
     } catch (e) {
@@ -58,6 +70,36 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load budgets: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _saveBudgetId(String budgetId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('budget_id', budgetId);
+  }
+
+  Future<void> _loadSavedBudgetId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedBudgetId = prefs.getString('budget_id');
+
+    if (savedBudgetId != null && _budgets.isNotEmpty) {
+      final budgetIndex = _budgets.indexWhere((b) => b.id == savedBudgetId);
+
+      if (budgetIndex != -1) {
+        setState(() {
+          _selectedBudgetId = savedBudgetId;
+          _selectedBudgetName = _budgets[budgetIndex].name;
+        });
+        _updateScreens();
+      } else {
+        // If saved budget ID is not found in current budgets, select the first one
+        setState(() {
+          _selectedBudgetId = _budgets.first.id;
+          _selectedBudgetName = _budgets.first.name;
+        });
+        _saveBudgetId(_budgets.first.id);
+        _updateScreens();
       }
     }
   }
@@ -75,8 +117,8 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
               Text(
                 'Select Budget',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 16),
               if (_isLoadingBudgets)
@@ -85,19 +127,22 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
                 const Center(child: Text('No budgets available'))
               else
                 ...(_budgets.map((budget) => ListTile(
-                  leading: Icon(
-                    _selectedBudgetId == budget.id ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                    color: Colors.green,
-                  ),
-                  title: Text(budget.name),
-                  onTap: () {
-                    setState(() {
-                      _selectedBudgetId = budget.id;
-                      _selectedBudgetName = budget.name;
-                    });
-                    Navigator.pop(context);
-                  },
-                ))),
+                      leading: Icon(
+                        _selectedBudgetId == budget.id
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        color: const Color(0xFF0071BC),
+                      ),
+                      title: Text(budget.name),
+                      onTap: () {
+                        setState(() {
+                          _selectedBudgetId = budget.id;
+                          _selectedBudgetName = budget.name;
+                        });
+                        _saveBudgetId(budget.id);
+                        Navigator.pop(context);
+                      },
+                    ))),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -106,7 +151,8 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
                     Navigator.pop(context);
                     // TODO: Implement create new budget
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Create new budget - Coming soon!')),
+                      const SnackBar(
+                          content: Text('Create new budget - Coming soon!')),
                     );
                   },
                   icon: const Icon(Icons.add),
@@ -131,7 +177,7 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF0071BC),
         foregroundColor: Colors.white,
         title: GestureDetector(
           onTap: _showBudgetSelector,
@@ -159,9 +205,10 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-              // Only clear auth-related data, keep base_url
+              // Clear all auth-related data including budget_id, keep base_url
               await prefs.remove('auth_token');
               await prefs.remove('user_email');
+              await prefs.remove('budget_id');
               if (mounted) {
                 Navigator.pushReplacement(
                   context,
@@ -183,7 +230,7 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
             _currentIndex = index;
           });
         },
-        selectedItemColor: Colors.green,
+        selectedItemColor: const Color(0xFF0071BC),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.mail_outline),
@@ -197,7 +244,7 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTransaction,
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF0071BC),
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
