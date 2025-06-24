@@ -63,6 +63,8 @@
     "nowrap",
     "optgroup",
     "prefs",
+    "PYTHONDONTWRITEBYTECODE",
+    "PYTHONUNBUFFERED",
     "sfin",
     "Sidenav",
     "SimpleFIN",

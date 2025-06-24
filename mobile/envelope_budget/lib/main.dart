@@ -98,9 +98,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await _saveBaseUrl();
+      print('Saving base URL...');
 
       final baseUrl = _baseUrlController.text;
+      print('Using base URL: $baseUrl');
 
+      print('Sending login request to $baseUrl/api/auth/login...');
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         headers: {
@@ -111,16 +114,21 @@ class _LoginScreenState extends State<LoginScreen> {
           'password': _passwordController.text,
         }),
       );
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
+        print('Login successful, parsing response data...');
         final responseData = jsonDecode(response.body);
 
         // Save authentication token
+        print('Saving auth token and user email...');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', responseData['token'] ?? '');
         await prefs.setString('user_email', _emailController.text.trim());
 
         if (mounted) {
+          print('Showing success message and navigating...');
           _showSuccessMessage('Login successful!');
           // Navigate to budget tabs screen
           Navigator.pushReplacement(
@@ -129,6 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
+        print('Login failed with status code: ${response.statusCode}');
         final errorData = jsonDecode(response.body);
         _showErrorMessage(errorData['message'] ?? 'Login failed');
       }
@@ -170,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
@@ -178,6 +187,9 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Add some top padding to center content when keyboard is closed
+                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+
                 // Logo
                 Container(
                   height: 120,
@@ -347,6 +359,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                 ],
+
+                // Add bottom padding to ensure content is accessible
+                const SizedBox(height: 50),
               ],
             ),
           ),

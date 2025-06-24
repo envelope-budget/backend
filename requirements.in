@@ -1,10 +1,10 @@
+cryptography
 django
 django-allauth
 django-compressor
 django-csp
 django-debug-toolbar
 django-ninja
-jwt
 ofxparse
 openpyxl
 plaid-python
