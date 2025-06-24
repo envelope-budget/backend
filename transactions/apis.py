@@ -97,7 +97,6 @@ class Error(Schema):
 @router.get(
     "/transactions/{budget_id}",
     response=List[TransactionSchema],
-    auth=django_auth,
     tags=["Transactions"],
 )
 @paginate
@@ -141,7 +140,6 @@ def list_transactions(
 @router.post(
     "/transactions/{budget_id}/archive",
     response={200: dict, 400: Error},
-    auth=django_auth,
     tags=["Transactions"],
 )
 def archive_transactions(request, budget_id: str, transaction_ids: BulkDeleteSchema):
@@ -177,7 +175,6 @@ class MergeError(Schema):
 @router.post(
     "/transactions/{budget_id}/merge",
     response={200: TransactionMergeResponse, 400: MergeError},
-    auth=django_auth,
     tags=["Transactions"],
 )
 def merge_transactions(request, budget_id: str, merge_data: TransactionMergeRequest):
@@ -218,7 +215,6 @@ class TransactionMergeSchema(Schema):
 @router.get(
     "/transactions/{budget_id}/merges/{merge_id}",
     response={200: TransactionMergeSchema, 404: Error},
-    auth=django_auth,
     tags=["Transactions"],
 )
 def get_transaction_merge(request, budget_id: str, merge_id: str):
@@ -247,7 +243,6 @@ def get_transaction_merge(request, budget_id: str, merge_id: str):
 @router.post(
     "/transactions/{budget_id}/merges/{merge_id}/undo",
     response={200: dict, 404: Error},
-    auth=django_auth,
     tags=["Transactions"],
 )
 def undo_transaction_merge(request, budget_id: str, merge_id: str):
@@ -272,7 +267,6 @@ def undo_transaction_merge(request, budget_id: str, merge_id: str):
 @router.get(
     "/transactions/{budget_id}/merges",
     response=List[TransactionMergeSchema],
-    auth=django_auth,
     tags=["Transactions"],
 )
 def list_transaction_merges(request, budget_id: str):
@@ -301,7 +295,6 @@ def list_transaction_merges(request, budget_id: str):
 @router.get(
     "/transactions/{budget_id}/{transaction_id}",
     response=TransactionSchema,
-    auth=django_auth,
     tags=["Transactions"],
 )
 def get_transaction(request, budget_id: str, transaction_id: str):
@@ -331,7 +324,6 @@ def get_or_create_payee(name: str, budget: Budget) -> Payee:
 
 @router.post(
     "/transactions/{budget_id}",
-    auth=django_auth,
     tags=["Transactions"],
     response={200: TransactionSchema, 409: Error},
 )
@@ -375,7 +367,6 @@ def create_transaction(
 @router.post(
     "/transactions/{budget_id}/bulk",
     response={200: List[TransactionSchema], 404: Error},
-    auth=django_auth,
     tags=["Transactions"],
 )
 def create_transactions(
@@ -458,7 +449,6 @@ def create_transactions(
 @router.put(
     "/transactions/{budget_id}/{transaction_id}",
     response=TransactionSchema,
-    auth=django_auth,
     tags=["Transactions"],
 )
 def update_transaction(
@@ -577,7 +567,6 @@ def list_payees(request, budget_id: str):
 @router.get(
     "/payees/{budget_id}/{payee_id}",
     response=PayeeSchema,
-    auth=django_auth,
     tags=["Payees"],
 )
 def get_payee(request, budget_id: str, payee_id: str):
@@ -587,9 +576,7 @@ def get_payee(request, budget_id: str, payee_id: str):
     return PayeeSchema.from_orm(payee)
 
 
-@router.post(
-    "/payees/{budget_id}", response=PayeeSchema, auth=django_auth, tags=["Payees"]
-)
+@router.post("/payees/{budget_id}", response=PayeeSchema, tags=["Payees"])
 def create_payee(request, budget_id: str, payee_in: PayeeCreateSchema):
     user = request.auth
     budget = get_object_or_404(Budget, id=budget_id, user=user)
@@ -600,7 +587,6 @@ def create_payee(request, budget_id: str, payee_in: PayeeCreateSchema):
 @router.put(
     "/payees/{budget_id}/{payee_id}",
     response=PayeeSchema,
-    auth=django_auth,
     tags=["Payees"],
 )
 def update_payee(request, budget_id: str, payee_id: str, payee_in: PayeeUpdateSchema):
@@ -613,7 +599,7 @@ def update_payee(request, budget_id: str, payee_id: str, payee_in: PayeeUpdateSc
     return PayeeSchema.from_orm(payee)
 
 
-@router.delete("/payees/{budget_id}/{payee_id}", auth=django_auth, tags=["Payees"])
+@router.delete("/payees/{budget_id}/{payee_id}", tags=["Payees"])
 def delete_payee(request, budget_id: str, payee_id: str):
     if payee_id == "delete-unused":
         return delete_unused_payees(request, budget_id)
@@ -625,7 +611,7 @@ def delete_payee(request, budget_id: str, payee_id: str):
     return {"detail": "Payee deleted successfully"}
 
 
-@router.delete("/payees/{budget_id}/delete-unused", auth=django_auth, tags=["Payees"])
+@router.delete("/payees/{budget_id}/delete-unused", tags=["Payees"])
 def delete_unused_payees(request, budget_id: str):
     """
     Delete all payees that are not used in any transactions for the given budget.
@@ -648,7 +634,6 @@ def delete_unused_payees(request, budget_id: str):
 @router.post(
     "/payees/{budget_id}/clean-names",
     response={200: dict, 400: Error},
-    auth=django_auth,
     tags=["Payees"],
 )
 def clean_payee_names(request, budget_id: str):
@@ -730,7 +715,6 @@ class PayeeMergeResponse(Schema):
 @router.post(
     "/payees/{budget_id}/merge/preview",
     response={200: PayeeMergePreview, 400: Error},
-    auth=django_auth,
     tags=["Payees"],
 )
 def preview_payee_merge(request, budget_id: str):
@@ -800,7 +784,6 @@ def preview_payee_merge(request, budget_id: str):
 @router.post(
     "/payees/{budget_id}/merge/confirm",
     response={200: PayeeMergeResponse, 400: Error},
-    auth=django_auth,
     tags=["Payees"],
 )
 def confirm_payee_merge(request, budget_id: str, merge_data: PayeeMergeRequest):

@@ -41,6 +41,8 @@ class AuthBearer(HttpBearer):
             if user_id:
                 user = User.objects.get(id=user_id)
                 logger.debug("User authenticated via JWT: %s", user)
+                request.auth = user
+                request.user = user
                 return user
         except jwt.ExpiredSignatureError:
             logger.debug("JWT token expired")

@@ -20,30 +20,15 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
   List<Budget> _budgets = [];
   bool _isLoadingBudgets = true;
 
-  late List<Widget> _screens;
-
   @override
   void initState() {
     super.initState();
-    _screens = [
-      EnvelopesScreen(
-        key: ValueKey(_selectedBudgetId),
-        budgetId: _selectedBudgetId,
-      ),
-      const TransactionsScreen(),
-    ];
     _loadBudgets().then((_) => _loadSavedBudgetId());
   }
 
   void _updateScreens() {
     setState(() {
-      _screens = [
-        EnvelopesScreen(
-          key: ValueKey(_selectedBudgetId),
-          budgetId: _selectedBudgetId,
-        ),
-        const TransactionsScreen(),
-      ];
+      // This will trigger a rebuild with the new budget ID
     });
   }
 
@@ -229,6 +214,15 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
     );
   }
 
+  List<Widget> get _screens => [
+        EnvelopesScreen(
+          key: ValueKey(_selectedBudgetId),
+          budgetId: _selectedBudgetId,
+        ),
+        TransactionsScreen(
+            key: ValueKey(_selectedBudgetId), budgetId: _selectedBudgetId),
+      ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -292,10 +286,12 @@ class _BudgetTabsScreenState extends State<BudgetTabsScreen> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: _selectedBudgetId.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {

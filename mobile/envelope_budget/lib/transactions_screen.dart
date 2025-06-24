@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TransactionsScreen extends StatefulWidget {
-  const TransactionsScreen({super.key});
+  final String budgetId;
+
+  const TransactionsScreen({
+    super.key,
+    required this.budgetId,
+  });
 
   @override
   State<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -10,54 +18,70 @@ class TransactionsScreen extends StatefulWidget {
 class _TransactionsScreenState extends State<TransactionsScreen> {
   bool _isLoading = false;
   String _searchQuery = '';
-  String _sortBy = 'date'; // 'date', 'amount', 'description'
-  bool _sortAscending = false;
+  List<Map<String, dynamic>> _transactions = [];
+  int _offset = 0;
+  final int _limit = 20;
+  bool _hasMoreData = true;
 
-  // Mock transaction data (keeping your existing data)
-  final List<Map<String, dynamic>> _mockTransactions = [
-    // ... your existing mock data
-  ];
+  @override
+  void initState() {
+    super.initState();
+    if (widget.budgetId.isNotEmpty) {
+      _loadTransactions();
+    }
+  }
+
+  @override
+  void didUpdateWidget(TransactionsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.budgetId != widget.budgetId && widget.budgetId.isNotEmpty) {
+      _resetAndLoadTransactions();
+    }
+  }
+
+  Future<void> _resetAndLoadTransactions() async {
+    setState(() {
+      _transactions = [];
+      _offset = 0;
+      _hasMoreData = true;
+    });
+    await _loadTransactions();
+  }
 
   List<Map<String, dynamic>> get _filteredTransactions {
-    var filtered = _mockTransactions.where((transaction) {
+    var filtered = _transactions.where((transaction) {
       if (_searchQuery.isEmpty) return true;
 
-      final description = transaction['description'].toString().toLowerCase();
-      final envelope = transaction['envelope'].toString().toLowerCase();
+      final memo = (transaction['memo'] ?? '').toString().toLowerCase();
+      final payeeName =
+          transaction['payee']?['name']?.toString().toLowerCase() ?? '';
+      final envelopeName =
+          transaction['envelope']?['name']?.toString().toLowerCase() ?? '';
+      final accountName =
+          transaction['account']?['name']?.toString().toLowerCase() ?? '';
       final query = _searchQuery.toLowerCase();
 
-      return description.contains(query) || envelope.contains(query);
+      return memo.contains(query) ||
+          payeeName.contains(query) ||
+          envelopeName.contains(query) ||
+          accountName.contains(query);
     }).toList();
-
-    // Sort transactions
-    filtered.sort((a, b) {
-      int comparison = 0;
-      switch (_sortBy) {
-        case 'date':
-          comparison =
-              DateTime.parse(a['date']).compareTo(DateTime.parse(b['date']));
-          break;
-        case 'amount':
-          comparison = (a['amount'] as int).compareTo(b['amount'] as int);
-          break;
-        case 'description':
-          comparison = a['description']
-              .toString()
-              .compareTo(b['description'].toString());
-          break;
-      }
-      return _sortAscending ? comparison : -comparison;
-    });
 
     return filtered;
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.budgetId.isEmpty) {
+      return const Center(
+        child: Text('Please select a budget to view transactions'),
+      );
+    }
+
     return Scaffold(
       body: Column(
         children: [
-          // Header Section
+          // Search Bar Section
           Container(
             padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
@@ -69,34 +93,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Transactions',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                    ),
-                    _buildSortButton(),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildSearchBar(),
-                const SizedBox(height: 8),
-                _buildTransactionSummary(),
-              ],
-            ),
+            child: _buildSearchBar(),
           ),
 
           // Transaction List
           Expanded(
             child: RefreshIndicator(
-              onRefresh: _loadTransactions,
+              onRefresh: _refreshTransactions,
               child: _buildTransactionList(),
             ),
           ),
@@ -137,101 +140,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  Widget _buildSortButton() {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.sort),
-      onSelected: (value) {
-        setState(() {
-          if (_sortBy == value) {
-            _sortAscending = !_sortAscending;
-          } else {
-            _sortBy = value;
-            _sortAscending = false;
-          }
-        });
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'date', child: Text('Sort by Date')),
-        const PopupMenuItem(value: 'amount', child: Text('Sort by Amount')),
-        const PopupMenuItem(
-            value: 'description', child: Text('Sort by Description')),
-      ],
-    );
-  }
-
-  Widget _buildTransactionSummary() {
-    final transactions = _filteredTransactions;
-    final totalIncome = transactions
-        .where((t) => (t['amount'] as int) > 0)
-        .fold(0, (sum, t) => sum + (t['amount'] as int));
-    final totalExpenses = transactions
-        .where((t) => (t['amount'] as int) < 0)
-        .fold(0, (sum, t) => sum + (t['amount'] as int));
-
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSummaryCard(
-            'Income',
-            _formatCurrency(totalIncome),
-            Colors.green,
-            Icons.trending_up,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildSummaryCard(
-            'Expenses',
-            _formatCurrency(totalExpenses),
-            Colors.red,
-            Icons.trending_down,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(
-      String title, String amount, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  amount,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTransactionList() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -257,6 +165,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget _buildTransactionCard(Map<String, dynamic> transaction) {
     final amount = transaction['amount'] as int;
     final isIncome = amount >= 0;
+    final payeeName = transaction['payee']?['name'] ?? 'Unknown Payee';
+    final envelopeName = transaction['envelope']?['name'] ?? 'Unassigned';
+    final accountName = transaction['account']?['name'] ?? 'Unknown Account';
+    final memo = transaction['memo'] ?? '';
+    final isPending = transaction['pending'] ?? false;
 
     return Card(
       elevation: 2,
@@ -272,7 +185,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 radius: 24,
                 backgroundColor: _getTransactionColor(amount).withOpacity(0.1),
                 child: Icon(
-                  _getTransactionIcon(transaction['category']),
+                  _getTransactionIcon(envelopeName, isPending),
                   color: _getTransactionColor(amount),
                   size: 20,
                 ),
@@ -283,7 +196,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      transaction['description'],
+                      payeeName,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
@@ -291,13 +204,25 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      transaction['envelope'],
+                      envelopeName,
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    if (memo.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        memo,
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text(
                       _formatDate(transaction['date']),
@@ -321,22 +246,45 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _getCategoryColor(transaction['category'])
-                          .withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      transaction['category'],
-                      style: TextStyle(
-                        color: _getCategoryColor(transaction['category']),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isPending) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'PENDING',
+                            style: TextStyle(
+                              color: Colors.orange[700],
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          accountName.replaceAll(RegExp(r'[^\w\s]'), '').trim(),
+                          style: TextStyle(
+                            color: Colors.blue[700],
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -421,6 +369,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     ScrollController scrollController,
   ) {
     final amount = transaction['amount'] as int;
+    final payeeName = transaction['payee']?['name'] ?? 'Unknown Payee';
+    final envelopeName = transaction['envelope']?['name'] ?? 'Unassigned';
+    final accountName = transaction['account']?['name'] ?? 'Unknown Account';
+    final memo = transaction['memo'] ?? '';
+    final isPending = transaction['pending'] ?? false;
+    final isCleared = transaction['cleared'] ?? false;
+    final isReconciled = transaction['reconciled'] ?? false;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -444,7 +399,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 radius: 30,
                 backgroundColor: _getTransactionColor(amount).withOpacity(0.1),
                 child: Icon(
-                  _getTransactionIcon(transaction['category']),
+                  _getTransactionIcon(envelopeName, isPending),
                   color: _getTransactionColor(amount),
                   size: 24,
                 ),
@@ -455,7 +410,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      transaction['description'],
+                      payeeName,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -476,8 +431,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           ),
           const SizedBox(height: 32),
           _buildDetailRow('Date', _formatDate(transaction['date'])),
-          _buildDetailRow('Envelope', transaction['envelope']),
-          _buildDetailRow('Category', transaction['category']),
+          _buildDetailRow('Account', accountName),
+          _buildDetailRow('Envelope', envelopeName),
+          if (memo.isNotEmpty) _buildDetailRow('Memo', memo),
+          _buildDetailRow(
+              'Status', _getStatusText(isPending, isCleared, isReconciled)),
           _buildDetailRow('Transaction ID', transaction['id']),
           const SizedBox(height: 32),
           Row(
@@ -548,13 +506,21 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
+  String _getStatusText(bool isPending, bool isCleared, bool isReconciled) {
+    if (isReconciled) return 'Reconciled';
+    if (isCleared) return 'Cleared';
+    if (isPending) return 'Pending';
+    return 'Uncleared';
+  }
+
   void _showDeleteConfirmation(Map<String, dynamic> transaction) {
+    final payeeName = transaction['payee']?['name'] ?? 'Unknown Payee';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: Text(
-            'Are you sure you want to delete "${transaction['description']}"?'),
+        content: Text('Are you sure you want to delete "$payeeName"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -595,7 +561,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _formatCurrency(int cents) {
-    return '\$${(cents / 100).toStringAsFixed(2)}';
+    return '\$${(cents.abs() / 100).toStringAsFixed(2)}';
   }
 
   String _formatDate(String dateStr) {
@@ -608,25 +574,36 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     } else if (difference == 1) {
       return 'Yesterday';
     } else if (difference < 7) {
-      return '${difference} days ago';
+      return '$difference days ago';
     } else {
       return '${date.month}/${date.day}/${date.year}';
     }
   }
 
-  IconData _getTransactionIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'income':
-        return Icons.trending_up;
-      case 'essential':
-        return Icons.home;
-      case 'lifestyle':
-        return Icons.shopping_bag;
-      case 'savings':
-        return Icons.savings;
-      default:
-        return Icons.receipt;
+  IconData _getTransactionIcon(String envelopeName, bool isPending) {
+    if (isPending) return Icons.pending;
+
+    final name = envelopeName.toLowerCase();
+    if (name.contains('tithing') || name.contains('church')) {
+      return Icons.church;
     }
+    if (name.contains('groceries') || name.contains('food')) {
+      return Icons.shopping_cart;
+    }
+    if (name.contains('medical') || name.contains('health')) {
+      return Icons.medical_services;
+    }
+    if (name.contains('home') || name.contains('maintenance')) {
+      return Icons.home_repair_service;
+    }
+    if (name.contains('clothing')) return Icons.checkroom;
+    if (name.contains('crypto')) return Icons.currency_bitcoin;
+    if (name.contains('gym') || name.contains('fitness')) {
+      return Icons.fitness_center;
+    }
+    if (name.contains('reimbursement')) return Icons.receipt_long;
+
+    return Icons.receipt;
   }
 
   Color _getTransactionColor(int amount) {
@@ -634,17 +611,72 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _loadTransactions() async {
+    if (_isLoading || widget.budgetId.isEmpty) return;
+
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      // Get the base URL from shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      final baseUrl =
+          prefs.getString('base_url') ?? 'https://envelopebudget.com';
+      final authToken = prefs.getString('auth_token') ?? '';
 
-    setState(() {
-      _isLoading = false;
-    });
+      // Debug: Check if budgetId is available
+      print('Budget ID: ${widget.budgetId}');
 
-    // TODO: Implement real API call
+      final url =
+          '$baseUrl/api/transactions/${widget.budgetId}?offset=$_offset&limit=$_limit&in_inbox=true';
+      print('API URL: $url'); // Debug: Print the full URL
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+      );
+
+      print(
+          'Response status: ${response.statusCode}'); // Debug: Print response status
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> items = data['items'] ?? [];
+
+        setState(() {
+          if (_offset == 0) {
+            _transactions = items.cast<Map<String, dynamic>>();
+          } else {
+            _transactions.addAll(items.cast<Map<String, dynamic>>());
+          }
+          _hasMoreData = items.length == _limit;
+          _offset += items.length;
+        });
+      } else {
+        throw Exception('Failed to load transactions: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error loading transactions: $e'); // Debug: Print error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading transactions: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshTransactions() async {
+    _offset = 0;
+    _hasMoreData = true;
+    await _loadTransactions();
   }
 }
