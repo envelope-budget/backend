@@ -1,5 +1,5 @@
 # Use an official Python runtime as the base image
-FROM python:latest
+FROM python:3.13.5
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1

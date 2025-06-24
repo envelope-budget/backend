@@ -1,9 +1,17 @@
+# Python
+__pycache__
+*_log.txt
+
+# macOS
 .DS_Store
+
+# Node.js
+node_modules
+.pnpm-store
+
+# Django/Web
 /.env
 /db.sqlite3
-node_modules
-CACHE
-/static/src/output.css
-*_log.txt
-__pycache__
 /dbreset
+/static/src/output.css
+CACHE

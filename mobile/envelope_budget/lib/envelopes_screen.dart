@@ -169,7 +169,7 @@ class _EnvelopesScreenState extends State<EnvelopesScreen> {
   }
 
   String _formatCurrency(int cents) {
-    return '\$${(cents / 100).toStringAsFixed(2)}';
+    return '\$${(cents / 1000).toStringAsFixed(2)}';
   }
 
   Future<void> _loadQuickViewPreferences() async {

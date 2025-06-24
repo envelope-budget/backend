@@ -38,7 +38,85 @@ class EnvelopeBudgetApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const LoginScreen(),
+      home: const AuthCheckScreen(),
+    );
+  }
+}
+
+// Add this new screen to check authentication status
+class AuthCheckScreen extends StatefulWidget {
+  const AuthCheckScreen({super.key});
+
+  @override
+  State<AuthCheckScreen> createState() => _AuthCheckScreenState();
+}
+
+class _AuthCheckScreenState extends State<AuthCheckScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final authToken = prefs.getString('auth_token');
+
+    // Add a small delay to show the splash screen briefly
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    if (mounted) {
+      if (authToken != null && authToken.isNotEmpty) {
+        // User is logged in, go to budget tabs
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const BudgetTabsScreen()),
+        );
+      } else {
+        // User is not logged in, go to login screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Logo
+            Container(
+              height: 120,
+              width: 120,
+              margin: const EdgeInsets.only(bottom: 24),
+              child: SvgPicture.asset(
+                'assets/images/eb-logo.svg',
+                height: 120,
+                width: 120,
+              ),
+            ),
+            // App title
+            Text(
+              'EnvelopeBudget',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0071BC),
+                  ),
+            ),
+            const SizedBox(height: 32),
+            // Loading indicator
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0071BC)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -376,5 +454,20 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     _baseUrlController.dispose();
     super.dispose();
+  }
+}
+
+// Add this helper function at the top level (outside of classes)
+Future<void> logout(BuildContext context) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('auth_token');
+  await prefs.remove('user_email');
+
+  if (context.mounted) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
   }
 }
