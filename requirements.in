@@ -8,6 +8,7 @@ django-ninja
 ofxparse
 openpyxl
 plaid-python
+psycopg2-binary
 PyJWT
 python-dotenv
 requests

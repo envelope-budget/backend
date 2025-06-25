@@ -1,11 +1,20 @@
 #!/bin/bash
-
-# Exit on any error
 set -e
+
+echo "🚀 Starting EnvelopeBudget application..."
+
+# Wait for database if using PostgreSQL
+if [ "$DATABASE_ENGINE" = "postgresql" ]; then
+  echo "⏳ Waiting for PostgreSQL..."
+  while ! nc -z $POSTGRES_HOST $POSTGRES_PORT; do
+    sleep 0.1
+  done
+  echo "✅ PostgreSQL started"
+fi
 
 # Run migrations
 echo "🚀 Running database migrations..."
-python manage.py migrate
+python manage.py migrate --noinput
 
 # Create superuser if specified
 if [ -n "$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ]; then
@@ -26,7 +35,22 @@ python manage.py compress --force
 echo "📦 Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Start Nginx and Gunicorn
-echo "🚀 Starting Nginx and Gunicorn..."
-service nginx start
-exec gunicorn --bind 0.0.0.0:8000 budgetapp.wsgi:application --workers 2 --log-level debug
+# Test nginx configuration
+echo "🔧 Testing Nginx configuration..."
+nginx -t
+
+# Start nginx in background
+echo "🚀 Starting Nginx..."
+nginx
+
+# Start Gunicorn
+echo "🦄 Starting Gunicorn..."
+exec gunicorn budgetapp.wsgi:application \
+  --bind 127.0.0.1:8000 \
+  --workers 3 \
+  --timeout 120 \
+  --keep-alive 2 \
+  --max-requests 1000 \
+  --max-requests-jitter 100 \
+  --access-logfile - \
+  --error-logfile -
