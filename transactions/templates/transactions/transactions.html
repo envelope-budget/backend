@@ -624,7 +624,11 @@
 {% block js %}
   <script src="{% static 'vendor/flowbite/datepicker.min.js' %}"></script>
   {% compress js %}
-
+    <script src="{% static 'transactions/js/utils.js' %}"></script>
+    <script src="{% static 'transactions/js/api-functions.js' %}"></script>
+    <script src="{% static 'transactions/js/search-functions.js' %}"></script>
+    <script src="{% static 'transactions/js/transaction-operations.js' %}"></script>
+    <script src="{% static 'transactions/js/split-transactions.js' %}"></script>
     <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
     <script src="{% static 'transactions/js/transactions.js' %}"></script>
     <script src="{% static 'transactions/js/envelope-select.js' %}"></script>
