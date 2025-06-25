@@ -868,7 +868,7 @@ function transactionData() {
           envelope: sub.envelope_id,
           memo: sub.memo || '',
           inflow: sub.amount > 0 ? (sub.amount / 1000).toFixed(2) : '',
-          outflow: sub.amount < 0 ? (Math.abs(sub.amount) / 1000).toFixed(2) : ''
+          outflow: sub.amount < 0 ? (Math.abs(sub.amount) / 1000).toFixed(2) : '',
         }));
         this.validateSplitAmounts();
       } else {
@@ -1123,7 +1123,7 @@ function transactionData() {
         this.splitTotal = 0;
         this.splitInflowTotal = 0;
         this.splitAmountsMatch = false;
-        
+
         // Focus on envelope selector for assignment
         this.$nextTick(() => {
           const envelopeSelect = this.$refs.envelopeSelect;
@@ -1241,16 +1241,16 @@ function transactionData() {
             showToast('Split amounts must match the main transaction amount', 'error');
             return;
           }
-          
+
           // Check if this is editing an existing transaction
           if (this.editableTransaction.id) {
             return await this.updateSplitTransaction();
           }
           return await this.saveSplitTransaction();
         }
-        
+
         // Check if this was a split transaction being converted to regular
-        if (this.editableTransaction.id && this.editableTransaction.subtransactions) {
+        if (this.editableTransaction.id && this.editableTransaction.subtransactions.length > 0) {
           // This was a split transaction, now being saved as regular - need to delete subtransactions
           return await this.convertSplitToRegular();
         }
@@ -1418,6 +1418,7 @@ function transactionData() {
         this.isSplitMode = false;
         this.splitRows = [];
         this.activeIndex = 0;
+        this.showAllTransactions();
 
         // Refresh the transaction list to ensure we have the latest data
         await this.fetchTransactions();
@@ -1506,6 +1507,7 @@ function transactionData() {
         this.showEditForm = false;
         this.isSplitMode = false;
         this.splitRows = [];
+        this.showAllTransactions();
 
         // Refresh the transaction list to ensure we have the latest data
         await this.fetchTransactions();

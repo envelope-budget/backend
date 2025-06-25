@@ -156,10 +156,10 @@ def list_transactions(
     if not Budget.objects.filter(id=budget_id, user=request.user).exists():
         return []  # Return an empty list if the budget does not belong to the user
 
-    # Start with base query and prefetch subtransactions
+    # Start with base query and prefetch related data
     transactions_query = Transaction.objects.filter(
         budget_id=budget_id, deleted=False
-    ).prefetch_related("subtransaction_set__envelope")
+    ).select_related("envelope", "account", "payee").prefetch_related("subtransaction_set__envelope")
 
     # Apply search filter if provided
     if search:
