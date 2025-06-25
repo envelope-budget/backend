@@ -4,6 +4,7 @@ import logging
 
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, transaction
+from django.db.transaction import on_commit
 from django.shortcuts import get_object_or_404
 from ninja import File, Router, Schema, UploadedFile
 from ninja.pagination import paginate
@@ -13,7 +14,7 @@ from accounts.models import Account
 from budgets.models import Budget
 from envelopes.models import Envelope
 from transactions.search import parse_search_query
-from .models import Payee, Transaction, TransactionMerge
+from .models import Payee, SubTransaction, Transaction, TransactionMerge
 
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,28 @@ class TransactionSchema(Schema):
     reconciled: bool
     import_id: Optional[str]
     sfin_id: Optional[str]
+    subtransactions: Optional[List["SubTransactionSchema"]] = None
+
+    @staticmethod
+    def resolve_subtransactions(obj):
+        """Resolve subtransactions for the transaction"""
+        if hasattr(obj, "subtransaction_set"):
+            subtrans = obj.subtransaction_set.filter(deleted=False)
+            return [
+                {
+                    "id": sub.id,
+                    "transaction_id": sub.transaction_id,
+                    "envelope": {
+                        "id": sub.envelope.id,
+                        "name": sub.envelope.name
+                    } if sub.envelope else None,
+                    "envelope_id": sub.envelope_id,
+                    "amount": sub.amount,
+                    "memo": sub.memo,
+                }
+                for sub in subtrans
+            ]
+        return None
 
 
 class TransactionPostPatchSchema(Schema):
@@ -77,9 +100,26 @@ class TransactionPostPatchSchema(Schema):
 class SubTransactionSchema(Schema):
     id: str
     transaction_id: str
+    envelope: Optional[EnvelopeSchema]
     envelope_id: Optional[str]
     amount: int
     memo: Optional[str]
+
+
+class SubTransactionCreateSchema(Schema):
+    envelope_id: str
+    amount: int
+    memo: Optional[str] = None
+
+
+class SplitTransactionCreateSchema(Schema):
+    account_id: str
+    payee: Optional[str] = None
+    date: str
+    amount: int
+    memo: Optional[str] = None
+    cleared: Optional[bool] = False
+    subtransactions: List[SubTransactionCreateSchema]
 
 
 class OFXDataSchema(Schema):
@@ -116,8 +156,10 @@ def list_transactions(
     if not Budget.objects.filter(id=budget_id, user=request.user).exists():
         return []  # Return an empty list if the budget does not belong to the user
 
-    # Start with base query
-    transactions_query = Transaction.objects.filter(budget_id=budget_id, deleted=False)
+    # Start with base query and prefetch subtransactions
+    transactions_query = Transaction.objects.filter(
+        budget_id=budget_id, deleted=False
+    ).prefetch_related("subtransaction_set__envelope")
 
     # Apply search filter if provided
     if search:
@@ -134,7 +176,200 @@ def list_transactions(
     # Order by date descending
     transactions_query = transactions_query.order_by("-date")
 
-    return transactions_query
+    # Convert to list and manually include subtransactions
+    transactions_list = list(transactions_query)
+    
+    # Add subtransactions to each transaction
+    for transaction in transactions_list:
+        if hasattr(transaction, "subtransaction_set"):
+            subtrans = transaction.subtransaction_set.filter(deleted=False)
+            if subtrans.exists():
+                transaction.subtransactions = [
+                    {
+                        "id": sub.id,
+                        "transaction_id": sub.transaction_id,
+                        "envelope": {
+                            "id": sub.envelope.id,
+                            "name": sub.envelope.name
+                        } if sub.envelope else None,
+                        "envelope_id": sub.envelope_id,
+                        "amount": sub.amount,
+                        "memo": sub.memo,
+                    }
+                    for sub in subtrans
+                ]
+            else:
+                transaction.subtransactions = None
+        else:
+            transaction.subtransactions = None
+
+    return transactions_list
+
+
+@router.post(
+    "/transactions/{budget_id}/split",
+    response={200: TransactionSchema, 404: Error},
+    tags=["Transactions"],
+)
+def create_split_transaction(
+    request, budget_id: str, transaction_data: SplitTransactionCreateSchema
+):
+    """Create a new split transaction with subtransactions"""
+    # Ensure the budget belongs to the user
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    account = get_object_or_404(Account, id=transaction_data.account_id)
+    payee = get_or_create_payee(transaction_data.payee, budget)
+
+    with transaction.atomic():
+        # Create the main transaction without an envelope (will show as "Split")
+        main_transaction = Transaction.objects.create(
+            budget=budget,
+            account=account,
+            envelope=None,  # No envelope for split transactions
+            payee=payee,
+            date=transaction_data.date,
+            amount=transaction_data.amount,
+            memo=transaction_data.memo,
+            cleared=transaction_data.cleared,
+            in_inbox=True,  # Keep in inbox so it shows in the list
+        )
+
+        # Create the subtransactions
+        for sub_data in transaction_data.subtransactions:
+            envelope = get_object_or_404(Envelope, id=sub_data.envelope_id)
+            SubTransaction.objects.create(
+                transaction=main_transaction,
+                envelope=envelope,
+                amount=sub_data.amount,
+                memo=sub_data.memo,
+            )
+
+    # Refresh the transaction from database to get latest state
+    main_transaction.refresh_from_db()
+    
+    # Add subtransactions to the main transaction for serialization
+    subtrans = main_transaction.subtransaction_set.filter(deleted=False)
+    main_transaction.subtransactions = [
+        {
+            "id": sub.id,
+            "transaction_id": sub.transaction_id,
+            "envelope": {
+                "id": sub.envelope.id,
+                "name": sub.envelope.name
+            } if sub.envelope else None,
+            "envelope_id": sub.envelope_id,
+            "amount": sub.amount,
+            "memo": sub.memo,
+        }
+        for sub in subtrans
+    ]
+
+    # Return the main transaction with its subtransactions
+    return TransactionSchema.from_orm(main_transaction)
+
+
+@router.put(
+    "/transactions/{budget_id}/split/{transaction_id}",
+    response={200: TransactionSchema, 404: Error},
+    tags=["Transactions"],
+)
+def update_split_transaction(
+    request, budget_id: str, transaction_id: str, transaction_data: SplitTransactionCreateSchema
+):
+    """Update an existing split transaction with subtransactions"""
+    # Ensure the budget belongs to the user
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+    main_transaction = get_object_or_404(Transaction, id=transaction_id, budget=budget)
+
+    account = get_object_or_404(Account, id=transaction_data.account_id)
+    payee = get_or_create_payee(transaction_data.payee, budget)
+
+    with transaction.atomic():
+        # Update the main transaction
+        main_transaction.account = account
+        main_transaction.payee = payee
+        main_transaction.date = transaction_data.date
+        main_transaction.amount = transaction_data.amount
+        main_transaction.memo = transaction_data.memo
+        main_transaction.cleared = transaction_data.cleared
+        main_transaction.envelope = None  # Keep as split transaction
+        main_transaction.in_inbox = True  # Keep in inbox so it shows in the list
+        main_transaction.save()
+
+        # Delete existing subtransactions
+        main_transaction.subtransaction_set.all().delete()
+
+        # Create new subtransactions
+        for sub_data in transaction_data.subtransactions:
+            envelope = get_object_or_404(Envelope, id=sub_data.envelope_id)
+            SubTransaction.objects.create(
+                transaction=main_transaction,
+                envelope=envelope,
+                amount=sub_data.amount,
+                memo=sub_data.memo,
+            )
+
+    # Refresh the transaction from database to get latest state
+    main_transaction.refresh_from_db()
+    
+    # Add subtransactions to the main transaction for serialization
+    subtrans = main_transaction.subtransaction_set.filter(deleted=False)
+    main_transaction.subtransactions = [
+        {
+            "id": sub.id,
+            "transaction_id": sub.transaction_id,
+            "envelope": {
+                "id": sub.envelope.id,
+                "name": sub.envelope.name
+            } if sub.envelope else None,
+            "envelope_id": sub.envelope_id,
+            "amount": sub.amount,
+            "memo": sub.memo,
+        }
+        for sub in subtrans
+    ]
+
+    return TransactionSchema.from_orm(main_transaction)
+
+
+@router.post(
+    "/transactions/{budget_id}/split/{transaction_id}/convert",
+    response={200: TransactionSchema, 404: Error},
+    tags=["Transactions"],
+)
+def convert_split_to_regular(
+    request, budget_id: str, transaction_id: str, transaction_data: TransactionPostPatchSchema
+):
+    """Convert a split transaction back to a regular transaction"""
+    # Ensure the budget belongs to the user
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+    main_transaction = get_object_or_404(Transaction, id=transaction_id, budget=budget)
+
+    account = get_object_or_404(Account, id=transaction_data.account_id)
+    payee = get_or_create_payee(transaction_data.payee, budget)
+    envelope = None
+    if transaction_data.envelope_id:
+        envelope = get_object_or_404(Envelope, id=transaction_data.envelope_id)
+
+    with transaction.atomic():
+        # Update the main transaction
+        main_transaction.account = account
+        main_transaction.payee = payee
+        main_transaction.envelope = envelope
+        main_transaction.date = transaction_data.date
+        main_transaction.amount = transaction_data.amount
+        main_transaction.memo = transaction_data.memo
+        main_transaction.cleared = transaction_data.cleared
+        main_transaction.save()
+
+        # Delete all subtransactions
+        main_transaction.subtransaction_set.all().delete()
+
+    # Clear subtransactions for serialization
+    main_transaction.subtransactions = None
+
+    return TransactionSchema.from_orm(main_transaction)
 
 
 @router.post(

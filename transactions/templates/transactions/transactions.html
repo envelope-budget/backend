@@ -217,7 +217,7 @@
                   </payee-select>
                 </td>
                 <td class="px-1 py-3 align-text-top">
-                  <searchable-select id="id_envelope" class="block w-full" x-ref="envelopeSelect" :data-selected-id="editableTransaction.envelope" x-init="$nextTick(() => { $refs.envelopeSelect.addEventListener('change', (e) => { editableTransaction.envelope = e.detail.value; }); if (editableTransaction.envelope) { $refs.envelopeSelect.setValue(editableTransaction.envelope); } })">
+                  <searchable-select id="id_envelope" class="block w-full" x-ref="envelopeSelect" :data-selected-id="editableTransaction.envelope" x-init="$nextTick(() => { $refs.envelopeSelect.addEventListener('change', (e) => { if (e.detail.isSplit) { enableSplitMode(); } else { editableTransaction.envelope = e.detail.value; } }); if (editableTransaction.envelope) { $refs.envelopeSelect.setValue(editableTransaction.envelope); } })">
                   </searchable-select>
                 </td>
 
@@ -274,6 +274,111 @@
                   </span>
                 </td>
               </tr>
+              
+              <!-- Split Transaction Rows -->
+              <template x-for="(splitRow, splitIndex) in splitRows" :key="splitIndex" x-show="showEditForm && isSplitMode">
+                <tr class="transaction-edit split-row" x-ref="splitRow" x-cloak>
+                  <td class="px-2 py-3 align-text-top"></td>
+                  <td class="px-1 py-3 align-text-top">
+                    <!-- Empty for split rows to maintain alignment -->
+                  </td>
+                  <td class="px-1 py-3 align-text-top">
+                    <!-- Empty for split rows to maintain alignment -->
+                  </td>
+                  <td class="px-1 py-3 align-text-top">
+                    <!-- Empty for split rows to maintain alignment -->
+                  </td>
+                  <td class="px-1 py-3 align-text-top">
+                    <searchable-select :id="'id_split_envelope_' + splitIndex" 
+                                     class="block w-full" 
+                                     :data-selected-id="splitRows[splitIndex].envelope"
+                                     x-init="$nextTick(() => { 
+                                       $el.addEventListener('change', (e) => { 
+                                         splitRows[splitIndex].envelope = e.detail.value; 
+                                         validateSplitAmounts(); 
+                                       }); 
+                                       if (splitRows[splitIndex].envelope) { 
+                                         $el.setValue(splitRows[splitIndex].envelope); 
+                                       }
+                                     })">
+                    </searchable-select>
+                  </td>
+                  <td class="px-1 py-3 align-text-top">
+                    <input type="text"
+                           :id="'id_split_memo_' + splitIndex"
+                           class="block p-1 w-full text-sm text-gray-900 bg-gray-50 rounded border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                           placeholder="Split memo..."
+                           x-model="splitRows[splitIndex].memo" />
+                  </td>
+                  <td class="px-1 py-3 align-text-top w-5">
+                    <input type="text"
+                           :id="'id_split_outflow_' + splitIndex"
+                           class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                           x-model="splitRows[splitIndex].outflow"
+                           placeholder="0.00"
+                           @blur="validateSplitAmounts()" />
+                  </td>
+                  <td class="px-1 py-3 align-text-top w-5">
+                    <input type="text"
+                           :id="'id_split_inflow_' + splitIndex"
+                           class="text-right block w-full p-1 text-gray-900 border border-gray-300 rounded bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                           x-model="splitRows[splitIndex].inflow"
+                           placeholder="0.00"
+                           @blur="validateSplitAmounts()" />
+                  </td>
+                  <td class="px-1 py-3 align-text-top">
+                    <!-- Empty for alignment -->
+                  </td>
+                  <td class="px-1 py-3 align-text-top text-center">
+                    <button type="button" 
+                            class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600"
+                            @click="removeSplitRow(splitIndex)"
+                            x-show="splitRows.length > 2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+              
+              <!-- Split Controls Row -->
+              <tr class="transaction-edit split-controls" x-show="showEditForm && isSplitMode" x-cloak>
+                <td colspan="4"></td>
+                <td class="px-1 py-2">
+                  <button type="button"
+                          class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600"
+                          @click="addSplitRow()">
+                    + Add Split Row
+                  </button>
+                </td>
+                <td class="px-1 py-2">
+                  <button type="button"
+                          class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-600 mr-2"
+                          @click="cancelSplitMode()">
+                    Cancel Split
+                  </button>
+                  <button type="button"
+                          class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600"
+                          @click="undoSplit()"
+                          x-show="editableTransaction.id">
+                    Undo Split
+                  </button>
+                </td>
+                <td class="px-1 py-2 text-right text-sm">
+                  <span x-text="'Total: ' + splitTotal.toFixed(2)" 
+                        :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></span>
+                </td>
+                <td class="px-1 py-2 text-right text-sm">
+                  <span x-text="'Total: ' + splitInflowTotal.toFixed(2)" 
+                        :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></span>
+                </td>
+                <td colspan="2" class="px-1 py-2 text-center">
+                  <span x-show="splitAmountsMatch" class="text-green-600">✓</span>
+                  <span x-show="!splitAmountsMatch" class="text-red-600">✗</span>
+                </td>
+              </tr>
+              
               <tr class="transaction-edit"
                   x-show="showEditForm"
                   x-ref="editFormButtons"
@@ -282,6 +387,8 @@
                   <!-- Adjust the colspan to match the number of columns in your table -->
                   <button type="button"
                           class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mr-2 mb-2"
+                          :disabled="isSplitMode && !splitAmountsMatch"
+                          :class="{ 'opacity-50 cursor-not-allowed': isSplitMode && !splitAmountsMatch }"
                           @click.prevent="saveTransaction()">Save</button>
                   <button type="button"
                           class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-white mr-2 mb-2"
@@ -307,9 +414,10 @@
                       @click="editTransactionAtIndex(transaction, index, 'payee')"></td>
                   <td class="px-2 py-3 whitespace-nowrap truncate"
                       @click="editTransactionAtIndex(transaction, index, 'envelope')">
+                    <!-- Regular envelope assignment -->
                     <button type="button"
                             class="px-4 py-1 text-xs font-medium text-center inline-flex items-center text-white bg-yellow-700 rounded-full hover:bg-yellow-800 focus:ring-1 focus:outline-none focus:ring-yellow-300"
-                            x-show="!transaction.envelope && transaction.amount < 0">
+                            x-show="!transaction.envelope && !transaction.subtransactions && transaction.amount < 0">
                       <svg class="w-3 h-3 text-white me-2"
                            aria-hidden="true"
                            xmlns="http://www.w3.org/2000/svg"
@@ -320,11 +428,35 @@
                       </svg>
                       Assign...
                     </button>
+                    
+                    <!-- Single envelope -->
                     <button x-show="transaction.envelope"
                             x-text="transaction.envelope ? transaction.envelope.name : ''"></button>
+                    
+                    <!-- Split transaction display -->
+                    <div x-show="transaction.subtransactions && transaction.subtransactions.length > 0" class="space-y-1">
+                      <div class="flex items-center">
+                        <svg class="w-3 h-3 text-blue-600 me-1"
+                             aria-hidden="true"
+                             xmlns="http://www.w3.org/2000/svg"
+                             fill="currentColor"
+                             viewBox="0 0 24 24">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        <span class="text-xs font-medium text-blue-600">Split:</span>
+                      </div>
+                      <template x-for="(subtransaction, subIndex) in transaction.subtransactions" :key="subtransaction.id">
+                        <div class="text-xs text-gray-600 dark:text-gray-400 flex justify-between">
+                          <span x-text="subtransaction.envelope ? subtransaction.envelope.name : 'No Envelope'" class="truncate mr-2"></span>
+                          <span x-text="formatAmount(subtransaction.amount, subtransaction.amount >= 0 ? 'inflow' : 'outflow')" class="font-mono"></span>
+                        </div>
+                      </template>
+                    </div>
+                    
+                    <!-- To Budget button -->
                     <button type="button"
                             class="px-4 py-1 text-xs font-medium text-center inline-flex items-center text-white bg-green-700 rounded-full hover:bg-green-800 focus:ring-1 focus:outline-none focus:ring-green-300"
-                            x-show="!transaction.envelope && transaction.amount > 0"
+                            x-show="!transaction.envelope && !transaction.subtransactions && transaction.amount > 0"
                             @click.stop="toBudget(transaction)">
                       <svg class="w-4 h-4 text-gray-800 dark:text-white"
                            aria-hidden="true"
@@ -395,7 +527,7 @@
                   </td>
                 </tr>
               </template>
-            </tbody>
+             </tbody>
           </table>
         </div>
         <!-- Pagination nav -->

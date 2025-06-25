@@ -243,6 +243,13 @@ function transactionData() {
     envelopes: [],
     accounts: [],
 
+    // Split transaction properties
+    isSplitMode: false,
+    splitRows: [],
+    splitTotal: 0,
+    splitInflowTotal: 0,
+    splitAmountsMatch: false,
+
     async loadSearchData() {
       try {
         // Use the shared envelope data manager if available
@@ -854,6 +861,21 @@ function transactionData() {
         this.editableTransaction.envelope = transaction.envelope.id;
       }
 
+      // Check if this is a split transaction
+      if (transaction.subtransactions && transaction.subtransactions.length > 0) {
+        this.isSplitMode = true;
+        this.splitRows = transaction.subtransactions.map(sub => ({
+          envelope: sub.envelope_id,
+          memo: sub.memo || '',
+          inflow: sub.amount > 0 ? (sub.amount / 1000).toFixed(2) : '',
+          outflow: sub.amount < 0 ? (Math.abs(sub.amount) / 1000).toFixed(2) : ''
+        }));
+        this.validateSplitAmounts();
+      } else {
+        this.isSplitMode = false;
+        this.splitRows = [];
+      }
+
       this.activeIndex = index;
       this.showEditForm = true;
 
@@ -868,6 +890,11 @@ function transactionData() {
           allRows[index].after(formFieldsRow);
           formFieldsRow.after(formButtonsRow);
           allRows[index].classList.add('hidden');
+
+          // If in split mode, position split rows after the main form
+          if (this.isSplitMode) {
+            this.positionSplitRows();
+          }
         }
 
         const selectFields = ['date', 'payee', 'memo', 'inflow', 'outflow'];
@@ -1042,12 +1069,192 @@ function transactionData() {
       );
     },
 
+    // Split transaction functions
+    enableSplitMode() {
+      this.isSplitMode = true;
+      this.splitRows = [
+        { envelope: '', memo: '', inflow: '', outflow: '' },
+        { envelope: '', memo: '', inflow: '', outflow: '' },
+      ];
+
+      this.$nextTick(() => {
+        this.positionSplitRows();
+
+        // Focus on the first split envelope selector
+        setTimeout(() => {
+          const firstEnvelopeSelect = document.getElementById('id_split_envelope_0');
+          if (firstEnvelopeSelect) {
+            const input = firstEnvelopeSelect.querySelector('input');
+            if (input) {
+              input.focus();
+            }
+          }
+        }, 200); // Increased delay to allow for initialization
+      });
+    },
+
+    cancelSplitMode() {
+      this.isSplitMode = false;
+      this.splitRows = [];
+      this.splitTotal = 0;
+      this.splitInflowTotal = 0;
+      this.splitAmountsMatch = false;
+
+      // Clear the main envelope selector and focus it
+      const envelopeSelect = this.$refs.envelopeSelect;
+      if (envelopeSelect) {
+        envelopeSelect.reset();
+        this.editableTransaction.envelope = '';
+
+        this.$nextTick(() => {
+          const input = envelopeSelect.querySelector('input');
+          if (input) {
+            input.focus();
+          }
+        });
+      }
+    },
+
+    undoSplit() {
+      // Convert split transaction back to regular transaction
+      if (confirm('Are you sure you want to undo the split and convert this to a regular transaction?')) {
+        this.isSplitMode = false;
+        this.splitRows = [];
+        this.splitTotal = 0;
+        this.splitInflowTotal = 0;
+        this.splitAmountsMatch = false;
+        
+        // Focus on envelope selector for assignment
+        this.$nextTick(() => {
+          const envelopeSelect = this.$refs.envelopeSelect;
+          if (envelopeSelect) {
+            const input = envelopeSelect.querySelector('input');
+            if (input) {
+              input.focus();
+            }
+          }
+        });
+      }
+    },
+
+    addSplitRow() {
+      this.splitRows.push({ envelope: '', memo: '', inflow: '', outflow: '' });
+      this.$nextTick(() => {
+        this.positionSplitRows();
+      });
+    },
+
+    removeSplitRow(index) {
+      if (this.splitRows.length > 2) {
+        this.splitRows.splice(index, 1);
+        this.validateSplitAmounts();
+      }
+    },
+
+    validateSplitAmounts() {
+      this.splitTotal = 0;
+      this.splitInflowTotal = 0;
+
+      for (const row of this.splitRows) {
+        const outflow = row.outflow ? Number.parseFloat(row.outflow) : 0;
+        const inflow = row.inflow ? Number.parseFloat(row.inflow) : 0;
+        this.splitTotal += outflow;
+        this.splitInflowTotal += inflow;
+      }
+
+      const mainOutflow = this.editableTransaction.outflow ? Number.parseFloat(this.editableTransaction.outflow) : 0;
+      const mainInflow = this.editableTransaction.inflow ? Number.parseFloat(this.editableTransaction.inflow) : 0;
+
+      this.splitAmountsMatch =
+        (mainOutflow > 0 && Math.abs(this.splitTotal - mainOutflow) < 0.01) ||
+        (mainInflow > 0 && Math.abs(this.splitInflowTotal - mainInflow) < 0.01);
+    },
+
+    positionSplitRows() {
+      if (!this.isSplitMode) return;
+
+      // Wait for DOM to be updated
+      this.$nextTick(() => {
+        // Find the main edit form buttons row
+        const formButtonsRow = this.$refs.editFormButtons;
+        if (!formButtonsRow) return;
+
+        // Find all split rows and controls
+        const splitRowElements = document.querySelectorAll('.split-row');
+        const splitControlsElement = document.querySelector('.split-controls');
+
+        // Position each split row after the main form buttons
+        let lastElement = formButtonsRow;
+
+        for (const splitRow of splitRowElements) {
+          if (splitRow.parentNode) {
+            lastElement.after(splitRow);
+            lastElement = splitRow;
+          }
+        }
+
+        // Position the split controls after the split rows
+        if (splitControlsElement?.parentNode) {
+          lastElement.after(splitControlsElement);
+
+          // Finally, move the form buttons row to the end
+          splitControlsElement.after(formButtonsRow);
+        }
+
+        // Initialize envelope selectors with values after positioning
+        setTimeout(() => {
+          this.initializeSplitEnvelopeSelectors();
+        }, 100);
+      });
+    },
+
+    initializeSplitEnvelopeSelectors() {
+      // Initialize each split envelope selector with its corresponding value
+      this.splitRows.forEach((row, index) => {
+        if (row.envelope) {
+          const envelopeSelect = document.getElementById(`id_split_envelope_${index}`);
+          if (envelopeSelect) {
+            // Wait for the custom element to be fully initialized
+            const initializeSelector = () => {
+              if (typeof envelopeSelect.setValue === 'function') {
+                envelopeSelect.setValue(row.envelope);
+              } else {
+                // If setValue isn't available yet, try again after a short delay
+                setTimeout(initializeSelector, 50);
+              }
+            };
+            initializeSelector();
+          }
+        }
+      });
+    },
+
     async saveTransaction() {
       // Add a guard to prevent double submission
       if (this.isSaving) return;
       this.isSaving = true;
 
       try {
+        // Check if we're in split mode and validate amounts
+        if (this.isSplitMode) {
+          if (!this.splitAmountsMatch) {
+            showToast('Split amounts must match the main transaction amount', 'error');
+            return;
+          }
+          
+          // Check if this is editing an existing transaction
+          if (this.editableTransaction.id) {
+            return await this.updateSplitTransaction();
+          }
+          return await this.saveSplitTransaction();
+        }
+        
+        // Check if this was a split transaction being converted to regular
+        if (this.editableTransaction.id && this.editableTransaction.subtransactions) {
+          // This was a split transaction, now being saved as regular - need to delete subtransactions
+          return await this.convertSplitToRegular();
+        }
+
         // Calculate amount from inflow/outflow before saving
         if (this.editableTransaction.inflow) {
           this.calculateAmount('inflow');
@@ -1134,6 +1341,252 @@ function transactionData() {
       }
     },
 
+    async saveSplitTransaction() {
+      try {
+        const budgetId = this.editableTransaction.budget_id;
+        const csrfToken = getCookie('csrftoken');
+        const date = new Date(document.querySelector('.editable-transaction-date').value);
+        const formattedDate = date.toISOString().slice(0, 10);
+
+        // Handle payee - extract the name from the payee object
+        let payeeName = '';
+        if (this.editableTransaction.payee) {
+          if (typeof this.editableTransaction.payee === 'string') {
+            payeeName = this.editableTransaction.payee;
+          } else if (this.editableTransaction.payee.name) {
+            payeeName = this.editableTransaction.payee.name;
+          }
+        }
+
+        // Create subtransactions array
+        const subtransactions = [];
+        for (const row of this.splitRows) {
+          if (row.envelope && (row.inflow || row.outflow)) {
+            const outflow = row.outflow ? Number.parseFloat(row.outflow) : 0;
+            const inflow = row.inflow ? Number.parseFloat(row.inflow) : 0;
+            const amount = inflow > 0 ? inflow * 1000 : outflow * -1000;
+
+            subtransactions.push({
+              envelope_id: row.envelope,
+              amount: amount,
+              memo: row.memo,
+            });
+          }
+        }
+
+        if (subtransactions.length === 0) {
+          showToast('Please add at least one split transaction with an envelope and amount', 'error');
+          return;
+        }
+
+        // Calculate amount from inflow/outflow for main transaction
+        if (this.editableTransaction.inflow) {
+          this.calculateAmount('inflow');
+        } else if (this.editableTransaction.outflow) {
+          this.calculateAmount('outflow');
+        }
+
+        // Create split transaction data
+        const splitTransactionData = {
+          account_id: this.editableTransaction.account,
+          amount: this.editableTransaction.amount,
+          cleared: this.editableTransaction.cleared,
+          date: formattedDate,
+          memo: this.editableTransaction.memo,
+          payee: payeeName,
+          subtransactions: subtransactions,
+        };
+
+        // Save split transaction
+        const response = await fetch(`/api/transactions/${budgetId}/split`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+          },
+          body: JSON.stringify(splitTransactionData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const newTransaction = await response.json();
+
+        // Close the form and reset split mode
+        this.showEditForm = false;
+        this.isSplitMode = false;
+        this.splitRows = [];
+        this.activeIndex = 0;
+
+        // Refresh the transaction list to ensure we have the latest data
+        await this.fetchTransactions();
+
+        showToast('Split transaction created successfully', 'success');
+        updateAccountBalances();
+      } catch (error) {
+        console.error('Error creating split transaction:', error);
+        showToast(`Error creating split transaction: ${error}`, 'error');
+      }
+    },
+
+    async updateSplitTransaction() {
+      try {
+        const budgetId = this.editableTransaction.budget_id;
+        const csrfToken = getCookie('csrftoken');
+        const date = new Date(document.querySelector('.editable-transaction-date').value);
+        const formattedDate = date.toISOString().slice(0, 10);
+
+        // Handle payee - extract the name from the payee object
+        let payeeName = '';
+        if (this.editableTransaction.payee) {
+          if (typeof this.editableTransaction.payee === 'string') {
+            payeeName = this.editableTransaction.payee;
+          } else if (this.editableTransaction.payee.name) {
+            payeeName = this.editableTransaction.payee.name;
+          }
+        }
+
+        // Create subtransactions array
+        const subtransactions = [];
+        for (const row of this.splitRows) {
+          if (row.envelope && (row.inflow || row.outflow)) {
+            const outflow = row.outflow ? Number.parseFloat(row.outflow) : 0;
+            const inflow = row.inflow ? Number.parseFloat(row.inflow) : 0;
+            const amount = inflow > 0 ? inflow * 1000 : outflow * -1000;
+
+            subtransactions.push({
+              envelope_id: row.envelope,
+              amount: amount,
+              memo: row.memo,
+            });
+          }
+        }
+
+        if (subtransactions.length === 0) {
+          showToast('Please add at least one split transaction with an envelope and amount', 'error');
+          return;
+        }
+
+        // Calculate amount from inflow/outflow for main transaction
+        if (this.editableTransaction.inflow) {
+          this.calculateAmount('inflow');
+        } else if (this.editableTransaction.outflow) {
+          this.calculateAmount('outflow');
+        }
+
+        // Update split transaction data
+        const splitTransactionData = {
+          account_id: this.editableTransaction.account,
+          amount: this.editableTransaction.amount,
+          cleared: this.editableTransaction.cleared,
+          date: formattedDate,
+          memo: this.editableTransaction.memo,
+          payee: payeeName,
+          subtransactions: subtransactions,
+        };
+
+        // Update split transaction
+        const response = await fetch(`/api/transactions/${budgetId}/split/${this.editableTransaction.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+          },
+          body: JSON.stringify(splitTransactionData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const updatedTransaction = await response.json();
+
+        // Close the form and reset split mode
+        this.showEditForm = false;
+        this.isSplitMode = false;
+        this.splitRows = [];
+
+        // Refresh the transaction list to ensure we have the latest data
+        await this.fetchTransactions();
+
+        showToast('Split transaction updated successfully', 'success');
+        updateAccountBalances();
+      } catch (error) {
+        console.error('Error updating split transaction:', error);
+        showToast(`Error updating split transaction: ${error}`, 'error');
+      }
+    },
+
+    async convertSplitToRegular() {
+      try {
+        const budgetId = this.editableTransaction.budget_id;
+        const csrfToken = getCookie('csrftoken');
+        const date = new Date(document.querySelector('.editable-transaction-date').value);
+        const formattedDate = date.toISOString().slice(0, 10);
+
+        // Handle payee - extract the name from the payee object
+        let payeeName = '';
+        if (this.editableTransaction.payee) {
+          if (typeof this.editableTransaction.payee === 'string') {
+            payeeName = this.editableTransaction.payee;
+          } else if (this.editableTransaction.payee.name) {
+            payeeName = this.editableTransaction.payee.name;
+          }
+        }
+
+        // Calculate amount from inflow/outflow
+        if (this.editableTransaction.inflow) {
+          this.calculateAmount('inflow');
+        } else if (this.editableTransaction.outflow) {
+          this.calculateAmount('outflow');
+        }
+
+        const postData = {
+          account_id: this.editableTransaction.account,
+          amount: this.editableTransaction.amount,
+          cleared: this.editableTransaction.cleared,
+          date: formattedDate,
+          memo: this.editableTransaction.memo,
+          payee: payeeName,
+        };
+
+        if (this.editableTransaction.envelope) {
+          postData.envelope_id = this.editableTransaction.envelope;
+        }
+
+        // Convert split to regular transaction
+        const response = await fetch(`/api/transactions/${budgetId}/split/${this.editableTransaction.id}/convert`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+          },
+          body: JSON.stringify(postData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const updatedTransaction = await response.json();
+
+        // Close the form
+        this.showEditForm = false;
+        this.isSplitMode = false;
+        this.splitRows = [];
+
+        // Refresh the transaction list to ensure we have the latest data
+        await this.fetchTransactions();
+
+        showToast('Split transaction converted to regular transaction', 'success');
+        updateAccountBalances();
+      } catch (error) {
+        console.error('Error converting split transaction:', error);
+        showToast(`Error converting split transaction: ${error}`, 'error');
+      }
+    },
+
     showAllTransactions() {
       // remove hidden class from each row
       const allRows = document.querySelectorAll('.transaction-row');
@@ -1148,6 +1601,12 @@ function transactionData() {
         if (this.activeIndex < 0) {
           this.activeIndex = 0;
         }
+        // Reset split mode
+        this.isSplitMode = false;
+        this.splitRows = [];
+        this.splitTotal = 0;
+        this.splitInflowTotal = 0;
+        this.splitAmountsMatch = false;
         this.showAllTransactions();
       }
     },

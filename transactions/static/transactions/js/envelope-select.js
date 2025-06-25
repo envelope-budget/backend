@@ -88,6 +88,12 @@ class SearchableSelect extends HTMLElement {
       this.envelopes = data.envelopes;
 
       this.filteredEnvelopes = [...this.envelopes];
+
+      // Check if this is a split row selector (hide split option for split rows)
+      if (this.id?.includes('split_envelope')) {
+        this.showSplitOption = false;
+      }
+
       this.render();
       this.setupEventListeners();
 
