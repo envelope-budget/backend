@@ -1,3 +1,14 @@
+.djlintrc
+.dockerignore
+.DS_Store
+.editorconfig
+.git
+.gitignore
+.pnpm-store
+.prettierignore
+.prettierrc.yml
+.vscode
+AGENT.md
 biome.json
 clean_docker.sh
 db.sqlite3
@@ -5,6 +16,8 @@ dbreset
 dev_requirements_log.txt
 Dockerfile
 FEATURE_IDEAS.md
+flutter_run.sh
+ios_install.sh
 lefthook.yml
 local_setup.sh
 mobile

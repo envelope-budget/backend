@@ -71,10 +71,11 @@ class TransactionSchema(Schema):
                 {
                     "id": sub.id,
                     "transaction_id": sub.transaction_id,
-                    "envelope": {
-                        "id": sub.envelope.id,
-                        "name": sub.envelope.name
-                    } if sub.envelope else None,
+                    "envelope": (
+                        {"id": sub.envelope.id, "name": sub.envelope.name}
+                        if sub.envelope
+                        else None
+                    ),
                     "envelope_id": sub.envelope_id,
                     "amount": sub.amount,
                     "memo": sub.memo,
@@ -157,9 +158,11 @@ def list_transactions(
         return []  # Return an empty list if the budget does not belong to the user
 
     # Start with base query and prefetch related data
-    transactions_query = Transaction.objects.filter(
-        budget_id=budget_id, deleted=False
-    ).select_related("envelope", "account", "payee").prefetch_related("subtransaction_set__envelope")
+    transactions_query = (
+        Transaction.objects.filter(budget_id=budget_id, deleted=False)
+        .select_related("envelope", "account", "payee")
+        .prefetch_related("subtransaction_set__envelope")
+    )
 
     # Apply search filter if provided
     if search:
@@ -178,7 +181,7 @@ def list_transactions(
 
     # Convert to list and manually include subtransactions
     transactions_list = list(transactions_query)
-    
+
     # Add subtransactions to each transaction
     for transaction in transactions_list:
         if hasattr(transaction, "subtransaction_set"):
@@ -188,10 +191,11 @@ def list_transactions(
                     {
                         "id": sub.id,
                         "transaction_id": sub.transaction_id,
-                        "envelope": {
-                            "id": sub.envelope.id,
-                            "name": sub.envelope.name
-                        } if sub.envelope else None,
+                        "envelope": (
+                            {"id": sub.envelope.id, "name": sub.envelope.name}
+                            if sub.envelope
+                            else None
+                        ),
                         "envelope_id": sub.envelope_id,
                         "amount": sub.amount,
                         "memo": sub.memo,
@@ -247,17 +251,18 @@ def create_split_transaction(
 
     # Refresh the transaction from database to get latest state
     main_transaction.refresh_from_db()
-    
+
     # Add subtransactions to the main transaction for serialization
     subtrans = main_transaction.subtransaction_set.filter(deleted=False)
     main_transaction.subtransactions = [
         {
             "id": sub.id,
             "transaction_id": sub.transaction_id,
-            "envelope": {
-                "id": sub.envelope.id,
-                "name": sub.envelope.name
-            } if sub.envelope else None,
+            "envelope": (
+                {"id": sub.envelope.id, "name": sub.envelope.name}
+                if sub.envelope
+                else None
+            ),
             "envelope_id": sub.envelope_id,
             "amount": sub.amount,
             "memo": sub.memo,
@@ -275,7 +280,10 @@ def create_split_transaction(
     tags=["Transactions"],
 )
 def update_split_transaction(
-    request, budget_id: str, transaction_id: str, transaction_data: SplitTransactionCreateSchema
+    request,
+    budget_id: str,
+    transaction_id: str,
+    transaction_data: SplitTransactionCreateSchema,
 ):
     """Update an existing split transaction with subtransactions"""
     # Ensure the budget belongs to the user
@@ -312,17 +320,18 @@ def update_split_transaction(
 
     # Refresh the transaction from database to get latest state
     main_transaction.refresh_from_db()
-    
+
     # Add subtransactions to the main transaction for serialization
     subtrans = main_transaction.subtransaction_set.filter(deleted=False)
     main_transaction.subtransactions = [
         {
             "id": sub.id,
             "transaction_id": sub.transaction_id,
-            "envelope": {
-                "id": sub.envelope.id,
-                "name": sub.envelope.name
-            } if sub.envelope else None,
+            "envelope": (
+                {"id": sub.envelope.id, "name": sub.envelope.name}
+                if sub.envelope
+                else None
+            ),
             "envelope_id": sub.envelope_id,
             "amount": sub.amount,
             "memo": sub.memo,
@@ -339,7 +348,10 @@ def update_split_transaction(
     tags=["Transactions"],
 )
 def convert_split_to_regular(
-    request, budget_id: str, transaction_id: str, transaction_data: TransactionPostPatchSchema
+    request,
+    budget_id: str,
+    transaction_id: str,
+    transaction_data: TransactionPostPatchSchema,
 ):
     """Convert a split transaction back to a regular transaction"""
     # Ensure the budget belongs to the user
@@ -560,7 +572,7 @@ def get_or_create_payee(name: str, budget: Budget) -> Payee:
 @router.post(
     "/transactions/{budget_id}",
     tags=["Transactions"],
-    response={200: TransactionSchema, 409: Error},
+    response={200: TransactionSchema, 400: Error, 409: Error},  # Add 400 status code
 )
 def create_transaction(
     request, budget_id: str, transaction: TransactionPostPatchSchema
@@ -569,10 +581,19 @@ def create_transaction(
     # Ensure the budget belongs to the user
     budget = get_object_or_404(Budget, id=budget_id, user=request.user)
 
-    account = get_object_or_404(Account, id=transaction.account_id)
+    try:
+        account = Account.objects.get(id=transaction.account_id)
+    except Account.DoesNotExist:
+        return 400, {"message": "Account not found"}
+
     payee = get_or_create_payee(transaction.payee, budget)
+
     if transaction.envelope_id:
-        envelope = get_object_or_404(Envelope, id=transaction.envelope_id)
+        try:
+            envelope = Envelope.objects.get(id=transaction.envelope_id)
+        except Envelope.DoesNotExist:
+            return 400, {"message": "Envelope not found"}
+
     else:
         envelope = None
 

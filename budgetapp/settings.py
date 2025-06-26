@@ -38,6 +38,12 @@ ALLOWED_HOSTS = os.environ.get(
     "DJANGO_ALLOWED_HOSTS", "localhost,0.0.0.0,127.0.0.1"
 ).split(",")
 
+CSRF_TRUSTED_ORIGINS = (
+    os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if os.environ.get("CSRF_TRUSTED_ORIGINS")
+    else []
+)
+
 if DEBUG:
     import socket  # only if you haven't already imported this
 

@@ -217,7 +217,7 @@
                   </payee-select>
                 </td>
                 <td class="px-1 py-3 align-text-top">
-                  <searchable-select id="id_envelope" class="block w-full" x-ref="envelopeSelect" :data-selected-id="editableTransaction.envelope" x-init="$nextTick(() => { $refs.envelopeSelect.addEventListener('change', (e) => { if (e.detail.isSplit) { enableSplitMode(); } else { editableTransaction.envelope = e.detail.value; } }); if (editableTransaction.envelope) { $refs.envelopeSelect.setValue(editableTransaction.envelope); } })">
+                  <searchable-select id="id_envelope" class="block w-full" x-ref="envelopeSelect" :data-selected-id="editableTransaction.envelope" x-init="$nextTick(() => { $refs.envelopeSelect.addEventListener('change', (e) => { if (e.detail && e.detail.isSplit) { enableSplitMode(); } else if (e.detail) { editableTransaction.envelope = e.detail.value; } }); if (editableTransaction.envelope) { $refs.envelopeSelect.setValue(editableTransaction.envelope); } })">
                   </searchable-select>
                 </td>
 
@@ -291,7 +291,7 @@
                     <!-- Empty for split rows to maintain alignment -->
                   </td>
                   <td class="px-1 py-3 align-text-top">
-                    <searchable-select :id="'id_split_envelope_' + splitIndex" class="block w-full" :data-selected-id="splitRows[splitIndex].envelope" x-init="$nextTick(() => { $el.addEventListener('change', (e) => { splitRows[splitIndex].envelope = e.detail.value; validateSplitAmounts(); }); if (splitRows[splitIndex].envelope) { $el.setValue(splitRows[splitIndex].envelope); } })">
+                    <searchable-select :id="'id_split_envelope_' + splitIndex" class="block w-full" :data-selected-id="splitRows[splitIndex].envelope" x-init="$nextTick(() => { $el.addEventListener('change', (e) => { if (e.detail) { splitRows[splitIndex].envelope = e.detail.value; validateSplitAmounts(); } }); if (splitRows[splitIndex].envelope) { $el.setValue(splitRows[splitIndex].envelope); } })">
                     </searchable-select>
                   </td>
                   <td class="px-1 py-3 align-text-top">
@@ -416,7 +416,6 @@
                       </svg>
                       Assign...
                     </button>
-
 
                     <!-- Single envelope -->
                     <button x-show="transaction.envelope"

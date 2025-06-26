@@ -120,8 +120,7 @@ function transactionData() {
 
         if (elementRect.top < dropdownRect.top) {
           selectedElement.scrollIntoView({ block: 'start', behavior: 'smooth' });
-        }
-        else if (elementRect.bottom > dropdownRect.bottom) {
+        } else if (elementRect.bottom > dropdownRect.bottom) {
           selectedElement.scrollIntoView({ block: 'end', behavior: 'smooth' });
         }
       });
@@ -129,8 +128,8 @@ function transactionData() {
 
     generateSearchSuggestions() {
       this.searchSuggestions = SearchFunctions.generateSearchSuggestions(
-        this.searchQuery, 
-        this.envelopes, 
+        this.searchQuery,
+        this.envelopes,
         this.accounts
       );
     },
@@ -449,9 +448,20 @@ function transactionData() {
       this.isSaving = true;
 
       try {
+        // Validate required fields for new transactions
+        if (!this.editableTransaction.id) {
+          if (!this.editableTransaction.account) {
+            showToast('Please select an account', 'error');
+            this.highlightAccountField();
+            this.isSaving = false;
+            return;
+          }
+        }
+
         if (this.isSplitMode) {
           if (!this.splitAmountsMatch) {
             showToast('Split amounts must match the main transaction amount', 'error');
+            this.isSaving = false;
             return;
           }
 
@@ -546,6 +556,9 @@ function transactionData() {
           }
         }
         updateAccountBalances();
+      } catch (error) {
+        console.error('Unexpected error in saveTransaction:', error);
+        // showToast(`Unexpected error: ${error}`, 'error');
       } finally {
         this.isSaving = false;
       }
@@ -720,6 +733,29 @@ function transactionData() {
         showToast('Transaction marked as transfer');
       } catch (error) {
         console.error('Error marking as transfer:', error);
+      }
+    },
+
+    highlightAccountField() {
+      const accountSelect = document.getElementById('id_account');
+      if (accountSelect) {
+        // Add error styling
+        accountSelect.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+        accountSelect.classList.remove('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+
+        // Focus the field
+        accountSelect.focus();
+
+        // Remove error styling after user interacts with the field
+        const removeErrorStyling = () => {
+          accountSelect.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+          accountSelect.classList.add('border-gray-300', 'focus:border-blue-500', 'focus:ring-blue-500');
+          accountSelect.removeEventListener('change', removeErrorStyling);
+          accountSelect.removeEventListener('focus', removeErrorStyling);
+        };
+
+        accountSelect.addEventListener('change', removeErrorStyling);
+        accountSelect.addEventListener('focus', removeErrorStyling);
       }
     },
   };

@@ -46,7 +46,7 @@ nginx
 # Start Gunicorn
 echo "🦄 Starting Gunicorn..."
 exec gunicorn budgetapp.wsgi:application \
-  --bind 127.0.0.1:8000 \
+  --bind 0.0.0.0:8000 \
   --workers 3 \
   --timeout 120 \
   --keep-alive 2 \
