@@ -202,8 +202,35 @@ class _LoginScreenState extends State<LoginScreen> {
         // Save authentication token
         print('Saving auth token and user email...');
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', responseData['token'] ?? '');
+        final authToken = responseData['token'] ?? '';
+        await prefs.setString('auth_token', authToken);
         await prefs.setString('user_email', _emailController.text.trim());
+
+        // Fetch user's budgets and save the first budget ID
+        print('Fetching user budgets...');
+        try {
+          final budgetsResponse = await http.get(
+            Uri.parse('${_baseUrlController.text}/api/budgets'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $authToken',
+            },
+          );
+
+          if (budgetsResponse.statusCode == 200) {
+            final List<dynamic> budgets = jsonDecode(budgetsResponse.body);
+            if (budgets.isNotEmpty) {
+              final budgetId = budgets[0]['id'] as String;
+              await prefs.setString('budget_id', budgetId);
+              print('Saved budget ID: $budgetId');
+            }
+          } else {
+            print('Failed to fetch budgets: ${budgetsResponse.statusCode}');
+          }
+        } catch (e) {
+          print('Error fetching budgets: $e');
+          // Continue with login even if budget fetch fails
+        }
 
         if (mounted) {
           print('Showing success message and navigating...');
@@ -462,6 +489,7 @@ Future<void> logout(BuildContext context) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove('auth_token');
   await prefs.remove('user_email');
+  await prefs.remove('budget_id');
 
   if (context.mounted) {
     Navigator.pushAndRemoveUntil(
