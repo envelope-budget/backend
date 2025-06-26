@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/cache_service.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -13,6 +14,7 @@ class AddTransactionScreen extends StatefulWidget {
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _payeeController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
   final _amountFocusNode = FocusNode();
@@ -24,16 +26,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   bool _isLoading = false;
   bool _isLoadingData = true;
   bool _isSearchingEnvelope = false;
+  bool _showPayeeSuggestions = false;
   
   final _envelopeSearchController = TextEditingController();
 
   List<Map<String, String>> _accounts = [];
   List<Map<String, dynamic>> _envelopes = [];
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, String>> _payees = [];
 
   String? _budgetId;
   String? _authToken;
   String? _baseUrl;
+
+  final _cacheService = CacheService();
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -77,7 +83,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool forceRefresh = false}) async {
     setState(() {
       _isLoadingData = true;
     });
@@ -86,10 +92,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // First load user data
       await _loadUserData();
       
-      // Then load accounts and envelopes in parallel
+      // Invalidate cache if force refresh
+      if (forceRefresh) {
+        await _cacheService.invalidateAllCache(_budgetId!);
+      }
+      
+      // Then load accounts, envelopes, and payees in parallel
       await Future.wait([
         _loadAccounts(),
         _loadEnvelopes(),
+        _loadPayees(),
       ]);
     } catch (e) {
       if (mounted) {
@@ -109,8 +121,31 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
+  Future<void> _refreshData() async {
+    await _loadData(forceRefresh: true);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Data refreshed successfully!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
   Future<void> _loadAccounts() async {
     try {
+      // Check cache first
+      final cachedAccounts = await _cacheService.getCachedAccounts(_budgetId!);
+      if (cachedAccounts != null) {
+        setState(() {
+          _accounts = cachedAccounts;
+        });
+        return; // Use cached data
+      }
+
+      // Fetch from API if cache miss
       final response = await http.get(
         Uri.parse('$_baseUrl/api/accounts/$_budgetId'),
         headers: {
@@ -121,13 +156,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       if (response.statusCode == 200) {
         final List<dynamic> accountsJson = json.decode(response.body);
+        final accounts = accountsJson
+            .map((account) => {
+                  'id': account['id'] as String,
+                  'name': account['name'] as String,
+                })
+            .toList();
+        
+        // Update cache
+        await _cacheService.cacheAccounts(_budgetId!, accounts);
+        
         setState(() {
-          _accounts = accountsJson
-              .map((account) => {
-                    'id': account['id'] as String,
-                    'name': account['name'] as String,
-                  })
-              .toList();
+          _accounts = accounts;
         });
       } else {
         throw Exception('Failed to load accounts: ${response.statusCode}');
@@ -139,6 +179,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _loadEnvelopes() async {
     try {
+      // Check cache first
+      final cachedData = await _cacheService.getCachedEnvelopes(_budgetId!);
+      if (cachedData != null) {
+        setState(() {
+          _envelopes = cachedData['envelopes'] as List<Map<String, dynamic>>;
+          _categories = cachedData['categories'] as List<Map<String, dynamic>>;
+        });
+        return; // Use cached data
+      }
+
+      // Fetch from API if cache miss
       final response = await http.get(
         Uri.parse('$_baseUrl/api/envelopes/$_budgetId'),
         headers: {
@@ -179,6 +230,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         // Sort categories by sort_order
         allCategories.sort((a, b) => (a['sort_order'] as int).compareTo(b['sort_order'] as int));
         
+        // Update cache
+        await _cacheService.cacheEnvelopes(_budgetId!, allEnvelopes, allCategories);
+        
         setState(() {
           _envelopes = allEnvelopes;
           _categories = allCategories;
@@ -188,6 +242,51 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
     } catch (e) {
       throw Exception('Error loading envelopes: $e');
+    }
+  }
+
+  Future<void> _loadPayees() async {
+    try {
+      // Check cache first
+      final cachedPayees = await _cacheService.getCachedPayees(_budgetId!);
+      if (cachedPayees != null) {
+        setState(() {
+          _payees = cachedPayees;
+        });
+        return; // Use cached data
+      }
+
+      // Fetch from API if cache miss
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/payees/$_budgetId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_authToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> payeesJson = json.decode(response.body);
+        final payees = payeesJson
+            .map((payee) => {
+                  'id': payee['id'] as String,
+                  'name': payee['name'] as String,
+                })
+            .toList();
+        // Sort payees alphabetically
+        payees.sort((a, b) => a['name']!.compareTo(b['name']!));
+        
+        // Update cache
+        await _cacheService.cachePayees(_budgetId!, payees);
+        
+        setState(() {
+          _payees = payees;
+        });
+      } else {
+        throw Exception('Failed to load payees: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error loading payees: $e');
     }
   }
 
@@ -212,17 +311,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         },
         body: json.encode({
           'account_id': _selectedAccount,
-          'payee': _descriptionController.text,
+          'payee': _payeeController.text.trim(),
           'envelope_id': _selectedEnvelope,
           'date': '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
           'amount': amountInCents.toInt(),
-          'memo': null,
+          'memo': _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
           'cleared': false,
           'reconciled': false,
         }),
       );
 
       if (response.statusCode == 200) {
+        // Invalidate payee cache if a new payee was potentially created
+        final payeeName = _payeeController.text.trim();
+        final existingPayee = _payees.any((p) => p['name']!.toLowerCase() == payeeName.toLowerCase());
+        if (!existingPayee) {
+          await _cacheService.invalidatePayees(_budgetId!);
+        }
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -253,36 +359,37 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  Widget _buildEnvelopeSelector() {
+  Widget _buildPayeeField() {
     if (_isLoadingData) {
       return TextFormField(
         enabled: false,
-        decoration: const InputDecoration(
-          labelText: 'Envelope (Optional)',
-          prefixIcon: Icon(Icons.mail_outline),
-          border: OutlineInputBorder(),
-          hintText: 'Loading envelopes...',
+        decoration: InputDecoration(
+          labelText: 'Payee',
+          prefixIcon: const Icon(Icons.person, size: 20),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          hintText: 'Loading payees...',
         ),
       );
     }
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Search field
         TextFormField(
-          controller: _envelopeSearchController,
+          controller: _payeeController,
           decoration: InputDecoration(
-            labelText: 'Search Envelopes',
-            prefixIcon: const Icon(Icons.search),
-            border: const OutlineInputBorder(),
-            suffixIcon: _envelopeSearchController.text.isNotEmpty
+            labelText: 'Payee',
+            hintText: 'e.g., Walmart, Shell, Netflix, etc.',
+            prefixIcon: const Icon(Icons.person, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            suffixIcon: _payeeController.text.isNotEmpty && _showPayeeSuggestions
                 ? IconButton(
-                    icon: const Icon(Icons.clear),
+                    icon: const Icon(Icons.clear, size: 20),
                     onPressed: () {
                       setState(() {
-                        _envelopeSearchController.clear();
-                        _isSearchingEnvelope = false;
+                        _payeeController.clear();
+                        _showPayeeSuggestions = false;
                       });
                     },
                   )
@@ -290,19 +397,134 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
           onChanged: (value) {
             setState(() {
-              _isSearchingEnvelope = value.isNotEmpty;
+              _showPayeeSuggestions = value.isNotEmpty;
             });
           },
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter a payee';
+            }
+            return null;
+          },
         ),
-        const SizedBox(height: 8),
-        
-        // Current selection display and dropdown
-        _isSearchingEnvelope ? _buildSearchResults() : _buildEnvelopeDropdown(),
+        if (_showPayeeSuggestions) ...[
+          const SizedBox(height: 8),
+          _buildPayeeSuggestions(),
+        ],
       ],
     );
   }
 
-  Widget _buildSearchResults() {
+  Widget _buildPayeeSuggestions() {
+    final searchTerm = _payeeController.text.toLowerCase();
+    final filteredPayees = _payees.where((payee) {
+      final name = payee['name']!.toLowerCase();
+      return name.contains(searchTerm);
+    }).toList();
+
+    if (filteredPayees.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.grey[50],
+        ),
+        child: Text(
+          'No existing payees found. "${_payeeController.text}" will be created as a new payee.',
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 120),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: filteredPayees.length,
+        itemBuilder: (context, index) {
+          final payee = filteredPayees[index];
+          return ListTile(
+            dense: true,
+            title: Text(
+              payee['name']!,
+              style: const TextStyle(fontSize: 14),
+            ),
+            onTap: () {
+              setState(() {
+                _payeeController.text = payee['name']!;
+                _showPayeeSuggestions = false;
+              });
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCompactEnvelopeSelector() {
+    if (_isLoadingData) {
+      return TextFormField(
+        enabled: false,
+        decoration: InputDecoration(
+          labelText: 'Envelope (Optional)',
+          prefixIcon: const Icon(Icons.mail_outline, size: 20),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          hintText: 'Loading envelopes...',
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Search field if many envelopes, otherwise just dropdown
+        if (_envelopes.length > 10) ...[
+          TextFormField(
+            controller: _envelopeSearchController,
+            decoration: InputDecoration(
+              labelText: 'Search Envelopes',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              suffixIcon: _envelopeSearchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _envelopeSearchController.clear();
+                          _isSearchingEnvelope = false;
+                        });
+                      },
+                    )
+                  : null,
+            ),
+            onChanged: (value) {
+              setState(() {
+                _isSearchingEnvelope = value.isNotEmpty;
+              });
+            },
+          ),
+          if (_isSearchingEnvelope) ...[
+            const SizedBox(height: 8),
+            _buildCompactSearchResults(),
+          ] else ...[
+            const SizedBox(height: 8),
+            _buildCompactEnvelopeDropdown(),
+          ],
+        ] else
+          _buildCompactEnvelopeDropdown(),
+      ],
+    );
+  }
+
+  Widget _buildCompactSearchResults() {
     final searchTerm = _envelopeSearchController.text.toLowerCase();
     final filteredEnvelopes = _envelopes.where((envelope) {
       final name = (envelope['name'] as String).toLowerCase();
@@ -327,10 +549,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(maxHeight: 200),
+      constraints: const BoxConstraints(maxHeight: 150),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: ListView.builder(
         shrinkWrap: true,
@@ -338,6 +560,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         itemBuilder: (context, index) {
           if (index == 0) {
             return ListTile(
+              dense: true,
               title: const Text('No Envelope'),
               onTap: () {
                 setState(() {
@@ -352,13 +575,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           
           final envelope = filteredEnvelopes[index - 1];
           return ListTile(
+            dense: true,
             title: Text(
               envelope['name'] as String,
               overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14),
             ),
             subtitle: Text(
               envelope['category_name'] as String,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
             onTap: () {
               setState(() {
@@ -374,7 +599,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildEnvelopeDropdown() {
+  Widget _buildCompactEnvelopeDropdown() {
     // Build organized dropdown items
     final List<DropdownMenuItem<String>> items = [
       const DropdownMenuItem(
@@ -439,10 +664,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       width: double.infinity,
       child: DropdownButtonFormField<String>(
         value: _selectedEnvelope,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Envelope (Optional)',
-          prefixIcon: Icon(Icons.mail_outline),
-          border: OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.mail_outline, size: 20),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         ),
         items: items,
         selectedItemBuilder: (BuildContext context) {
@@ -497,6 +723,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         backgroundColor: const Color(0xFF0071BC),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            onPressed: _isLoadingData ? null : _refreshData,
+            icon: _isLoadingData
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.refresh),
+            tooltip: 'Refresh data',
+          ),
           TextButton(
             onPressed: _isLoading ? null : _saveTransaction,
             child: _isLoading
@@ -517,221 +757,255 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            // Amount Field - Large and prominent at the top
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    Text(
-                      'Enter Amount',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _amountController,
-                      focusNode: _amountFocusNode,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                      ],
-                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                      decoration: InputDecoration(
-                        hintText: '0.00',
-                        hintStyle: TextStyle(fontSize: 32, color: Colors.grey[400]),
-                        prefixIcon: Icon(
-                          Icons.attach_money,
-                          size: 32,
-                          color: _isExpense ? Colors.red : const Color(0xFF0071BC),
-                        ),
-                        prefixText: _isExpense ? '-\$' : '+\$',
-                        prefixStyle: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: _isExpense ? Colors.red : const Color(0xFF0071BC),
-                        ),
-                        border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter an amount';
-                        }
-                        final amount = double.tryParse(value);
-                        if (amount == null || amount <= 0) {
-                          return 'Please enter a valid amount';
-                        }
-                        return null;
-                      },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              // Amount Field - Compact but prominent
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Transaction Type Toggle
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Transaction Type',
+                      'Amount',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ToggleButtons(
-                      isSelected: [_isExpense, !_isExpense],
-                      onPressed: (index) {
-                        setState(() {
-                          _isExpense = index == 0;
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      selectedColor: Colors.white,
-                      fillColor: _isExpense ? Colors.red : Colors.green,
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24),
-                          child: Text('Expense'),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        // Transaction Type Toggle - Compact
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: ToggleButtons(
+                            isSelected: [_isExpense, !_isExpense],
+                            onPressed: (index) {
+                              setState(() {
+                                _isExpense = index == 0;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            selectedColor: Colors.white,
+                            fillColor: _isExpense ? Colors.red[400] : Colors.green[400],
+                            constraints: const BoxConstraints(minWidth: 40, minHeight: 32),
+                            children: [
+                              Icon(_isExpense ? Icons.remove : Icons.add, size: 16),
+                              Icon(_isExpense ? Icons.add : Icons.trending_up, size: 16),
+                            ],
+                          ),
                         ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24),
-                          child: Text('Income'),
+                        const SizedBox(width: 12),
+                        // Amount Input
+                        Expanded(
+                          child: TextFormField(
+                            controller: _amountController,
+                            focusNode: _amountFocusNode,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                            ],
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: _isExpense ? Colors.red[600] : Colors.green[600],
+                            ),
+                            textAlign: TextAlign.right,
+                            decoration: InputDecoration(
+                              hintText: '0.00',
+                              hintStyle: TextStyle(fontSize: 24, color: Colors.grey[400]),
+                              prefixText: '\$ ',
+                              prefixStyle: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: _isExpense ? Colors.red[600] : Colors.green[600],
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter an amount';
+                              }
+                              final amount = double.tryParse(value);
+                              if (amount == null || amount <= 0) {
+                                return 'Please enter a valid amount';
+                              }
+                              return null;
+                            },
+                          ),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
 
-            // Account Selector
-            SizedBox(
-              width: double.infinity,
-              child: DropdownButtonFormField<String>(
-              value: _selectedAccount,
-              decoration: InputDecoration(
-                labelText: 'Account',
-                prefixIcon: const Icon(Icons.account_balance),
-                border: const OutlineInputBorder(),
-                enabled: !_isLoadingData,
-              ),
-              items: _isLoadingData
-                  ? [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('Loading accounts...'),
-                      )
-                    ]
-                  : _accounts.map((account) {
-                      return DropdownMenuItem(
-                        value: account['id'],
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: Text(
+              // Main form fields in a card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Account Selector
+                    SizedBox(
+                      width: double.infinity,
+                      child: DropdownButtonFormField<String>(
+                      value: _selectedAccount,
+                      decoration: InputDecoration(
+                        labelText: 'Account',
+                        prefixIcon: const Icon(Icons.account_balance, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                        enabled: !_isLoadingData,
+                      ),
+                      items: _isLoadingData
+                          ? [
+                              const DropdownMenuItem(
+                                value: null,
+                                child: Text('Loading accounts...'),
+                              )
+                            ]
+                          : _accounts.map((account) {
+                              return DropdownMenuItem(
+                                value: account['id'],
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: Text(
+                                    account['name']!,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                      selectedItemBuilder: (BuildContext context) {
+                        return _accounts.map<Widget>((account) {
+                          return Text(
                             account['name']!,
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-              selectedItemBuilder: (BuildContext context) {
-                return _accounts.map<Widget>((account) {
-                  return Text(
-                    account['name']!,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  );
-                }).toList();
-              },
-              onChanged: _isLoadingData
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _selectedAccount = value;
-                      });
-                    },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select an account';
-                }
-                return null;
-              },
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Description Field
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'e.g., Grocery Store, Salary, etc.',
-                prefixIcon: Icon(Icons.description),
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a description';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Envelope Selector (Optional)
-            _buildEnvelopeSelector(),
-            const SizedBox(height: 16),
-
-            // Date Selector
-            InkWell(
-              onTap: () => _selectDate(context),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Date',
-                  prefixIcon: Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(),
-                ),
-                child: Text(_formatDate(_selectedDate)),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Save Button (Alternative to AppBar action)
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _saveTransaction,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0071BC),
-                  foregroundColor: Colors.white,
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      )
-                    : const Text(
-                        'Save Transaction',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          );
+                        }).toList();
+                      },
+                      onChanged: _isLoadingData
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _selectedAccount = value;
+                              });
+                            },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select an account';
+                        }
+                        return null;
+                      },
                       ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Payee Field with Autocomplete
+                    _buildPayeeField(),
+                    const SizedBox(height: 12),
+
+                    // Description Field (Optional)
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: InputDecoration(
+                        labelText: 'Description (Optional)',
+                        hintText: 'e.g., Weekly groceries, Gas fill-up, etc.',
+                        prefixIcon: const Icon(Icons.description, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Envelope Selector (Optional) - Compact
+                    _buildCompactEnvelopeSelector(),
+                    const SizedBox(height: 12),
+
+                    // Date Selector
+                    InkWell(
+                      onTap: () => _selectDate(context),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Date',
+                          prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                        ),
+                        child: Text(_formatDate(_selectedDate)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // Save Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _saveTransaction,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0071BC),
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Save Transaction',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16), // Bottom padding for safe area
+            ],
+          ),
         ),
       ),
     );
@@ -739,6 +1013,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   void dispose() {
+    _payeeController.dispose();
     _descriptionController.dispose();
     _amountController.dispose();
     _amountFocusNode.dispose();

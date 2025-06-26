@@ -561,7 +561,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _formatCurrency(int cents) {
-    return '\$${(cents.abs() / 100).toStringAsFixed(2)}';
+    return '\$${(cents.abs() / 1000).toStringAsFixed(2)}';
   }
 
   String _formatDate(String dateStr) {
