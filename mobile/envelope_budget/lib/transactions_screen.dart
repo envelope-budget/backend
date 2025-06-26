@@ -179,73 +179,73 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         onTap: () => _showTransactionDetails(transaction),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: _getTransactionColor(amount).withOpacity(0.1),
-                child: Icon(
-                  _getTransactionIcon(envelopeName, isPending),
-                  color: _getTransactionColor(amount),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      payeeName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      envelopeName,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (memo.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        memo,
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatDate(transaction['date']),
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
                 children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          payeeName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          envelopeName,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   Text(
                     '${isIncome ? '+' : ''}${_formatCurrency(amount)}',
                     style: TextStyle(
                       color: _getTransactionColor(amount),
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 18,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (memo.isNotEmpty) ...[
+                          Expanded(
+                            child: Text(
+                              memo,
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ] else ...[
+                          Text(
+                            _formatDate(transaction['date']),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -276,7 +276,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          accountName.replaceAll(RegExp(r'[^\w\s]'), '').trim(),
+                          accountName,
                           style: TextStyle(
                             color: Colors.blue[700],
                             fontSize: 9,
@@ -353,9 +353,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
+        initialChildSize: 0.75,
         maxChildSize: 0.9,
-        minChildSize: 0.4,
+        minChildSize: 0.5,
         expand: false,
         builder: (context, scrollController) {
           return _buildTransactionDetailsSheet(transaction, scrollController);
@@ -377,7 +377,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final isCleared = transaction['cleared'] ?? false;
     final isReconciled = transaction['reconciled'] ?? false;
 
-    return Container(
+    return SingleChildScrollView(
+      controller: scrollController,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,51 +394,76 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: _getTransactionColor(amount).withOpacity(0.1),
-                child: Icon(
-                  _getTransactionIcon(envelopeName, isPending),
-                  color: _getTransactionColor(amount),
-                  size: 24,
-                ),
+          
+          // Transaction Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: _getTransactionColor(amount).withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _getTransactionColor(amount).withOpacity(0.1),
+                width: 1,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            child: Column(
+              children: [
+                Text(
+                  payeeName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${amount >= 0 ? '+' : ''}${_formatCurrency(amount)}',
+                  style: TextStyle(
+                    fontSize: 28,
+                    color: _getTransactionColor(amount),
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      payeeName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '${amount >= 0 ? '+' : ''}${_formatCurrency(amount)}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: _getTransactionColor(amount),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    _buildStatusChip(isPending, isCleared, isReconciled),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          
+          const SizedBox(height: 24),
+          
+          // Transaction Details
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                _buildDetailRow('Date', _formatDate(transaction['date'])),
+                const Divider(height: 24),
+                _buildDetailRow('Account', accountName),
+                const Divider(height: 24),
+                _buildDetailRow('Envelope', envelopeName),
+                if (memo.isNotEmpty) ...[
+                  const Divider(height: 24),
+                  _buildDetailRow('Memo', memo),
+                ],
+              ],
+            ),
+          ),
+          
           const SizedBox(height: 32),
-          _buildDetailRow('Date', _formatDate(transaction['date'])),
-          _buildDetailRow('Account', accountName),
-          _buildDetailRow('Envelope', envelopeName),
-          if (memo.isNotEmpty) _buildDetailRow('Memo', memo),
-          _buildDetailRow(
-              'Status', _getStatusText(isPending, isCleared, isReconciled)),
-          _buildDetailRow('Transaction ID', transaction['id']),
-          const SizedBox(height: 32),
+          
+          // Action Buttons
           Row(
             children: [
               Expanded(
@@ -446,13 +472,15 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     Navigator.pop(context);
                     // TODO: Navigate to edit transaction
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              'Edit transaction ${transaction['id']} - Coming soon!')),
+                      const SnackBar(
+                          content: Text('Edit feature coming soon!')),
                     );
                   },
                   icon: const Icon(Icons.edit),
                   label: const Text('Edit'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -467,6 +495,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
               ),
@@ -506,11 +535,45 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  String _getStatusText(bool isPending, bool isCleared, bool isReconciled) {
-    if (isReconciled) return 'Reconciled';
-    if (isCleared) return 'Cleared';
-    if (isPending) return 'Pending';
-    return 'Uncleared';
+  Widget _buildStatusChip(bool isPending, bool isCleared, bool isReconciled) {
+    String statusText;
+    Color statusColor;
+    Color backgroundColor;
+
+    if (isReconciled) {
+      statusText = 'Reconciled';
+      statusColor = Colors.green[700]!;
+      backgroundColor = Colors.green[50]!;
+    } else if (isCleared) {
+      statusText = 'Cleared';
+      statusColor = Colors.blue[700]!;
+      backgroundColor = Colors.blue[50]!;
+    } else if (isPending) {
+      statusText = 'Pending';
+      statusColor = Colors.orange[700]!;
+      backgroundColor = Colors.orange[50]!;
+    } else {
+      statusText = 'Uncleared';
+      statusColor = Colors.grey[700]!;
+      backgroundColor = Colors.grey[100]!;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Text(
+        statusText,
+        style: TextStyle(
+          color: statusColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 
   void _showDeleteConfirmation(Map<String, dynamic> transaction) {
@@ -545,20 +608,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'income':
-        return Colors.green;
-      case 'essential':
-        return Colors.blue;
-      case 'lifestyle':
-        return Colors.orange;
-      case 'savings':
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
-  }
+
 
   String _formatCurrency(int cents) {
     return '\$${(cents.abs() / 1000).toStringAsFixed(2)}';
@@ -580,31 +630,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
   }
 
-  IconData _getTransactionIcon(String envelopeName, bool isPending) {
-    if (isPending) return Icons.pending;
 
-    final name = envelopeName.toLowerCase();
-    if (name.contains('tithing') || name.contains('church')) {
-      return Icons.church;
-    }
-    if (name.contains('groceries') || name.contains('food')) {
-      return Icons.shopping_cart;
-    }
-    if (name.contains('medical') || name.contains('health')) {
-      return Icons.medical_services;
-    }
-    if (name.contains('home') || name.contains('maintenance')) {
-      return Icons.home_repair_service;
-    }
-    if (name.contains('clothing')) return Icons.checkroom;
-    if (name.contains('crypto')) return Icons.currency_bitcoin;
-    if (name.contains('gym') || name.contains('fitness')) {
-      return Icons.fitness_center;
-    }
-    if (name.contains('reimbursement')) return Icons.receipt_long;
-
-    return Icons.receipt;
-  }
 
   Color _getTransactionColor(int amount) {
     return amount >= 0 ? Colors.green : Colors.red;
