@@ -353,3 +353,43 @@ def archive_account(request, budget_id: str, account_id: str):
     except (Account.DoesNotExist, ValidationError, DatabaseError) as e:
         logger.error("Error archiving account %s: %s", account_id, str(e))
         return {"status": "error", "message": f"Failed to archive account: {str(e)}"}
+
+
+@router.post(
+    "/{budget_id}/delete/{account_id}",
+    response=Dict[str, Any],
+    auth=django_auth,
+    tags=["Accounts"],
+)
+def delete_account(request, budget_id: str, account_id: str):
+    """
+    Soft delete an account by setting its 'deleted' field to True.
+
+    Args:
+        budget_id: The ID of the budget
+        account_id: The ID of the account to delete
+
+    Returns:
+        Dictionary with status and message
+    """
+    user = request.auth
+    get_object_or_404(
+        Budget, id=budget_id, user=user
+    )  # Ensure the budget belongs to the user
+
+    try:
+        account = get_object_or_404(
+            Account, id=account_id, budget_id=budget_id, deleted=False
+        )
+
+        # Set the account as deleted
+        account.deleted = True
+        account.save()
+
+        return {
+            "status": "success",
+            "message": f"Account '{account.name}' has been deleted successfully.",
+        }
+    except (Account.DoesNotExist, ValidationError, DatabaseError) as e:
+        logger.error("Error deleting account %s: %s", account_id, str(e))
+        return {"status": "error", "message": f"Failed to delete account: {str(e)}"}

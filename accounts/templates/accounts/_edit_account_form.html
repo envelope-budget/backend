@@ -62,9 +62,15 @@
     </div>
   </div>
   <div class="flex justify-between items-center mt-4 sm:mt-6">
-    <button type="button"
-            class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-lg focus:ring-4 focus:ring-red-200 dark:focus:ring-red-900 hover:bg-red-50 dark:hover:bg-red-900/20"
-            onclick="archiveAccount('{{ account.id }}')">Archive Account</button>
+    {% if account.closed %}
+      <button type="button"
+              class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-lg focus:ring-4 focus:ring-red-200 dark:focus:ring-red-900 hover:bg-red-50 dark:hover:bg-red-900/20"
+              onclick="deleteAccount('{{ account.id }}')">Delete Account</button>
+    {% else %}
+      <button type="button"
+              class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-lg focus:ring-4 focus:ring-red-200 dark:focus:ring-red-900 hover:bg-red-50 dark:hover:bg-red-900/20"
+              onclick="archiveAccount('{{ account.id }}')">Archive Account</button>
+    {% endif %}
     <button type="submit"
             class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-white bg-primary-700 rounded-lg focus:ring-4 focus:ring-primary-200 dark:focus:ring-primary-900 hover:bg-primary-800">
       Update Account

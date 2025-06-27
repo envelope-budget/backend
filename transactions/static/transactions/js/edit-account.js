@@ -123,3 +123,38 @@ function archiveAccount(accountId) {
       showToast('An error occurred while trying to archive the account.');
     });
 }
+
+function deleteAccount(accountId) {
+  if (!confirm('Are you sure you want to delete this account? This action cannot be undone.')) {
+    return;
+  }
+
+  const budgetId = getCookie('budget_id');
+  console.log(`Deleting account with ID: ${accountId} in budget with ID: ${budgetId}`);
+  fetch(`/api/accounts/${budgetId}/delete/${accountId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+    },
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Response:', data);
+      if (data.status === 'success') {
+        // Close the modal
+        editModal.hide();
+
+        // Redirect to transactions page after deletion
+        window.location.href = '/transactions/';
+      } else {
+        // Show toast message instead of alert
+        showToast(`Failed to delete account: ${data.message}`);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      // Show toast message instead of alert
+      showToast('An error occurred while trying to delete the account.');
+    });
+}
