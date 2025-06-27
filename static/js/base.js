@@ -133,15 +133,17 @@ document.addEventListener('DOMContentLoaded', event => {
   for (const dropdown of dropdowns) {
     const button = document.querySelector(`[data-collapse-toggle="dropdown-${dropdown}"]`);
     const content = document.querySelector(`#dropdown-${dropdown}`);
-    const icon = button.querySelector('svg:last-child');
+    if (button) {
+      const icon = button.querySelector('svg:last-child');
 
-    // Save the state in cookies on toggle
-    button.addEventListener('click', () => {
-      icon.classList.toggle('rotate-90');
-      content.classList.toggle('hidden');
-      const isCurrentlyOpen = !icon.classList.contains('rotate-90');
-      setCookie(`show-${dropdown}`, isCurrentlyOpen, 30); // Cookie expires in 30 days
-    });
+      // Save the state in cookies on toggle
+      button.addEventListener('click', () => {
+        icon.classList.toggle('rotate-90');
+        content.classList.toggle('hidden');
+        const isCurrentlyOpen = !icon.classList.contains('rotate-90');
+        setCookie(`show-${dropdown}`, isCurrentlyOpen, 30); // Cookie expires in 30 days
+      });
+    }
   }
 
   // Look for a budget ID in the cookie

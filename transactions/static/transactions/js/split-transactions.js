@@ -35,7 +35,8 @@ const SplitTransactions = {
   positionSplitRows(activeIndex, formButtonsRow) {
     const splitControlsElement = document.getElementById('split-controls');
     if (splitControlsElement && formButtonsRow) {
-      splitControlsElement.after(formButtonsRow);
+      // Position split controls before the form buttons
+      formButtonsRow.before(splitControlsElement);
     }
   },
 
@@ -60,7 +61,11 @@ const SplitTransactions = {
   async saveSplitTransaction(editableTransaction, splitRows) {
     const budgetId = editableTransaction.budget_id;
     const csrfToken = getCookie('csrftoken');
-    const date = new Date(document.querySelector('.editable-transaction-date').value);
+    const dateInput = document.querySelector('.editable-transaction-date');
+    if (!dateInput) {
+      throw new Error('Date input element not found');
+    }
+    const date = new Date(dateInput.value);
     const formattedDate = date.toISOString().slice(0, 10);
 
     let payeeName = '';
@@ -121,7 +126,11 @@ const SplitTransactions = {
   async updateSplitTransaction(editableTransaction, splitRows) {
     const budgetId = editableTransaction.budget_id;
     const csrfToken = getCookie('csrftoken');
-    const date = new Date(document.querySelector('.editable-transaction-date').value);
+    const dateInput = document.querySelector('.editable-transaction-date');
+    if (!dateInput) {
+      throw new Error('Date input element not found');
+    }
+    const date = new Date(dateInput.value);
     const formattedDate = date.toISOString().slice(0, 10);
 
     let payeeName = '';
@@ -182,7 +191,11 @@ const SplitTransactions = {
   async convertSplitToRegular(editableTransaction) {
     const budgetId = editableTransaction.budget_id;
     const csrfToken = getCookie('csrftoken');
-    const date = new Date(document.querySelector('.editable-transaction-date').value);
+    const dateInput = document.querySelector('.editable-transaction-date');
+    if (!dateInput) {
+      throw new Error('Date input element not found');
+    }
+    const date = new Date(dateInput.value);
     const formattedDate = date.toISOString().slice(0, 10);
 
     let payeeName = '';

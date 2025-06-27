@@ -28,3 +28,17 @@ function getCookie(name) {
   }
   return cookieValue;
 }
+
+// Global function to enable split mode from envelope select
+function enableSplitMode() {
+  // Find the Alpine.js component and call toggleSplitMode
+  const transactionElement = document.querySelector('[x-data*="transactionData"]');
+  if (transactionElement && transactionElement._x_dataStack) {
+    const componentData = transactionElement._x_dataStack[0];
+    if (componentData && typeof componentData.toggleSplitMode === 'function') {
+      if (!componentData.isSplitMode) {
+        componentData.toggleSplitMode();
+      }
+    }
+  }
+}

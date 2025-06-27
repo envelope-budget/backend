@@ -486,7 +486,12 @@ function transactionData() {
 
         let url = `/api/transactions/${this.editableTransaction.budget_id}`;
         const csrfToken = getCookie('csrftoken');
-        const date = new Date(document.querySelector('.editable-transaction-date').value);
+        const dateInput = document.querySelector('.editable-transaction-date');
+        if (!dateInput) {
+          showToast('Date input element not found', 'error');
+          return;
+        }
+        const date = new Date(dateInput.value);
         const formattedDate = date.toISOString().slice(0, 10);
 
         let payeeName = '';
