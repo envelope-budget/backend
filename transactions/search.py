@@ -171,6 +171,11 @@ def _parse_is_filter(value):
         return (
             Q(envelope__isnull=True) & ~has_subtransactions
         ) | has_unassigned_subtransactions
+    elif value == "split":
+        # A transaction is split if it has subtransactions
+        return Exists(
+            SubTransaction.objects.filter(transaction=OuterRef("pk"), deleted=False)
+        )
     return Q()
 
 
