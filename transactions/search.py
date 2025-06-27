@@ -110,6 +110,11 @@ def _process_term_group(term_group, text_search_terms):
         elif key == "outflow":
             return _parse_outflow_filter(value)
     else:
+        # Check if this is a plain number (for amount search)
+        number_match = re.match(r"^\d+\.?\d*$", term_group.strip())
+        if number_match:
+            return _parse_plain_number_filter(term_group.strip())
+        
         # Process text search terms, handling quoted phrases
         _extract_search_terms(term_group, text_search_terms)
 
@@ -300,6 +305,18 @@ def _parse_outflow_filter(value):
         return Q()
 
     return Q() & Q(amount__lt=0)
+
+
+def _parse_plain_number_filter(value):
+    """Parse plain number searches to match both inflow and outflow amounts"""
+    try:
+        # Convert to milliunits (stored as integers in the database)
+        amount = int(Decimal(value) * 1000)
+        
+        # Match both positive (inflow) and negative (outflow) amounts
+        return Q(amount=amount) | Q(amount=-amount)
+    except (ValueError, TypeError):
+        return Q()
 
 
 def _build_text_search_filter(terms):
