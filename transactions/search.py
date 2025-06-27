@@ -2,7 +2,8 @@ import re
 from datetime import datetime
 from decimal import Decimal
 
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
+from .models import SubTransaction
 
 
 def parse_search_query(query_string, budget_id):
@@ -149,7 +150,27 @@ def _parse_is_filter(value):
     elif value == "archived":
         return Q(in_inbox=False)
     elif value == "unassigned":
-        return Q(envelope__isnull=True)
+        # A transaction is unassigned if:
+        # 1. It has no envelope AND no subtransactions (regular unassigned transaction)
+        # 2. OR it has subtransactions but some subtransactions don't have envelopes
+
+        # Check if transaction has any subtransactions without envelopes
+        has_unassigned_subtransactions = Exists(
+            SubTransaction.objects.filter(
+                transaction=OuterRef("pk"), envelope__isnull=True, deleted=False
+            )
+        )
+
+        # Check if transaction has any subtransactions at all
+        has_subtransactions = Exists(
+            SubTransaction.objects.filter(transaction=OuterRef("pk"), deleted=False)
+        )
+
+        # Transaction is unassigned if:
+        # (no envelope AND no subtransactions) OR (has unassigned subtransactions)
+        return (
+            Q(envelope__isnull=True) & ~has_subtransactions
+        ) | has_unassigned_subtransactions
     return Q()
 
 

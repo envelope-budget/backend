@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from ninja import Router, Schema
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 from .models import Envelope, Category
 
@@ -123,16 +124,40 @@ def get_unassigned_transactions_balance(request, budget_id: str):
     Get the total balance and count of unassigned transactions (transactions with no envelope)
     """
     from budgets.models import Budget
-    from transactions.models import Transaction
+    from transactions.models import Transaction, SubTransaction
+    from django.db.models import Exists, OuterRef
 
     # Verify the budget exists
     budget = get_object_or_404(Budget, id=budget_id)
 
-    # Get all unassigned transactions (those with envelope_id = null)
+    # Check if transaction has any subtransactions without envelopes
+    has_unassigned_subtransactions = Exists(
+        SubTransaction.objects.filter(
+            transaction=OuterRef('pk'),
+            envelope__isnull=True,
+            deleted=False
+        )
+    )
+    
+    # Check if transaction has any subtransactions at all
+    has_subtransactions = Exists(
+        SubTransaction.objects.filter(
+            transaction=OuterRef('pk'),
+            deleted=False
+        )
+    )
+    
+    # Get all unassigned transactions:
+    # 1. Transactions with no envelope AND no subtransactions (regular unassigned)
+    # 2. OR transactions with unassigned subtransactions
     unassigned_transactions = Transaction.objects.filter(
         budget=budget,
-        envelope__isnull=True,
         deleted=False
+    ).filter(
+        # (no envelope AND no subtransactions) OR (has unassigned subtransactions)
+        (
+            Q(envelope__isnull=True) & ~has_subtransactions
+        ) | has_unassigned_subtransactions
     )
 
     # Calculate total balance and count
