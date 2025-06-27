@@ -108,6 +108,43 @@ class UpdateCategorySchema(Schema):
     hidden: Optional[bool] = None
 
 
+class UnassignedTransactionsSchema(Schema):
+    total_balance: int
+    transaction_count: int
+
+
+@router.get(
+    "/unassigned/{budget_id}",
+    response=UnassignedTransactionsSchema,
+    tags=["Envelopes"],
+)
+def get_unassigned_transactions_balance(request, budget_id: str):
+    """
+    Get the total balance and count of unassigned transactions (transactions with no envelope)
+    """
+    from budgets.models import Budget
+    from transactions.models import Transaction
+
+    # Verify the budget exists
+    budget = get_object_or_404(Budget, id=budget_id)
+
+    # Get all unassigned transactions (those with envelope_id = null)
+    unassigned_transactions = Transaction.objects.filter(
+        budget=budget,
+        envelope__isnull=True,
+        deleted=False
+    )
+
+    # Calculate total balance and count
+    total_balance = sum(t.amount for t in unassigned_transactions)
+    transaction_count = unassigned_transactions.count()
+
+    return {
+        "total_balance": total_balance,
+        "transaction_count": transaction_count,
+    }
+
+
 @router.get(
     "/{budget_id}",
     response=List[CategorySchema],
@@ -518,3 +555,5 @@ def delete_envelope(request, budget_id: str, envelope_id: str):
             "has_transactions": False,
             "action_taken": "deleted",
         }
+
+

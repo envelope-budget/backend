@@ -114,13 +114,34 @@ const TransactionOperations = {
       idsToArchive = [transaction.id];
     } else {
       idsToArchive = transactions
-        .filter(transaction => transaction.checked && transaction.envelope && transaction.cleared)
+        .filter(transaction => {
+          if (!transaction.checked || !transaction.cleared) return false;
+
+          // For split transactions, check that all subtransactions have envelopes
+          if (transaction.subtransactions?.length > 0) {
+            return transaction.subtransactions.every(sub => sub.envelope_id);
+          }
+
+          // For regular transactions, check that envelope is assigned
+          return transaction.envelope;
+        })
         .map(transaction => transaction.id);
 
       if (transactions.filter(transaction => transaction.checked).length === 0) {
-        const activeTransaction = transactions[activeIndex];
-        if (activeTransaction?.envelope && activeTransaction.cleared) {
-          idsToArchive = [activeTransaction.id];
+        const activeTransaction = transactions?.[activeIndex];
+        if (activeTransaction && activeTransaction.cleared) {
+          // Check if it's a split transaction or regular transaction
+          const hasValidEnvelopes =
+            activeTransaction.subtransactions?.length > 0
+              ? activeTransaction.subtransactions.every(sub => sub.envelope_id)
+              : activeTransaction.envelope;
+
+          if (hasValidEnvelopes) {
+            idsToArchive = [activeTransaction.id];
+          } else {
+            showToast('Please select transactions with envelopes and are cleared');
+            return;
+          }
         } else {
           showToast('Please select transactions with envelopes and are cleared');
           return;
@@ -128,9 +149,18 @@ const TransactionOperations = {
       }
     }
 
-    const skippedTransactions = transactions.filter(
-      transaction => transaction.checked && (!transaction.envelope || !transaction.cleared)
-    ).length;
+    const skippedTransactions = transactions.filter(transaction => {
+      if (!transaction.checked) return false;
+      if (!transaction.cleared) return true;
+
+      // For split transactions, check that all subtransactions have envelopes
+      if (transaction.subtransactions?.length > 0) {
+        return !transaction.subtransactions.every(sub => sub.envelope_id);
+      }
+
+      // For regular transactions, check that envelope is assigned
+      return !transaction.envelope;
+    }).length;
 
     if (idsToArchive.length > 0) {
       await bulkArchiveTransactions(idsToArchive);
@@ -169,9 +199,7 @@ const TransactionOperations = {
   },
 
   async deleteCheckedRows(transactions) {
-    const idsToDelete = transactions
-      .filter(transaction => transaction.checked)
-      .map(transaction => transaction.id);
+    const idsToDelete = transactions.filter(transaction => transaction.checked).map(transaction => transaction.id);
 
     if (idsToDelete.length > 0) {
       const deletePromises = idsToDelete.map(id => deleteTransaction(id));
@@ -192,9 +220,7 @@ const TransactionOperations = {
     if (transaction) {
       transactionIds = [transaction.id];
     } else {
-      transactionIds = transactions
-        .filter(transaction => transaction.checked)
-        .map(transaction => transaction.id);
+      transactionIds = transactions.filter(transaction => transaction.checked).map(transaction => transaction.id);
 
       if (transactionIds.length === 0 && activeIndex !== -1) {
         const activeTransaction = transactions[activeIndex];
@@ -305,5 +331,5 @@ const TransactionOperations = {
       showToast('Error marking as transfer');
       throw error;
     }
-  }
+  },
 };

@@ -182,6 +182,7 @@ function envelopeData() {
     budget: null,
     categories: [],
     loading: true,
+    unassignedBalance: 0,
 
     envelope: {
       id: '',
@@ -249,7 +250,7 @@ function envelopeData() {
     },
 
     // Methods
-    async loadEnvelopes() {
+async loadEnvelopes() {
       this.loading = true;
       try {
         // console.log(`Budget ID: ${window.budgetId}`);
@@ -266,6 +267,9 @@ function envelopeData() {
 
         // Load budget data including unallocated envelope
         await this.loadBudgetData();
+        
+        // Load unassigned transactions balance
+        await this.loadUnassignedTransactionsBalance();
 
         // Re-initialize sortable after data loads
         this.$nextTick(() => {
@@ -461,7 +465,25 @@ function envelopeData() {
         showToast('Failed to sweep funds. Please try again.');
       }
     },
-    performSearch() {
+async loadUnassignedTransactionsBalance() {
+  try {
+    const response = await fetch(`/api/envelopes/unassigned/${window.budgetId}`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    this.unassignedBalance = data.total_balance / 1000; // Convert to dollars
+  } catch (error) {
+    console.error('Error fetching unassigned transactions balance:', error);
+    showToast('Failed to fetch unassigned transactions balance. Please refresh the page.');
+  }
+},
+
+performSearch() {
       // The search is now handled by the filteredCategories computed property
       // This method can be used for additional search logic if needed
     },
