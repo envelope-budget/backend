@@ -353,19 +353,19 @@
                           x-show="editableTransaction.id">Undo Split</button>
                 </td>
                 <td class="px-1 py-2 text-right text-sm">
-                <div x-text="'Total: ' + splitTotal.toFixed(2)"
-                :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></div>
-                  <div x-show="remainingOutflow > 0" 
+                  <div x-text="'Total: ' + splitTotal.toFixed(2)"
+                       :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></div>
+                  <div x-show="remainingOutflow > 0"
                        x-text="'Remaining: ' + remainingOutflow.toFixed(2)"
-                     class="text-orange-600 text-xs"></div>
+                       class="text-orange-600 text-xs"></div>
                 </td>
                 <td class="px-1 py-2 text-right text-sm">
-                   <div x-text="'Total: ' + splitInflowTotal.toFixed(2)"
-                        :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></div>
-                   <div x-show="remainingInflow > 0" 
-                        x-text="'Remaining: ' + remainingInflow.toFixed(2)"
-                        class="text-orange-600 text-xs"></div>
-                 </td>
+                  <div x-text="'Total: ' + splitInflowTotal.toFixed(2)"
+                       :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></div>
+                  <div x-show="remainingInflow > 0"
+                       x-text="'Remaining: ' + remainingInflow.toFixed(2)"
+                       class="text-orange-600 text-xs"></div>
+                </td>
                 <td colspan="2" class="px-1 py-2 text-center">
                   <span x-show="splitAmountsMatch" class="text-green-600">✓</span>
                   <span x-show="!splitAmountsMatch" class="text-red-600">✗</span>
@@ -533,7 +533,7 @@
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.5 4h-13m13 16h-13M8 20v-3.333a2 2 0 0 1 .4-1.2L10 12.6a1 1 0 0 0 0-1.2L8.4 8.533a2 2 0 0 1-.4-1.2V4h8v3.333a2 2 0 0 1-.4 1.2L13.957 11.4a1 1 0 0 0 0 1.2l1.643 2.867a2 2 0 0 1 .4 1.2V20H8Z" />
                       </svg>
                     </span>
-                    <span x-show="transaction.cleared && transaction.envelope"
+                    <span x-show="transaction.cleared && transaction.envelope && transaction.in_inbox"
                           x-on:click="archive(transaction)"
                           class="cursor-pointer">
                       <svg class="w-4.5 h-4.5 text-gray-800 dark:text-white"

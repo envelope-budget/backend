@@ -61,6 +61,7 @@ class TransactionSchema(Schema):
     import_id: Optional[str]
     sfin_id: Optional[str]
     subtransactions: Optional[List["SubTransactionSchema"]] = None
+    in_inbox: bool
 
     @staticmethod
     def resolve_subtransactions(obj):

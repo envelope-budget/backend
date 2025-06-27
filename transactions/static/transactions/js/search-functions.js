@@ -131,6 +131,7 @@ const SearchFunctions = {
         { key: 'is:pending', description: 'Pending transactions' },
         { key: 'is:unassigned', description: 'Unassigned transactions' },
         { key: 'is:split', description: 'Split transactions' },
+        { key: 'is:archived', description: 'Archived transactions' },
         { key: 'in:inbox', description: 'Transactions in inbox' },
         { key: 'in:trash', description: 'Transactions in trash' },
       ];
