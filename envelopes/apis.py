@@ -335,33 +335,6 @@ def update_category(
     }
 
 
-@router.delete(
-    "/categories/{budget_id}/{category_id}",
-    response=dict,
-    tags=["Categories"],
-)
-def delete_category(request, budget_id: str, category_id: str):
-    from budgets.models import Budget
-
-    budget = get_object_or_404(Budget, id=budget_id)
-    category = get_object_or_404(Category, id=category_id, budget=budget)
-
-    # Check if category has any non-deleted envelopes
-    if category.envelopes.filter(deleted=False).exists():
-        return {
-            "success": False,
-            "message": f"Cannot delete category '{category.name}' because it contains envelopes. Please move or delete the envelopes first.",
-        }
-
-    # Soft delete the category
-    category.deleted = True
-    category.save()
-
-    # Also soft delete all envelopes in this category
-    Envelope.objects.filter(category=category).update(deleted=True)
-
-    return {"success": True, "message": "Category deleted successfully"}
-
 
 class EnvelopeTransferSchema(Schema):
     from_envelope_id: str

@@ -250,7 +250,7 @@ function envelopeData() {
     },
 
     // Methods
-async loadEnvelopes() {
+    async loadEnvelopes() {
       this.loading = true;
       try {
         // console.log(`Budget ID: ${window.budgetId}`);
@@ -267,7 +267,7 @@ async loadEnvelopes() {
 
         // Load budget data including unallocated envelope
         await this.loadBudgetData();
-        
+
         // Load unassigned transactions balance
         await this.loadUnassignedTransactionsBalance();
 
@@ -465,25 +465,25 @@ async loadEnvelopes() {
         showToast('Failed to sweep funds. Please try again.');
       }
     },
-async loadUnassignedTransactionsBalance() {
-  try {
-    const response = await fetch(`/api/envelopes/unassigned/${window.budgetId}`, {
-      credentials: 'include',
-    });
+    async loadUnassignedTransactionsBalance() {
+      try {
+        const response = await fetch(`/api/envelopes/unassigned/${window.budgetId}`, {
+          credentials: 'include',
+        });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-    const data = await response.json();
-    this.unassignedBalance = data.total_balance / 1000; // Convert to dollars
-  } catch (error) {
-    console.error('Error fetching unassigned transactions balance:', error);
-    showToast('Failed to fetch unassigned transactions balance. Please refresh the page.');
-  }
-},
+        const data = await response.json();
+        this.unassignedBalance = data.total_balance / 1000; // Convert to dollars
+      } catch (error) {
+        console.error('Error fetching unassigned transactions balance:', error);
+        showToast('Failed to fetch unassigned transactions balance. Please refresh the page.');
+      }
+    },
 
-performSearch() {
+    performSearch() {
       // The search is now handled by the filteredCategories computed property
       // This method can be used for additional search logic if needed
     },
@@ -808,6 +808,44 @@ performSearch() {
       }
     },
 
+    async confirmDeleteCategory() {
+      // This method is called when the user confirms deletion in the modal
+      if (!this.selectedItem.id || this.selectedItem.type !== 'category') {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/categories/${window.budgetId}/${this.selectedItem.id}`, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRFToken': window.getCookie('csrftoken'),
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast(`Category deleted: ${data.message}`);
+
+          // Close details panel since the category was deleted
+          this.closeDetails();
+
+          // Reload envelopes to reflect changes
+          await this.loadEnvelopes();
+        } else {
+          throw new Error(data.message || 'Failed to delete category');
+        }
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        showToast('Failed to delete category. Please try again.');
+      }
+    },
+
     findEnvelopeById(envelopeId) {
       for (const category of this.categories) {
         const envelope = category.envelopes.find(env => env.id === envelopeId);
@@ -816,6 +854,10 @@ performSearch() {
         }
       }
       return null;
+    },
+
+    findCategoryById(categoryId) {
+      return this.categories.find(cat => cat.id === categoryId) || null;
     },
 
     allocation: {

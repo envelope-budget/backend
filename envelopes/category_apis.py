@@ -173,7 +173,7 @@ def update_category(
 
 @router.delete(
     "/{budget_id}/{category_id}",
-    response=CategorySchema,
+    response=dict,
     auth=django_auth,
     tags=["Categories"],
 )
@@ -187,14 +187,23 @@ def delete_category(request, budget_id: str, category_id: str):
         category_id (str): The ID of the category to delete.
 
     Returns:
-        CategorySchema: The deleted category.
+        dict: Success status and message.
     """
     from budgets.models import Budget
 
     get_object_or_404(Budget, id=budget_id)
     category = get_object_or_404(Category, id=category_id)
     if Envelope.objects.filter(category=category, deleted=False).exists():
-        raise ValueError("Cannot delete category with assigned envelopes")
+        return {
+            "success": False,
+            "message": f"Cannot delete category '{category.name}' because it contains envelopes. Please move or delete the envelopes first.",
+        }
+    
+    category_name = category.name
     category.deleted = True
     category.save(update_fields=["deleted"])
-    return category
+    
+    return {
+        "success": True,
+        "message": f"Category '{category_name}' deleted successfully",
+    }
