@@ -29,3 +29,5 @@
 
 Assume the development serving is running. You can access the development site at http://127.0.0.1:8007. The Ninja docs
 can be found at http://127.0.0.1:8007/api/docs. Django admin can be found at http://127.0.0.1:8007/admin/.
+
+For testing, you can log in with user `dustin@davis.im` password: `test`

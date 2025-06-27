@@ -33,6 +33,17 @@ function transactionData() {
     splitInflowTotal: 0,
     splitAmountsMatch: false,
 
+    // Computed properties for remaining amounts
+    get remainingOutflow() {
+      const mainOutflow = this.editableTransaction.outflow ? Number.parseFloat(this.editableTransaction.outflow) : 0;
+      return Math.max(0, mainOutflow - this.splitTotal);
+    },
+
+    get remainingInflow() {
+      const mainInflow = this.editableTransaction.inflow ? Number.parseFloat(this.editableTransaction.inflow) : 0;
+      return Math.max(0, mainInflow - this.splitInflowTotal);
+    },
+
     async loadSearchData() {
       try {
         const data = await SearchFunctions.loadSearchData();
@@ -391,6 +402,7 @@ function transactionData() {
       this.isSplitMode = !this.isSplitMode;
       if (this.isSplitMode) {
         if (this.splitRows.length === 0) {
+          this.addSplitRow();
           this.addSplitRow();
         }
         Alpine.nextTick(() => {

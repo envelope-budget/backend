@@ -33,10 +33,21 @@ const SplitTransactions = {
   },
 
   positionSplitRows(activeIndex, formButtonsRow) {
-    const splitControlsElement = document.getElementById('split-controls');
+    const splitControlsElement = document.querySelector('.split-controls');
     if (splitControlsElement && formButtonsRow) {
       // Position split controls before the form buttons
       formButtonsRow.before(splitControlsElement);
+    }
+
+    // Position all split rows after the main edit form
+    const splitRowElements = document.querySelectorAll('.split-row');
+    const editForm = document.querySelector('.transaction-edit[x-ref="editForm"]');
+    
+    if (splitRowElements.length > 0 && editForm) {
+      // Move all split rows to appear right after the edit form
+      for (const splitRow of splitRowElements) {
+        editForm.after(splitRow);
+      }
     }
   },
 

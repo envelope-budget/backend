@@ -353,13 +353,19 @@
                           x-show="editableTransaction.id">Undo Split</button>
                 </td>
                 <td class="px-1 py-2 text-right text-sm">
-                  <span x-text="'Total: ' + splitTotal.toFixed(2)"
-                        :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></span>
+                <div x-text="'Total: ' + splitTotal.toFixed(2)"
+                :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></div>
+                  <div x-show="remainingOutflow > 0" 
+                       x-text="'Remaining: ' + remainingOutflow.toFixed(2)"
+                     class="text-orange-600 text-xs"></div>
                 </td>
                 <td class="px-1 py-2 text-right text-sm">
-                  <span x-text="'Total: ' + splitInflowTotal.toFixed(2)"
-                        :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></span>
-                </td>
+                   <div x-text="'Total: ' + splitInflowTotal.toFixed(2)"
+                        :class="splitAmountsMatch ? 'text-green-600' : 'text-red-600'"></div>
+                   <div x-show="remainingInflow > 0" 
+                        x-text="'Remaining: ' + remainingInflow.toFixed(2)"
+                        class="text-orange-600 text-xs"></div>
+                 </td>
                 <td colspan="2" class="px-1 py-2 text-center">
                   <span x-show="splitAmountsMatch" class="text-green-600">✓</span>
                   <span x-show="!splitAmountsMatch" class="text-red-600">✗</span>
