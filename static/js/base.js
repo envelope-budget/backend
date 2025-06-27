@@ -1,43 +1,60 @@
 const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
 const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+const themeToggleAutoIcon = document.getElementById('theme-toggle-auto-icon');
 
-// Change the icons inside the button based on previous settings
-if (
-  localStorage.getItem('color-theme') === 'dark' ||
-  (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
-) {
-  themeToggleLightIcon.classList.remove('hidden');
-} else {
-  themeToggleDarkIcon.classList.remove('hidden');
-}
+// Function to apply theme based on current setting
+const applyTheme = (theme) => {
+  // Hide all icons first
+  themeToggleDarkIcon.classList.add('hidden');
+  themeToggleLightIcon.classList.add('hidden');
+  themeToggleAutoIcon.classList.add('hidden');
+
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark');
+    themeToggleDarkIcon.classList.remove('hidden'); // Show dark icon when in dark mode
+  } else if (theme === 'light') {
+    document.documentElement.classList.remove('dark');
+    themeToggleLightIcon.classList.remove('hidden'); // Show light icon when in light mode
+  } else { // auto mode
+    // Follow system preference
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    themeToggleAutoIcon.classList.remove('hidden'); // Show auto icon when in auto mode
+  }
+};
+
+// Initialize theme based on stored preference or system default
+const currentTheme = localStorage.getItem('color-theme') || 'auto';
+applyTheme(currentTheme);
+
+// Listen for system theme changes when in auto mode
+const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+mediaQuery.addEventListener('change', () => {
+  if (!localStorage.getItem('color-theme') || localStorage.getItem('color-theme') === 'auto') {
+    applyTheme('auto');
+  }
+});
 
 const themeToggleBtn = document.getElementById('theme-toggle');
 
 themeToggleBtn.addEventListener('click', () => {
-  // toggle icons inside button
-  themeToggleDarkIcon.classList.toggle('hidden');
-  themeToggleLightIcon.classList.toggle('hidden');
+  const currentTheme = localStorage.getItem('color-theme') || 'auto';
+  let nextTheme;
 
-  // if set via local storage previously
-  if (localStorage.getItem('color-theme')) {
-    if (localStorage.getItem('color-theme') === 'light') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('color-theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('color-theme', 'light');
-    }
-
-    // if NOT set via local storage previously
-  } else {
-    if (document.documentElement.classList.contains('dark')) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('color-theme', 'light');
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('color-theme', 'dark');
-    }
+  // Cycle through: light → auto → dark → light
+  if (currentTheme === 'light') {
+    nextTheme = 'auto';
+  } else if (currentTheme === 'auto') {
+    nextTheme = 'dark';
+  } else { // dark
+    nextTheme = 'light';
   }
+
+  localStorage.setItem('color-theme', nextTheme);
+  applyTheme(nextTheme);
 });
 
 // Add Account Modal
