@@ -1,6 +1,7 @@
 from datetime import timedelta
 import io
 import logging
+from typing import List
 
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save, pre_save
@@ -404,6 +405,70 @@ class Transaction(models.Model):
             )
 
         return merged_transaction, merge
+
+    @classmethod
+    def find_potential_duplicates(
+        cls, budget_id: str, transaction_ids: List[str] = None
+    ):
+        """
+        Find potential duplicate transactions based on:
+        - Date within ±6 days
+        - Same account
+        - Same amount
+
+        Args:
+            budget_id: The budget ID to search within
+            transaction_ids: Optional list of transaction IDs to check for duplicates.
+                           If None, checks all transactions.
+
+        Returns:
+            List of duplicate groups, each containing transaction objects
+        """
+        from datetime import timedelta
+
+        # Get transactions to check for duplicates
+        if transaction_ids:
+            transactions_to_check = cls.objects.filter(
+                id__in=transaction_ids, budget_id=budget_id, deleted=False
+            ).select_related("account", "payee", "envelope")
+        else:
+            transactions_to_check = cls.objects.filter(
+                budget_id=budget_id, deleted=False
+            ).select_related("account", "payee", "envelope")
+
+        duplicate_groups = []
+        processed_ids = set()
+
+        for transaction in transactions_to_check:
+            if transaction.id in processed_ids:
+                continue
+
+            # Find potential duplicates for this transaction
+            date_range_start = transaction.date - timedelta(days=6)
+            date_range_end = transaction.date + timedelta(days=6)
+
+            potential_duplicates = (
+                cls.objects.filter(
+                    budget_id=budget_id,
+                    account=transaction.account,
+                    amount=transaction.amount,
+                    date__range=[date_range_start, date_range_end],
+                    deleted=False,
+                )
+                .exclude(id=transaction.id)
+                .select_related("account", "payee", "envelope")
+            )
+
+            if potential_duplicates.exists():
+                # Create a group with the original transaction and its duplicates
+                group = [transaction] + list(potential_duplicates)
+                duplicate_groups.append(group)
+
+                # Mark all transactions in this group as processed
+                for t in group:
+                    processed_ids.add(t.id)
+
+        return duplicate_groups
 
     @classmethod
     def import_ofx(cls, budget_id: str, account_id: str, ofx_data: str):

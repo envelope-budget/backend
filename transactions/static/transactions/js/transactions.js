@@ -200,7 +200,7 @@ function transactionData() {
     },
 
     pullSimpleFINTransactions(sfin_id) {
-      TransactionOperations.pullSimpleFINTransactions(sfin_id);
+      TransactionOperations.pullSimpleFINTransactions(sfin_id, this.fetchTransactions.bind(this));
     },
 
     async importTransactions() {
@@ -270,6 +270,19 @@ function transactionData() {
       const success = await TransactionOperations.mergeSelectedTransactions(this.transactions);
       if (success) {
         this.fetchTransactions();
+      }
+    },
+
+    async checkDuplicates() {
+      try {
+        const duplicateData = await DuplicateDetection.checkForDuplicates();
+        if (duplicateData.duplicate_groups.length > 0) {
+          DuplicateDetection.showDuplicatesModal(duplicateData.duplicate_groups);
+        } else {
+          showToast('No duplicate transactions found');
+        }
+      } catch (error) {
+        console.error('Error checking for duplicates:', error);
       }
     },
 

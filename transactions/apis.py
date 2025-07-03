@@ -136,6 +136,22 @@ class Error(Schema):
     message: str
 
 
+class DuplicateGroupSchema(Schema):
+    id: str  # A generated ID for the group
+    transactions: List[TransactionSchema]
+
+
+class DuplicateDetectionResponse(Schema):
+    duplicate_groups: List[DuplicateGroupSchema]
+    total_groups: int
+    total_duplicates: int
+
+
+class DuplicateMergeRequest(Schema):
+    group_id: str
+    transaction_ids: List[str]  # Which transactions from the group to merge
+
+
 @router.get(
     "/transactions/{budget_id}",
     response=List[TransactionSchema],
@@ -538,6 +554,81 @@ def list_transaction_merges(request, budget_id: str):
         }
         for merge in merges
     ]
+
+
+@router.get(
+    "/transactions/{budget_id}/duplicates",
+    response=DuplicateDetectionResponse,
+    tags=["Transactions"],
+)
+def detect_duplicates(request, budget_id: str, transaction_ids: Optional[str] = None):
+    """
+    Detect potential duplicate transactions.
+
+    Args:
+        budget_id: The budget ID
+        transaction_ids: Optional comma-separated list of transaction IDs to check
+    """
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    # Parse transaction IDs if provided
+    ids_to_check = None
+    if transaction_ids:
+        ids_to_check = [id.strip() for id in transaction_ids.split(",") if id.strip()]
+
+    # Find duplicate groups
+    duplicate_groups = Transaction.find_potential_duplicates(budget_id, ids_to_check)
+
+    # Format response
+    formatted_groups = []
+    total_duplicates = 0
+
+    for i, group in enumerate(duplicate_groups):
+        group_id = f"group_{i}"
+        formatted_group = {
+            "id": group_id,
+            "transactions": [TransactionSchema.from_orm(t) for t in group],
+        }
+        formatted_groups.append(formatted_group)
+        total_duplicates += len(group)
+
+    return {
+        "duplicate_groups": formatted_groups,
+        "total_groups": len(duplicate_groups),
+        "total_duplicates": total_duplicates,
+    }
+
+
+@router.post(
+    "/transactions/{budget_id}/duplicates/merge",
+    response={200: TransactionMergeResponse, 400: MergeError},
+    tags=["Transactions"],
+)
+def merge_duplicate_transactions(
+    request, budget_id: str, merge_data: DuplicateMergeRequest
+):
+    """
+    Merge selected transactions from a duplicate group.
+    """
+    # Ensure the budget belongs to the user
+    get_object_or_404(Budget, id=budget_id, user=request.user)
+
+    try:
+        # Use the existing merge functionality
+        merged_transaction, merge = Transaction.merge_transactions(
+            budget_id=budget_id, transaction_ids=merge_data.transaction_ids
+        )
+
+        return {
+            "merged_transaction": TransactionSchema.from_orm(merged_transaction),
+            "merge_id": merge.id,
+            "source_transaction_ids": merge_data.transaction_ids,
+        }
+    except ValidationError as e:
+        return 400, {
+            "message": str(e.messages[0] if isinstance(e.messages, list) else str(e))
+        }
 
 
 @router.get(

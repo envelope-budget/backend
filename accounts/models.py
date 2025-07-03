@@ -331,15 +331,19 @@ class SimpleFINConnection(models.Model):
             if not response.text.strip():
                 return {"error": "SimpleFIN API returned empty response"}
 
+            response_data = response.json()
+
             if import_transactions:
                 # Import the transactions to the budget
-                self.import_sfin_transactions(response.json())
+                import_result = self.import_sfin_transactions(response_data)
+                # Add transaction IDs to the response for duplicate detection
+                response_data.update(import_result)
 
             if update_account_amounts:
                 # Update the account balances
-                self.update_sfin_account_balances(response.json())
+                self.update_sfin_account_balances(response_data)
 
-            return response.json()
+            return response_data
         except requests.exceptions.JSONDecodeError as e:
             logger.error("JSON decode error: %s", str(e))
             return {
@@ -362,6 +366,9 @@ class SimpleFINConnection(models.Model):
 
     def import_sfin_transactions(self, sfin_data, update_account_amounts=True):
         logger.info("Importing SimpleFIN transactions, data: %s", sfin_data)
+        all_created_transaction_ids = []
+        all_duplicate_transaction_ids = []
+
         for sfin_account in sfin_data.get("accounts", []):
             try:
                 account = Account.objects.get(sfin_id=sfin_account.get("id"))
@@ -440,9 +447,20 @@ class SimpleFINConnection(models.Model):
                             str(e),
                             transaction,
                         )
+
+            # Add this account's transactions to the overall lists
+            all_created_transaction_ids.extend(created_transaction_ids)
+            all_duplicate_transaction_ids.extend(duplicate_transaction_ids)
+
             # Update the last imported date for this account
             account.sfin_last_imported_on = datetime.datetime.now()
             account.save(update_fields=["sfin_last_imported_on"])
+
+        # Return the transaction IDs for duplicate detection
+        return {
+            "created_ids": all_created_transaction_ids,
+            "duplicate_ids": all_duplicate_transaction_ids,
+        }
 
     def update_sfin_account_balances(self, sfin_data):
         """

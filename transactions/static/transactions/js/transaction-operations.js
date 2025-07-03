@@ -8,7 +8,7 @@ const TransactionOperations = {
     }
   },
 
-  pullSimpleFINTransactions(sfin_id) {
+  pullSimpleFINTransactions(sfin_id, fetchTransactions) {
     const budgetId = getCookie('budget_id');
 
     let endpoint = `/api/accounts/${budgetId}/simplefin/transactions`;
@@ -18,11 +18,10 @@ const TransactionOperations = {
     }
 
     const button = document.getElementById('pull-simplefin-button');
+    const buttonText = button.querySelector('span');
 
     if (button) {
       button.disabled = true;
-      const buttonText = button.querySelector('span');
-      const originalText = buttonText.textContent;
 
       buttonText.innerHTML = `
         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -35,16 +34,42 @@ const TransactionOperations = {
 
     fetch(endpoint)
       .then(response => response.json())
-      .then(data => {
+      .then(async data => {
         if (data.errors && data.errors.length > 0) {
           showToast(`Error pulling transactions: ${data.errors.join(', ')}`);
 
           if (button) {
             button.disabled = false;
-            button.querySelector('span').textContent = 'Pull';
+            buttonText.innerHTML = 'Pull';
           }
         } else {
-          window.location.reload();
+          // Check for duplicates if new transactions were created
+          if (data.created_ids && data.created_ids.length > 0) {
+            try {
+              const duplicateData = await DuplicateDetection.checkForDuplicates(data.created_ids);
+              if (duplicateData.duplicate_groups.length > 0) {
+                showToast(`Found ${duplicateData.total_groups} potential duplicate groups`);
+                // Show modal with callback to refresh transactions when modal is closed
+                DuplicateDetection.showDuplicatesModal(duplicateData.duplicate_groups, () => {
+                  if (typeof fetchTransactions === 'function') {
+                    fetchTransactions();
+                  }
+                });
+                button.disabled = false;
+                buttonText.innerHTML = 'Pull';
+                return;
+              }
+            } catch (error) {
+              console.error('Error checking for duplicates after pull:', error);
+            }
+          }
+          // Only refresh transactions if no duplicates were found or if duplicate check failed
+          if (typeof fetchTransactions === 'function') {
+            fetchTransactions();
+          }
+
+          button.disabled = false;
+          buttonText.innerHTML = 'Pull';
         }
       })
       .catch(error => {
@@ -53,7 +78,7 @@ const TransactionOperations = {
 
         if (button) {
           button.disabled = false;
-          button.querySelector('span').textContent = 'Pull';
+          buttonText.innerHTML = 'Pull';
         }
       });
   },
@@ -96,6 +121,21 @@ const TransactionOperations = {
       const message = `Import complete. ${resp.created_ids.length} transactions imported. ${resp.duplicate_ids.length} transactions skipped.`;
       console.log(message);
       fetchTransactions();
+
+      // Check for duplicates among newly imported transactions
+      if (resp.created_ids.length > 0) {
+        setTimeout(async () => {
+          try {
+            const duplicateData = await DuplicateDetection.checkForDuplicates(resp.created_ids);
+            if (duplicateData.duplicate_groups.length > 0) {
+              showToast(`Found ${duplicateData.total_groups} potential duplicate groups`);
+              DuplicateDetection.showDuplicatesModal(duplicateData.duplicate_groups);
+            }
+          } catch (error) {
+            console.error('Error checking for duplicates after import:', error);
+          }
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error posting file:', error);
     } finally {
@@ -129,7 +169,7 @@ const TransactionOperations = {
 
       if (transactions.filter(transaction => transaction.checked).length === 0) {
         const activeTransaction = transactions?.[activeIndex];
-        if (activeTransaction && activeTransaction.cleared) {
+        if (activeTransaction?.cleared) {
           // Check if it's a split transaction or regular transaction
           const hasValidEnvelopes =
             activeTransaction.subtransactions?.length > 0
@@ -168,14 +208,13 @@ const TransactionOperations = {
         showToast(`${skippedTransactions} transaction(s) skipped - must have envelope assigned and be cleared`);
       }
       return true;
-    } else {
-      if (skippedTransactions > 0) {
-        showToast('Selected transactions must have envelope assigned and be cleared');
-      } else {
-        showToast('No transactions selected to archive');
-      }
-      return false;
     }
+    if (skippedTransactions > 0) {
+      showToast('Selected transactions must have envelope assigned and be cleared');
+    } else {
+      showToast('No transactions selected to archive');
+    }
+    return false;
   },
 
   async mergeSelectedTransactions(transactions) {
@@ -206,10 +245,9 @@ const TransactionOperations = {
       await Promise.all(deletePromises);
       updateAccountBalances();
       return true;
-    } else {
-      showToast('No transactions selected to delete');
-      return false;
     }
+    showToast('No transactions selected to delete');
+    return false;
   },
 
   async toBudget(transactions, activeIndex, transaction = null) {

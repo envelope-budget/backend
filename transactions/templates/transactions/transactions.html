@@ -134,6 +134,11 @@
                   </li>
                   <li>
                     <a href="#"
+                       class="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                       @click.prevent="checkDuplicates()">Check for Duplicates</a>
+                  </li>
+                  <li>
+                    <a href="#"
                        class="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Mass Edit</a>
                   </li>
                 </ul>
@@ -635,6 +640,7 @@
     <script src="{% static 'transactions/js/transaction-operations.js' %}"></script>
     <script src="{% static 'transactions/js/split-transactions.js' %}"></script>
     <script src="{% static 'transactions/js/keyboard-shortcuts.js' %}"></script>
+    <script src="{% static 'transactions/js/duplicate-detection.js' %}"></script>
     <script src="{% static 'transactions/js/transactions.js' %}"></script>
     <script src="{% static 'transactions/js/envelope-select.js' %}"></script>
     <script src="{% static 'transactions/js/payee-select.js' %}"></script>
