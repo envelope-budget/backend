@@ -12,4 +12,9 @@ urlpatterns = [
         views.spending_by_category_report,
         name="spending-by-category-report",
     ),
+    path(
+        "account-audit/",
+        views.account_audit_report,
+        name="account-audit-report",
+    ),
 ]

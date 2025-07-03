@@ -9,6 +9,7 @@ from django.views.generic import TemplateView
 
 from budgets.models import Budget
 from transactions.models import Transaction
+from accounts.models import Account
 
 from .utils import (
     export_budget_csv,
@@ -45,6 +46,11 @@ class ReportListView(LoginRequiredMixin, TemplateView):
                 "name": "Spending by Category",
                 "description": "View spending by envelope with monthly breakdown and budget comparison",
                 "url_name": "reports:spending-by-category-report",
+            },
+            {
+                "name": "Account Audit",
+                "description": "Compare account balances with calculated transaction totals to identify discrepancies",
+                "url_name": "reports:account-audit-report",
             },
         ]
         return context
@@ -527,3 +533,104 @@ def get_spending_by_category_data_for_export(budget, start_date, end_date):
         )
 
     return export_data
+
+
+@login_required
+def account_audit_report(request):
+    """
+    Display account audit report comparing stored balances with calculated transaction totals.
+    """
+    # Get the current budget using the same logic as other reports
+    current_budget = None
+    user_budgets = Budget.objects.filter(user=request.user)
+    active_budget_id = request.session.get("budget")
+
+    if (
+        not active_budget_id
+        and hasattr(request.user, "profile")
+        and request.user.profile.active_budget
+    ):
+        active_budget_id = request.user.profile.active_budget.id
+        request.session["budget"] = active_budget_id
+
+    for b in user_budgets:
+        if str(b.id) == str(active_budget_id):
+            current_budget = b
+            break
+
+    if not current_budget:
+        budget_count = len(user_budgets)
+        if budget_count == 0:
+            current_budget = Budget.objects.create(user=request.user, name="My Budget")
+        elif budget_count == 1:
+            current_budget = user_budgets.first()
+        else:
+            current_budget = (
+                Budget.objects.filter(user=request.user).order_by("-created_at").first()
+            )
+        request.session["budget"] = current_budget.id
+
+    if not current_budget:
+        return render(
+            request,
+            "reports/account_audit_report.html",
+            {
+                "current_budget": None,
+            },
+        )
+
+    # Get all accounts for the current budget
+    accounts = Account.objects.filter(budget=current_budget, deleted=False).order_by("name")
+
+    # Calculate transaction totals for each account
+    audit_data = []
+    for account in accounts:
+        # Get all transactions for this account
+        transactions = Transaction.objects.filter(
+            account=account,
+            deleted=False,
+        )
+        
+        # Calculate total from transactions
+        transaction_total = sum(t.amount for t in transactions)
+        
+        # Calculate cleared transactions total
+        cleared_transactions = transactions.filter(cleared=True)
+        cleared_total = sum(t.amount for t in cleared_transactions)
+        
+        # Calculate discrepancies
+        balance_discrepancy = account.balance - transaction_total
+        cleared_discrepancy = account.cleared_balance - cleared_total
+        
+        # Convert to dollars for display
+        audit_data.append({
+            'account': account,
+            'stored_balance': account.balance / 1000,
+            'calculated_balance': transaction_total / 1000,
+            'balance_discrepancy': balance_discrepancy / 1000,
+            'stored_cleared_balance': account.cleared_balance / 1000,
+            'calculated_cleared_balance': cleared_total / 1000,
+            'cleared_discrepancy': cleared_discrepancy / 1000,
+            'transaction_count': transactions.count(),
+            'cleared_count': cleared_transactions.count(),
+            'has_discrepancy': balance_discrepancy != 0 or cleared_discrepancy != 0,
+        })
+
+    # Calculate summary statistics
+    total_accounts = len(audit_data)
+    accounts_with_discrepancies = sum(1 for item in audit_data if item['has_discrepancy'])
+    total_balance_discrepancy = sum(item['balance_discrepancy'] for item in audit_data)
+    total_cleared_discrepancy = sum(item['cleared_discrepancy'] for item in audit_data)
+
+    context = {
+        "current_budget": current_budget,
+        "audit_data": audit_data,
+        "summary": {
+            "total_accounts": total_accounts,
+            "accounts_with_discrepancies": accounts_with_discrepancies,
+            "total_balance_discrepancy": total_balance_discrepancy,
+            "total_cleared_discrepancy": total_cleared_discrepancy,
+        },
+    }
+
+    return render(request, "reports/account_audit_report.html", context)
