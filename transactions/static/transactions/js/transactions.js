@@ -359,8 +359,11 @@ function transactionData() {
         const today = new Date();
         const todayString = today.toISOString().split('T')[0];
 
+        // Get the current account ID from the cookie or page context
+        const currentAccountId = getCookie('account_id');
+
         this.editableTransaction = {
-          account: '',
+          account: currentAccountId || '', // Set to current account if available
           amount: 0,
           budget_id: getCookie('budget_id'),
           date: todayString,
@@ -385,7 +388,14 @@ function transactionData() {
           if (formFieldsRow && formButtonsRow && firstTransactionRow) {
             firstTransactionRow.before(formFieldsRow);
             formFieldsRow.after(formButtonsRow);
-            document.getElementById('id_account').focus();
+
+            // Focus the appropriate field based on whether account is pre-selected
+            if (currentAccountId) {
+              // If account is pre-selected, focus on date field instead
+              document.getElementById('id_date').focus();
+            } else {
+              document.getElementById('id_account').focus();
+            }
           }
         });
       } else {
